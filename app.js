@@ -389,7 +389,7 @@ async function backendClient(){
 async function testBackend(){
   const badge=document.getElementById('backendBadge'),detail=document.getElementById('backendDetail');
   const c=window.GORUT_BACKEND||{};
-  if(!c.enabled){badge.textContent='Backend: belum dikonfigurasi';detail.textContent='Buat backend-config.js dari backend-config.example.js lalu isi URL dan public anon/publishable key.';return;}
+  if(!c.enabled){badge.textContent='Backend: belum dikonfigurasi';detail.textContent='Edit backend-config.js dengan URL proyek Supabase dan public anon/publishable key. Aktifkan RLS dan uji kebijakan akses sebelum menggunakan data nyata.';return;}
   const sb=await backendClient(); if(!sb){badge.textContent='Backend: gagal';detail.textContent='Supabase client/config belum tersedia.';return;}
   const {data,error}=await sb.from('diseases').select('id').limit(1);
   if(error){badge.textContent='Backend: error';detail.textContent='Koneksi tercapai tetapi query ditolak: '+error.message;}
@@ -417,7 +417,7 @@ const loginEl=document.getElementById('login'),app=document.getElementById('app'
 
 /* ===== v9 operational layer ===== */
 let GORUT_USER=null;
-function demoLogin(){loginEl.style.display='none';app.style.display='block';GORUT_USER={id:'offline',email:val('email')||'offline',role:'admin_kabupaten'};document.getElementById('roleBadge').textContent='Role: Admin Kabupaten (offline)';setRoleUI();render();}
+function demoLogin(){loginEl.style.display='none';app.style.display='block';GORUT_USER={id:'offline',email:val('email')||'offline',role:'admin_kabupaten'};document.getElementById('roleBadge').textContent='Mode lokal/demo — akses tidak terautentikasi';const d=document.getElementById('backendDetail');if(d)d.textContent='Mode lokal: tidak ada autentikasi server atau pembatasan akses yang aman. Data hanya tersimpan di perangkat ini; jangan masukkan identitas pasien nyata.';setRoleUI();render();}
 async function login(){
   const sb=await backendClient();
   if(!sb){demoLogin();return;}
@@ -1046,7 +1046,7 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
   }
   /* Patch login/demo and render without breaking backend auth. */
   const oldDemo=window.demoLogin; window.demoLogin=function(){
-    loginEl.style.display='none';app.style.display='block';GORUT_USER={id:'offline',email:val('email')||'offline',role:'admin_kabupaten'};document.getElementById('roleBadge').textContent='Role: Admin Kabupaten (offline)';setRoleUI();render();
+    loginEl.style.display='none';app.style.display='block';GORUT_USER={id:'offline',email:val('email')||'offline',role:'admin_kabupaten'};document.getElementById('roleBadge').textContent='Mode lokal/demo — akses tidak terautentikasi';const d=document.getElementById('backendDetail');if(d)d.textContent='Mode lokal: tidak ada autentikasi server atau pembatasan akses yang aman. Data hanya tersimpan di perangkat ini; jangan masukkan identitas pasien nyata.';setRoleUI();render();
   };
   const oldRender=window.render; window.render=function(){
     if(!enforceAccess())return;
