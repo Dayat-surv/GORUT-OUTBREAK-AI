@@ -1623,7 +1623,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   // Open operational mode: no registration, payment, subscription or expiry gate.
   window.GORUT_USER={id:'open-access',email:'',role:'admin_kabupaten'};
   window.GORUT_OPEN_ACCESS=true;
-  if(window.GORUT_BACKEND) window.GORUT_BACKEND.enabled=false;
+  // Preserve explicit backend configuration; production login must use Supabase when enabled.
   window.enforceAccess=function(){return true};
   window.showRegister=function(){};
   window.closeRegister=function(){};
@@ -1725,14 +1725,14 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.style.display='grid';
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
-      '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src='logo-gorontalo-utara.svg'" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src='logo-surveilans-epidemiologi.svg'" alt="Logo Surveilans Epidemiologi"></div>'+
+      '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
       '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v67</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
       '<div class="field"><label>Jenis Pengguna</label><select id="v45Role" onchange="v45RoleChanged()"><option value="puskesmas_rs">Surveilans Puskesmas dan Rumah Sakit</option><option value="dinkes_kab">Surveilans Dinkes Kabupaten</option><option value="dinkes_prov">Surveilans Dinkes Provinsi</option><option value="admin">Admin</option></select></div>'+
-      '<div id="v45AdminSetup" style="display:'+(adminReady?'none':'block')+'" class="notice"><b>Pengaturan awal Admin</b><br>Belum ada akun Admin aktif. Buat akun Admin pertama untuk mengelola persetujuan pengguna.</div>'+
-      '<div class="field"><label>Nama User</label><input id="v45LoginName" autocomplete="username" placeholder="Nama user"></div>'+
+      '<div id="v45AdminSetup" style="display:'+(window.GORUT_BACKEND?.enabled||adminReady?'none':'block')+'" class="notice"><b>Pengaturan awal Admin</b><br>Belum ada akun Admin aktif. Buat akun Admin pertama untuk mengelola persetujuan pengguna.</div>'+
+      '<div class="field"><label>'+(window.GORUT_BACKEND?.enabled?'Email akun Supabase':'Nama User')+'</label><input id="v45LoginName" autocomplete="username" placeholder="'+(window.GORUT_BACKEND?.enabled?'nama@instansi.go.id':'Nama user')+'"></div>'+
       '<div class="field"><label>Password</label><input id="v45LoginPass" type="password" autocomplete="current-password" placeholder="Password"></div>'+
       '<div class="field" id="v45LoginWaWrap"><label>Nomor WhatsApp terdaftar</label><input id="v45LoginWa" inputmode="tel" placeholder="08xxxxxxxxxx"></div>'+
       '<button class="primary" style="width:100%;margin-top:4px" onclick="v45Login()">🔐 Login</button><button class="btn-ghost" style="width:100%;margin-top:8px" onclick="demoLogin()">🚀 Masuk Gratis / Mode Lokal</button>'+
@@ -1769,23 +1769,48 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   };
   window.v45RegisterAndWA=function(){return v45Register(true)};
   window.v45Login=async function(){
-    const role=document.getElementById('v45Role')?.value,name=(document.getElementById('v45LoginName')?.value||'').trim(),pw=document.getElementById('v45LoginPass')?.value||'',wa=(document.getElementById('v45LoginWa')?.value||'').trim();
-    if(!name||!pw)return showLogin('Nama user dan password wajib diisi.');
+    const cfg=window.GORUT_BACKEND||{};
+    const role=document.getElementById('v45Role')?.value;
+    const name=(document.getElementById('v45LoginName')?.value||'').trim();
+    const pw=document.getElementById('v45LoginPass')?.value||'';
+    const wa=(document.getElementById('v45LoginWa')?.value||'').trim();
+    if(!name||!pw)return showLogin(cfg.enabled?'Email dan password wajib diisi.':'Nama user dan password wajib diisi.');
+    if(cfg.enabled){
+      const sb=await backendClient();
+      if(!sb)return showLogin('Backend Supabase ditandai aktif tetapi client/config belum siap. Login lokal dinonaktifkan untuk mencegah akses tidak terautentikasi.');
+      const auth=await sb.auth.signInWithPassword({email:name.toLowerCase(),password:pw});
+      if(auth.error)return showLogin('Login Supabase gagal: '+auth.error.message);
+      const user=auth.data?.user;
+      if(!user){await sb.auth.signOut();return showLogin('Supabase tidak mengembalikan pengguna yang valid.');}
+      const pr=await sb.from('profiles').select('role,full_name,facility').eq('id',user.id).maybeSingle();
+      if(pr.error||!pr.data?.role){
+        await sb.auth.signOut();
+        return showLogin('Profil dan peran pengguna belum tersedia di tabel profiles. Hubungi administrator; akses ditolak.');
+      }
+      window.GORUT_USER={...user,id:user.id,email:user.email||name,role:pr.data.role,displayName:pr.data.full_name||user.email,facility:pr.data.facility||null};
+      GORUT_USER=window.GORUT_USER;
+      localStorage.removeItem(SESSION_KEY);
+      const app=document.getElementById('app');if(app)app.style.display='block';
+      const login=document.getElementById('login');if(login)login.style.display='none';
+      const rb=document.getElementById('roleBadge');if(rb)rb.textContent='User: '+pr.data.role;
+      try{setRoleUI()}catch(e){}
+      try{await window.render()}catch(e){console.error('Render after Supabase login failed',e)}
+      return;
+    }
     let users=readUsers();
     if(role==='admin'&&!ensureAdminSetup()){
-      if(!name||!pw)return showLogin('Nama dan password Admin pertama wajib diisi.');
-      const rec={id:'ADM-'+Date.now(),name,passwordHash:await hash45(pw),whatsapp:'',role:'admin',status:'aktif',requestedAt:new Date().toISOString(),approvedAt:new Date().toISOString()};users.push(rec);writeUsers(users);alert('Akun Admin pertama berhasil dibuat. Silakan login kembali.');showLogin();document.getElementById('v45Role').value='admin';v45RoleChanged();return;
+      const rec={id:'ADM-'+Date.now(),name,passwordHash:await hash45(pw),whatsapp:'',role:'admin',status:'aktif',requestedAt:new Date().toISOString(),approvedAt:new Date().toISOString()};users.push(rec);writeUsers(users);alert('Akun Admin lokal pertama berhasil dibuat pada browser ini saja. Akun ini bukan akun server. Silakan login kembali.');showLogin();document.getElementById('v45Role').value='admin';v45RoleChanged();return;
     }
     const u=users.find(x=>x.name.toLowerCase()===name.toLowerCase()&&x.role===role);
     if(!u)return showLogin('User belum terdaftar pada jenis pengguna tersebut. Silakan daftar terlebih dahulu.');
     if(await hash45(pw)!==u.passwordHash)return showLogin('Password tidak sesuai.');
     if(role!=='admin'&&String(u.whatsapp).replace(/\D/g,'')!==String(wa).replace(/\D/g,''))return showLogin('Nomor WhatsApp tidak sesuai dengan nomor saat pendaftaran.');
-    if(u.status!=='aktif')return showLogin('Akun belum diizinkan Admin. Kirim WhatsApp Admin dan tunggu jawaban "silahkan".');
+    if(u.status!=='aktif')return showLogin('Akun belum diizinkan Admin. Mode lokal hanya berlaku pada browser ini.');
     localStorage.setItem(SESSION_KEY,JSON.stringify({id:u.id,at:new Date().toISOString()}));
     window.GORUT_USER={id:u.id,email:u.name,role:u.role,displayName:u.name,whatsapp:u.whatsapp}; GORUT_USER=window.GORUT_USER;
     const app=document.getElementById('app');if(app)app.style.display='block';const login=document.getElementById('login');if(login)login.style.display='none';
-    const rb=document.getElementById('roleBadge');if(rb)rb.textContent='User: '+roleLabel[u.role]+' · Akses penuh';
-    try{setRoleUI()}catch(e){} try{window.render()}catch(e){}
+    const rb=document.getElementById('roleBadge');if(rb)rb.textContent='User: '+roleLabel[u.role]+' · Mode lokal';
+    try{setRoleUI()}catch(e){} try{await window.render()}catch(e){}
   };
   window.v45Logout=function(){localStorage.removeItem(SESSION_KEY);window.GORUT_USER=null;GORUT_USER=null;showLogin();const app=document.getElementById('app');if(app)app.style.display='none'};
   window.v45Approve=function(id){const users=readUsers();const u=users.find(x=>x.id===id);if(!u)return alert('User tidak ditemukan.');u.status='aktif';u.approvedAt=new Date().toISOString();writeUsers(users);renderV45Admin();alert('Akun '+u.name+' sekarang DIIZINKAN login.');};
