@@ -1684,6 +1684,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   };
 
   function startOpen(){
+    if(window.GORUT_BACKEND?.enabled)return; // Do not auto-open the app when server authentication is configured.
     removeLegacyAccessUI();
     const app=document.getElementById('app'); if(app)app.style.display='block';
     window.GORUT_USER={id:'open-access',email:'',role:'admin_kabupaten'};
@@ -1735,7 +1736,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       '<div class="field"><label>'+(window.GORUT_BACKEND?.enabled?'Email akun Supabase':'Nama User')+'</label><input id="v45LoginName" autocomplete="username" placeholder="'+(window.GORUT_BACKEND?.enabled?'nama@instansi.go.id':'Nama user')+'"></div>'+
       '<div class="field"><label>Password</label><input id="v45LoginPass" type="password" autocomplete="current-password" placeholder="Password"></div>'+
       '<div class="field" id="v45LoginWaWrap"><label>Nomor WhatsApp terdaftar</label><input id="v45LoginWa" inputmode="tel" placeholder="08xxxxxxxxxx"></div>'+
-      '<button class="primary" style="width:100%;margin-top:4px" onclick="v45Login()">🔐 Login</button><button class="btn-ghost" style="width:100%;margin-top:8px" onclick="demoLogin()">🚀 Masuk Gratis / Mode Lokal</button>'+
+      '<button class="primary" style="width:100%;margin-top:4px" onclick="v45Login()">🔐 Login</button>'+(window.GORUT_BACKEND?.enabled?'':'<button class="btn-ghost" style="width:100%;margin-top:8px" onclick="demoLogin()">🚀 Masuk Gratis / Mode Lokal</button>')+'
       '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+
       '<button class="btn-ghost" style="flex:1" onclick="v45ShowRegister()">📝 Daftar Pengguna</button>'+
       '<a href="https://wa.me/'+WA+'?text='+encodeURIComponent(WA_TEXT)+'" target="_blank" rel="noopener" style="flex:1;text-decoration:none"><button class="btn-whatsapp" style="width:100%">💬 WhatsApp Admin</button></a></div>'+
@@ -3820,4 +3821,19 @@ try{installBrandingV67();}catch(e){}
   function inject85(){const sec=E85('audit');if(!sec||E85('v85WorkflowQA'))return;const card=document.createElement('div');card.id='v85WorkflowQA';card.className='card';card.style.marginTop='14px';sec.insertBefore(card,sec.firstElementChild);render85()}
   const oldPage85=window.page;window.page=function(id,b){const r=typeof oldPage85==='function'?oldPage85.apply(this,arguments):undefined;setTimeout(()=>{if(id==='audit')render85()},100);return r};
   setTimeout(inject85,1200);
+})();
+/* v86 security guard: never allow demo/local login to bypass configured server auth. */
+(function(){
+  const previousDemoLogin=window.demoLogin;
+  window.demoLogin=function(){
+    if(window.GORUT_BACKEND?.enabled){
+      const m=document.getElementById('loginMsg');
+      if(m){m.style.display='block';m.textContent='Mode demo dinonaktifkan karena autentikasi server telah dikonfigurasi. Silakan login menggunakan akun Supabase.';}
+      return false;
+    }
+    if(typeof previousDemoLogin==='function')return previousDemoLogin.apply(this,arguments);
+  };
+  if(window.GORUT_BACKEND?.enabled){
+    const app=document.getElementById('app');if(app)app.style.display='none';
+  }
 })();
