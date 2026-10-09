@@ -1731,7 +1731,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
-      '<div class="field"><label>Jenis Pengguna</label><select id="v45Role" onchange="v45RoleChanged()"><option value="puskesmas_rs">Surveilans Puskesmas dan Rumah Sakit</option><option value="dinkes_kab">Surveilans Dinkes Kabupaten</option><option value="dinkes_prov">Surveilans Dinkes Provinsi</option><option value="admin">Admin</option></select></div>'+
+      '<div class="field" style="display:'+(window.GORUT_BACKEND?.enabled?'none':'block')+'"><label>Jenis Pengguna</label><select id="v45Role" onchange="v45RoleChanged()"><option value="puskesmas_rs">Surveilans Puskesmas dan Rumah Sakit</option><option value="dinkes_kab">Surveilans Dinkes Kabupaten</option><option value="dinkes_prov">Surveilans Dinkes Provinsi</option><option value="admin">Admin</option></select></div>'+
       '<div id="v45AdminSetup" style="display:'+(window.GORUT_BACKEND?.enabled||adminReady?'none':'block')+'" class="notice"><b>Pengaturan awal Admin</b><br>Belum ada akun Admin aktif. Buat akun Admin pertama untuk mengelola persetujuan pengguna.</div>'+
       '<div class="field"><label>'+(window.GORUT_BACKEND?.enabled?'Email akun Supabase':'Nama User')+'</label><input id="v45LoginName" autocomplete="username" placeholder="'+(window.GORUT_BACKEND?.enabled?'nama@instansi.go.id':'Nama user')+'"></div>'+
       '<div class="field"><label>Password</label><input id="v45LoginPass" type="password" autocomplete="current-password" placeholder="Password"></div>'+
@@ -1746,12 +1746,14 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   }
   window.v45RoleChanged=function(){
     const role=document.getElementById('v45Role')?.value; const wa=document.getElementById('v45LoginWaWrap'); const setup=document.getElementById('v45AdminSetup');
+    if(window.GORUT_BACKEND?.enabled){if(wa)wa.style.display='none';if(setup)setup.style.display='none';const hint=document.getElementById('v45LoginHint');if(hint)hint.textContent='Login dikelola oleh Supabase Auth. Jenis peran diambil dari profil server.';return;}
     if(wa)wa.style.display=role==='admin'?'none':'block';
     if(setup)setup.style.display=role==='admin'&&!ensureAdminSetup()?'block':'none';
     const n=document.getElementById('v45LoginName'); if(n)n.placeholder=role==='admin'&&!ensureAdminSetup()?'Nama Admin pertama':'Nama user';
     const hint=document.getElementById('v45LoginHint'); if(hint)hint.textContent=role==='admin'?(ensureAdminSetup()?'Login sebagai Admin. Admin memiliki akses penuh dan mengelola persetujuan pengguna.':'Buat akun Admin pertama dengan nama dan password, lalu login.'):'Akun harus berstatus DIIZINKAN setelah Admin menjawab "silahkan" melalui WhatsApp.';
   };
   window.v45ShowRegister=function(){
+    if(window.GORUT_BACKEND?.enabled)return alert('Pendaftaran lokal dinonaktifkan. Admin harus menyiapkan akun melalui Supabase Auth dan mengisi profil serta peran pengguna di server.');
     let m=document.getElementById('registerModal');
     if(!m){m=document.createElement('div');m.id='registerModal';document.body.appendChild(m)}
     m.style.display='grid'; m.className='modal show';
@@ -1759,6 +1761,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   };
   window.v45CloseRegister=function(){const m=document.getElementById('registerModal');if(m){m.style.display='none';m.className='modal'}};
   window.v45Register=async function(openWA=false){
+    if(window.GORUT_BACKEND?.enabled)return alert('Pendaftaran lokal dinonaktifkan saat backend aktif. Gunakan proses pembuatan akun Supabase yang dikelola administrator.');
     const name=(document.getElementById('v45RegName')?.value||'').trim(),pw=document.getElementById('v45RegPass')?.value||'',wa=(document.getElementById('v45RegWa')?.value||'').trim(),role=document.getElementById('v45RegRole')?.value;
     if(!name||!pw||!wa||!role)return alert('Nama, password, WhatsApp dan jenis pengguna wajib diisi.');
     if(pw.length<6)return alert('Password minimal 6 karakter.');
