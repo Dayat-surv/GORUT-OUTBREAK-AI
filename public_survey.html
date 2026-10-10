@@ -39,7 +39,24 @@ const form=document.getElementById('surveyForm');
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function setStatus(message){statusEl.textContent=message;}
-function readQueue(){try{const q=JSON.parse(localStorage.getItem(queueKey)||'[]');return Array.isArray(q)?q:[]}catch(_){return[]}}
+function readQueue(){
+  try{
+    const current=JSON.parse(localStorage.getItem(queueKey)||'[]');
+    const q=Array.isArray(current)?current:[];
+    const legacyKey='gorut-public-outbox-v13';
+    const legacyRaw=localStorage.getItem(legacyKey);
+    if(legacyRaw){
+      const legacy=JSON.parse(legacyRaw);
+      if(Array.isArray(legacy)){
+        legacy.forEach(item=>{if(item && !item.submissionId)item.submissionId=newSubmissionId();});
+        q.push(...legacy);
+        localStorage.setItem(queueKey,JSON.stringify(q));
+      }
+      localStorage.removeItem(legacyKey);
+    }
+    return q;
+  }catch(_){return[]}
+}
 function writeQueue(q){localStorage.setItem(queueKey,JSON.stringify(q));}
 function render(){
   const questions=Array.isArray(questionnaire?.schema_json?.questions)?questionnaire.schema_json.questions:[];
