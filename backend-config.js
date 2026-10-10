@@ -6,5 +6,5 @@ window.GORUT_BACKEND = {
   anonKey: 'sb_publishable_123456',
   enabled: false,
   // Aktifkan hanya untuk pengujian formulir publik; tidak mengaktifkan backend aplikasi utama.
-  publicSurveyEnabled: false
+  publicSurveyEnabled: true
 };
