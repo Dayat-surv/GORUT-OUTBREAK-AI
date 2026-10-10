@@ -90,7 +90,7 @@ function bindConditionals(){
 }
 async function init(){
   const config=window.GORUT_BACKEND||{};
-  if(!config.enabled||!window.supabase){setStatus('Formulir online belum tersedia karena backend belum dikonfigurasi.');form.innerHTML='';return;}
+  if(!(config.publicSurveyEnabled===true||config.enabled)||!window.supabase){setStatus('Formulir online belum tersedia karena backend belum dikonfigurasi.');form.innerHTML='';return;}
   if(!token){setStatus('Token survei tidak ditemukan pada tautan.');form.innerHTML='';return;}
   sb=window.supabase.createClient(config.url,config.anonKey);
   const result=await sb.rpc('get_public_survey',{p_token:token});
