@@ -1736,7 +1736,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       '<div class="field"><label>'+(window.GORUT_BACKEND?.enabled?'Email akun Supabase':'Nama User')+'</label><input id="v45LoginName" autocomplete="username" placeholder="'+(window.GORUT_BACKEND?.enabled?'nama@instansi.go.id':'Nama user')+'"></div>'+
       '<div class="field"><label>Password</label><input id="v45LoginPass" type="password" autocomplete="current-password" placeholder="Password"></div>'+
       '<div class="field" id="v45LoginWaWrap"><label>Nomor WhatsApp terdaftar</label><input id="v45LoginWa" inputmode="tel" placeholder="08xxxxxxxxxx"></div>'+
-      '<button class="primary" style="width:100%;margin-top:4px" onclick="v45Login()">🔐 Login</button>'+(window.GORUT_BACKEND?.enabled?'':'<button class="btn-ghost" style="width:100%;margin-top:8px" onclick="demoLogin()">🚀 Masuk Gratis / Mode Lokal</button>')+'
+      '<button class="primary" style="width:100%;margin-top:4px" onclick="v45Login()">🔐 Login</button>'+(window.GORUT_BACKEND?.enabled?'':'<button class="btn-ghost" style="width:100%;margin-top:8px" onclick="demoLogin()">🚀 Masuk Gratis / Mode Lokal</button>')+
       '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+
       '<button class="btn-ghost" style="flex:1" onclick="v45ShowRegister()">📝 Daftar Pengguna</button>'+
       '<a href="https://wa.me/'+WA+'?text='+encodeURIComponent(WA_TEXT)+'" target="_blank" rel="noopener" style="flex:1;text-decoration:none"><button class="btn-whatsapp" style="width:100%">💬 WhatsApp Admin</button></a></div>'+
