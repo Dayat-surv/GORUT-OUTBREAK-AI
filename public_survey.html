@@ -22,7 +22,17 @@ body{font-family:Arial,sans-serif;margin:0;background:#f4f7fb;color:#172033}.wra
 let sb=null, survey=null, questionnaire=null;
 const params=new URLSearchParams(location.search);
 const token=params.get('survey')||'';
-const queueKey='gorut-public-outbox-v13';
+const queueKey='gorut-public-outbox-v14';
+// ID unik dibuat sekali per pengiriman dan dipertahankan saat retry/offline.
+function newSubmissionId(){
+  if(window.crypto && typeof window.crypto.randomUUID==='function') return window.crypto.randomUUID();
+  const bytes=new Uint8Array(16);
+  if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes);
+  else for(let i=0;i<bytes.length;i++) bytes[i]=Math.floor(Math.random()*256);
+  bytes[6]=(bytes[6]&0x0f)|0x40; bytes[8]=(bytes[8]&0x3f)|0x80;
+  const h=[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
+  return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+}
 const statusEl=document.getElementById('status');
 const titleEl=document.getElementById('surveyTitle');
 const form=document.getElementById('surveyForm');
@@ -75,23 +85,27 @@ async function init(){
   render();
   await flushOffline();
 }
-async function submitPayload(payload,device){
+async function submitPayload(payload,device,submissionId){
   return await sb.rpc('submit_public_survey',{
     p_token:token,
     p_payload:payload,
-    p_respondent_device:String(device||'browser').slice(0,180)
+    p_respondent_device:String(device||'browser').slice(0,180),
+    p_submission_id:submissionId
   });
 }
 form.addEventListener('submit',async event=>{
   event.preventDefault();
   if(!sb||!survey){setStatus('Kuesioner belum siap dikirim.');return;}
   const payload=Object.fromEntries(new FormData(form).entries());
+  const submissionId=newSubmissionId();
   const button=form.querySelector('button[type="submit"]');
   if(button)button.disabled=true;
-  const result=await submitPayload(payload,navigator.userAgent);
+  let result;
+  try{result=await submitPayload(payload,navigator.userAgent,submissionId);}
+  catch(error){result={error};}
   if(result.error){
     const queue=readQueue();
-    queue.push({token,payload,device:navigator.userAgent,savedAt:new Date().toISOString()});
+    queue.push({token,payload,device:navigator.userAgent,submissionId,savedAt:new Date().toISOString()});
     writeQueue(queue);
     setStatus('Pengiriman belum berhasil. Respons disimpan sementara pada perangkat ini; sambungkan kembali ke internet untuk mencoba mengirim ulang.');
     if(button)button.disabled=false;
@@ -109,7 +123,8 @@ async function flushOffline(){
     const result=await sb.rpc('submit_public_survey',{
       p_token:item.token,
       p_payload:item.payload,
-      p_respondent_device:String(item.device||'offline-queue').slice(0,180)
+      p_respondent_device:String(item.device||'offline-queue').slice(0,180),
+      p_submission_id:item.submissionId
     });
     if(result.error)remain.push(item);
   }
