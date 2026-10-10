@@ -71,8 +71,7 @@ function collectPayload(){
   if(q.type==='multiselect'||q.type==='checkbox'){payload[q.id]=[...form.querySelectorAll('input[name="'+CSS.escape(q.id+'__multi')+'"]:checked')].map(x=>x.value);continue;}
   const el=form.elements.namedItem(q.id);if(el)payload[q.id]=el.value;
  }
- if(moduleSelect?.value)payload._disease_module=moduleSelect.value;
- payload._questionnaire={id:survey?.questionnaire_id||null,name:questionnaire?.name||null,version:questionnaire?.version||null};
+ if(moduleSelect?.value)payload.disease_module=moduleSelect.value;
  return payload;
 }
 async function submitPayload(payload,device,submissionId){return await sb.rpc('submit_public_survey',{p_token:token,p_payload:payload,p_respondent_device:String(device||'browser').slice(0,180),p_submission_id:submissionId});}
