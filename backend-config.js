@@ -3,6 +3,6 @@
 window.GORUT_BACKEND = {
   provider: 'supabase',
   url: 'https://lheuszdhprwmtajhdukc.supabase.co',
-  anonKey: '123456',
+  anonKey: 'sb_publishable_123456',
   enabled: false
 };
