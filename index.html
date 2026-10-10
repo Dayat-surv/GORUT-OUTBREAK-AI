@@ -161,7 +161,7 @@ aside nav button{flex:none!important}
 </style>
 </head><body>
 <div id="login" class="login" style="display:grid;position:fixed;inset:0;z-index:9999">
-  <form class="loginbox" onsubmit="event.preventDefault();login();">
+  <form class="loginbox" onsubmit="event.preventDefault();window.gorutHandleLogin();">
     <div class="login-brand-logos"><div style="width:68px;height:68px;border-radius:18px;background:#0b2a43;color:white;display:grid;place-items:center;font-weight:800;font-size:24px">GO</div></div>
     <div style="text-align:center"><h2>GORUT-OUTBREAK AI</h2><p style="color:#64748b;margin-top:4px">Sistem Surveilans Epidemiologi Gorontalo Utara</p></div>
     <div class="field"><label for="email">Email akun</label><input id="email" name="email" type="email" autocomplete="username" placeholder="nama@instansi.go.id" required></div>
@@ -340,6 +340,27 @@ window.openDemographyTableV68=function(btn){
       },120);
     },160);
   }catch(e){console.error('openDemographyTableV68',e);}
+};
+</script>
+<script>
+/* Visible login diagnostics: surface missing handlers and rejected async login attempts. */
+window.gorutHandleLogin = async function () {
+  var msg = document.getElementById('loginMsg');
+  try {
+    if (typeof window.login !== 'function') {
+      throw new Error('Fungsi login aplikasi belum dimuat. Muat ulang halaman; jika tetap terjadi, periksa pemuatan app.js.');
+    }
+    if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
+    await window.login();
+  } catch (err) {
+    console.error('GORUT login error:', err);
+    if (msg) {
+      msg.style.display = 'block';
+      msg.textContent = 'Proses login gagal dijalankan: ' + (err && err.message ? err.message : String(err));
+    } else {
+      alert('Proses login gagal dijalankan: ' + (err && err.message ? err.message : String(err)));
+    }
+  }
 };
 </script>
 </body></html>
