@@ -1,12 +1,124 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GORUT-OUTBREAK AI — Public Survey v12 — v74</title><style>body{font-family:Arial;margin:0;background:#f4f7fb;color:#172033}.wrap{max-width:760px;margin:auto;padding:20px}.card{background:#fff;padding:20px;border-radius:12px;margin-bottom:15px}label{font-weight:bold;font-size:13px;display:block;margin:12px 0 5px}input,select,textarea{width:100%;padding:10px;border:1px solid #ccd3dc;border-radius:7px;box-sizing:border-box}.primary{background:#1769aa;color:white;border:0;padding:11px 15px;border-radius:7px}.notice{background:#eff6ff;padding:10px;border-left:4px solid #1769aa}.q{margin-bottom:14px}</style></head><body><div class="wrap"><div class="card"><h1 id="title">Kuesioner Investigasi</h1><div id="status" class="notice">Memuat kuesioner...</div></div><form id="form" class="card"></form></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="backend-config.js" onerror="window.GORUT_BACKEND={enabled:false}"></script><script>let sb=null,survey=null,questionnaire=null;const qs=new URLSearchParams(location.search);const token=qs.get('survey');const offlineQueueKey='gorut-public-outbox-v12';
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function uuid(){return crypto?.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3)|8;return v.toString(16)})}
-function pickAnswer(payload,labels){const qs=questionnaire?.schema_json?.questions||[];for(const q of qs){const label=String(q.label||'').toLowerCase();if(labels.some(x=>label===String(x).toLowerCase()||label.includes(String(x).toLowerCase()))){const v=payload[q.id];if(v!==undefined&&v!=='')return v}}return ''}
-function responseUuid(responseId){const s=String(responseId||'');if(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s))return s;let h='';for(let i=0;i<32;i++){const c=s.charCodeAt(i%s.length)||65;h+=(c*2654435761>>>0).toString(16).padStart(8,'0')}h=h.slice(0,32);return `${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-8${h.slice(17,20)}-${h.slice(20,32)}`}
-async function createCaseFromPayload(payload,responseId){if(!responseId)return {error:{message:'response_id tidak tersedia'}};const caseId=responseUuid(responseId);const caseRow={id:caseId,investigation_id:survey.investigation_id,case_code:'PUB-'+String(responseId).replace(/[^A-Za-z0-9]/g,'').slice(0,18).toUpperCase(),full_name:pickAnswer(payload,['Nama lengkap','Nama']),age:Number(pickAnswer(payload,['Umur','Usia']))||null,sex:pickAnswer(payload,['Jenis kelamin','Jenis Kelamin']),onset_date:pickAnswer(payload,['Tanggal onset gejala','Tanggal onset','Onset']),status:pickAnswer(payload,['Status kasus'])||'Suspek',outcome:pickAnswer(payload,['Keadaan akhir','Outcome','Status kesehatan']),latitude:Number(pickAnswer(payload,['Latitude']))||null,longitude:Number(pickAnswer(payload,['Longitude']))||null,questionnaire_response:payload,metadata:{source:'public_survey',survey_id:survey.id,response_id:responseId,created_at:new Date().toISOString(),integrity_version:'v74'}};return await sb.from('cases').upsert(caseRow,{onConflict:'id'}).select('id').single()}
-async function init(){const c=window.GORUT_BACKEND||{};if(!c.enabled||!window.supabase){status.textContent='Public survey online memerlukan backend yang dikonfigurasi.';return}sb=window.supabase.createClient(c.url,c.anonKey);let r=await sb.from('public_surveys').select('id,title,questionnaire_id,investigation_id,expires_at').eq('public_token',token).eq('is_active',true).single();if(r.error){status.textContent='Kuesioner tidak ditemukan atau sudah tidak aktif.';return}if(r.data.expires_at&&new Date(r.data.expires_at)<new Date()){status.textContent='Kuesioner sudah kedaluwarsa.';return}survey=r.data;title.textContent=survey.title;r=await sb.from('questionnaires').select('name,version,schema_json').eq('id',survey.questionnaire_id).single();if(r.error){status.textContent='Instrumen tidak tersedia.';return}questionnaire=r.data;status.textContent='Versi instrumen: '+questionnaire.version;render();flushOffline()}
-function render(){const qs=questionnaire.schema_json.questions||[];form.innerHTML=qs.map((q,i)=>{let input=q.type==='textarea'?`<textarea name="${esc(q.id)}" ${q.required?'required':''}></textarea>`:q.type==='choice'?`<select name="${esc(q.id)}" ${q.required?'required':''}><option value="">Pilih...</option>${(q.options||[]).map(o=>`<option>${esc(o)}</option>`).join('')}</select>`:`<input type="${q.type==='number'?'number':q.type==='date'?'date':'text'}" name="${esc(q.id)}" ${q.required?'required':''}>`;return `<div class="q" data-qid="${esc(q.id)}"><label>${i+1}. ${esc(q.label)} ${q.required?'*':''}</label>${input}</div>`}).join('')+'<button class="primary" type="submit">Kirim Kuesioner</button>';bindConditionals()}
-function bindConditionals(){const blocks=[...form.querySelectorAll('.q')];const rules=questionnaire.schema_json.meta?.conditionalRules||[];function apply(){blocks.forEach(b=>b.style.display='block');rules.forEach(r=>{const source=blocks.find(b=>b.dataset.qid===r.whenId);const target=blocks.find(b=>b.dataset.qid===r.revealId);if(!source||!target)return;const v=source.querySelector('input,select,textarea')?.value||'';target.style.display=r.values?.some(x=>String(v).toLowerCase().includes(String(x).toLowerCase()))?'block':'none'})}form.addEventListener('change',apply);apply()}
-form.addEventListener('submit',async e=>{e.preventDefault();const payload=Object.fromEntries(new FormData(form).entries());const btn=form.querySelector('button');if(btn)btn.disabled=true;const r=await sb.from('survey_responses').insert({survey_id:survey.id,respondent_device:navigator.userAgent.slice(0,180),payload}).select('id').single();if(r.error){const out=JSON.parse(localStorage.getItem(offlineQueueKey)||'[]');out.push({survey_id:survey.id,payload,savedAt:new Date().toISOString()});localStorage.setItem(offlineQueueKey,JSON.stringify(out));status.textContent='Koneksi gagal. Respons disimpan sementara di perangkat. Buka kembali saat koneksi tersedia untuk mengirim ulang.';if(btn)btn.disabled=false}else{const cr=await createCaseFromPayload(payload,r.data?.id);if(cr.error){status.textContent='Respons tersimpan, tetapi pembuatan kasus otomatis belum berhasil: '+cr.error.message;form.innerHTML='<div class="notice"><b>Respons kuesioner sudah tersimpan.</b> Kasus belum berhasil masuk ke Daftar Kasus. Periksa kebijakan akses backend (RLS) atau gunakan trigger backend v74.</div>'}else{form.innerHTML='<div class="notice"><b>Terima kasih.</b> Respons, <b>Case ID otomatis</b>, dan seluruh jawaban kuesioner telah tersimpan. Data dapat masuk ke Daftar Kasus setelah sinkronisasi aplikasi.</div>';status.textContent='Respons berhasil diterima dan kasus dibuat/di-upsert secara idempoten.'}}});
-async function flushOffline(){const out=JSON.parse(localStorage.getItem(offlineQueueKey)||'[]');if(!out.length||!sb)return;const remain=[];for(const x of out){const r=await sb.from('survey_responses').insert({survey_id:x.survey_id,respondent_device:'offline-queue',payload:x.payload}).select('id').single();if(r.error){remain.push(x);continue}const cr=await createCaseFromPayload(x.payload,r.data?.id);if(cr.error){x.response_id=r.data?.id;x.case_error=cr.error.message;remain.push(x)}}localStorage.setItem(offlineQueueKey,JSON.stringify(remain));if(!remain.length&&out.length)status.textContent='Antrian offline berhasil disinkronkan.'}
-window.addEventListener('online',flushOffline);init();</script></body></html>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GORUT-OUTBREAK AI — Kuesioner Publik</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f4f7fb;color:#172033}.wrap{max-width:760px;margin:auto;padding:20px}.card{background:#fff;padding:20px;border-radius:12px;margin-bottom:15px;box-shadow:0 2px 10px #1720330a}label{font-weight:bold;font-size:13px;display:block;margin:12px 0 5px}input,select,textarea{width:100%;padding:10px;border:1px solid #ccd3dc;border-radius:7px;box-sizing:border-box;font:inherit}.primary{background:#1769aa;color:white;border:0;padding:11px 15px;border-radius:7px;cursor:pointer}.primary:disabled{opacity:.6;cursor:wait}.notice{background:#eff6ff;padding:10px;border-left:4px solid #1769aa;border-radius:4px}.q{margin-bottom:14px}.muted{color:#596579;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1 id="surveyTitle">Kuesioner Investigasi</h1>
+    <div id="status" class="notice" role="status">Memuat kuesioner...</div>
+  </div>
+  <form id="surveyForm" class="card"></form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="backend-config.js" onerror="window.GORUT_BACKEND={enabled:false}"></script>
+<script>
+'use strict';
+let sb=null, survey=null, questionnaire=null;
+const params=new URLSearchParams(location.search);
+const token=params.get('survey')||'';
+const queueKey='gorut-public-outbox-v13';
+const statusEl=document.getElementById('status');
+const titleEl=document.getElementById('surveyTitle');
+const form=document.getElementById('surveyForm');
+
+function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function setStatus(message){statusEl.textContent=message;}
+function readQueue(){try{const q=JSON.parse(localStorage.getItem(queueKey)||'[]');return Array.isArray(q)?q:[]}catch(_){return[]}}
+function writeQueue(q){localStorage.setItem(queueKey,JSON.stringify(q));}
+function render(){
+  const questions=Array.isArray(questionnaire?.schema_json?.questions)?questionnaire.schema_json.questions:[];
+  if(!questions.length){form.innerHTML='<p>Instrumen ini belum memiliki pertanyaan yang dapat ditampilkan.</p>';return;}
+  form.innerHTML=questions.map((q,i)=>{
+    const id=String(q.id||'q'+i), label=String(q.label||('Pertanyaan '+(i+1)));
+    const required=q.required?'required':'';
+    let input='';
+    if(q.type==='textarea') input='<textarea name="'+esc(id)+'" '+required+'></textarea>';
+    else if(q.type==='choice') input='<select name="'+esc(id)+'" '+required+'><option value="">Pilih...</option>'+((q.options||[]).map(o=>'<option value="'+esc(o)+'">'+esc(o)+'</option>').join(''))+'</select>';
+    else input='<input type="'+(q.type==='number'?'number':q.type==='date'?'date':'text')+'" name="'+esc(id)+'" '+required+'>';
+    return '<div class="q" data-qid="'+esc(id)+'"><label for="'+esc(id)+'">'+(i+1)+'. '+esc(label)+(q.required?' *':'')+'</label>'+input+'</div>';
+  }).join('')+'<button class="primary" type="submit">Kirim Kuesioner</button><p class="muted">Jika koneksi terputus, jawaban dapat disimpan sementara pada perangkat ini.</p>';
+  bindConditionals();
+}
+function bindConditionals(){
+  const blocks=[...form.querySelectorAll('.q')];
+  const rules=questionnaire?.schema_json?.meta?.conditionalRules||[];
+  function apply(){
+    blocks.forEach(b=>{b.style.display='block';});
+    rules.forEach(rule=>{
+      const source=blocks.find(b=>b.dataset.qid===String(rule.whenId));
+      const target=blocks.find(b=>b.dataset.qid===String(rule.revealId));
+      if(!source||!target)return;
+      const value=source.querySelector('input,select,textarea')?.value||'';
+      target.style.display=(rule.values||[]).some(x=>String(value).toLowerCase().includes(String(x).toLowerCase()))?'block':'none';
+    });
+  }
+  form.addEventListener('change',apply);
+  apply();
+}
+async function init(){
+  const config=window.GORUT_BACKEND||{};
+  if(!config.enabled||!window.supabase){setStatus('Formulir online belum tersedia karena backend belum dikonfigurasi.');form.innerHTML='';return;}
+  if(!token){setStatus('Token survei tidak ditemukan pada tautan.');form.innerHTML='';return;}
+  sb=window.supabase.createClient(config.url,config.anonKey);
+  const result=await sb.rpc('get_public_survey',{p_token:token});
+  if(result.error||!result.data){setStatus('Kuesioner tidak ditemukan, tidak aktif, atau sudah kedaluwarsa.');form.innerHTML='';return;}
+  survey=result.data;
+  questionnaire={name:survey.name,version:survey.version,schema_json:survey.schema_json};
+  titleEl.textContent=survey.title||'Kuesioner Investigasi';
+  setStatus('Instrumen: '+(questionnaire.name||'Kuesioner')+' · Versi: '+(questionnaire.version||'-'));
+  render();
+  await flushOffline();
+}
+async function submitPayload(payload,device){
+  return await sb.rpc('submit_public_survey',{
+    p_token:token,
+    p_payload:payload,
+    p_respondent_device:String(device||'browser').slice(0,180)
+  });
+}
+form.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!sb||!survey){setStatus('Kuesioner belum siap dikirim.');return;}
+  const payload=Object.fromEntries(new FormData(form).entries());
+  const button=form.querySelector('button[type="submit"]');
+  if(button)button.disabled=true;
+  const result=await submitPayload(payload,navigator.userAgent);
+  if(result.error){
+    const queue=readQueue();
+    queue.push({token,payload,device:navigator.userAgent,savedAt:new Date().toISOString()});
+    writeQueue(queue);
+    setStatus('Pengiriman belum berhasil. Respons disimpan sementara pada perangkat ini; sambungkan kembali ke internet untuk mencoba mengirim ulang.');
+    if(button)button.disabled=false;
+    return;
+  }
+  form.innerHTML='<div class="notice"><b>Terima kasih.</b> Respons kuesioner telah diterima dan diproses oleh server.</div>';
+  setStatus('Respons berhasil dikirim.');
+});
+async function flushOffline(){
+  if(!sb||!navigator.onLine)return;
+  const queue=readQueue();
+  if(!queue.length)return;
+  const remain=[];
+  for(const item of queue){
+    const result=await sb.rpc('submit_public_survey',{
+      p_token:item.token,
+      p_payload:item.payload,
+      p_respondent_device:String(item.device||'offline-queue').slice(0,180)
+    });
+    if(result.error)remain.push(item);
+  }
+  writeQueue(remain);
+  if(queue.length&&!remain.length)setStatus('Antrian offline berhasil dikirim ke server.');
+  else if(remain.length)setStatus('Sebagian respons masih menunggu koneksi atau validasi server; respons tetap tersimpan di perangkat ini.');
+}
+window.addEventListener('online',flushOffline);
+init().catch(()=>setStatus('Terjadi kesalahan saat memuat kuesioner. Silakan coba kembali.'));
+</script>
+</body>
+</html>
