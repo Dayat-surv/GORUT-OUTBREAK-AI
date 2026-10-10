@@ -3,7 +3,7 @@
 window.GORUT_BACKEND = {
   provider: 'supabase',
   url: 'https://lheuszdhprwmtajhdukc.supabase.co',
-  anonKey: 'sb_publishable_123456',
+  anonKey: 'sb_publishable_120483',
   enabled: false,
   // Aktifkan hanya untuk pengujian formulir publik; tidak mengaktifkan backend aplikasi utama.
   publicSurveyEnabled: true
