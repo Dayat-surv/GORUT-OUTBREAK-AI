@@ -3919,3 +3919,35 @@ try{installBrandingV67();}catch(e){}
     const app=document.getElementById('app');if(app)app.style.display='none';
   }
 })();
+
+
+/* v105 — resilient case line-list and full-detail actions */
+(function(){
+  const E=id=>document.getElementById(id);
+  const esc105=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  function renderCaseList105(){
+    const body=E('caseRows'), table=body?.closest('table'), data=window.db;
+    if(!body||!table||!data||!Array.isArray(data.cases))return;
+    const head=table.querySelector('thead tr');
+    if(head)head.innerHTML='<th>ID</th><th>Nama</th><th>Alamat</th><th>Desa/Kel.</th><th>Kecamatan</th><th>Umur</th><th>JK</th><th>Tanggal Onset</th><th>Gejala Utama</th><th>Status</th><th>Faktor Risiko</th><th>Outcome</th><th>Aksi</th>';
+    const query=(E('caseSearch')?.value||'').trim().toLowerCase();
+    const active=data.active;
+    const cases=data.cases.filter(c=>(!active||String(c.investigationId)===String(active))&&(!query||[c.id,c.name,c.address,c.desa,c.kec,c.age,c.sex,c.onset,c.symptoms,c.status,c.outcome,c.disease].some(v=>String(v??'').toLowerCase().includes(query))));
+    const symptom=c=>c.symptoms||c.answers?.symptoms||c.answers?.symptom||c.answers?.gejala||c.answers?.gejalaUtama||c.foodCase?.symptoms||'-';
+    const riskText=c=>{let a=[];try{if(typeof window.deriveRiskFactors46==='function')a=window.deriveRiskFactors46(c)||[];else a=c.riskFactors||[]}catch(e){a=c.riskFactors||[]}return a.filter(x=>{const v=String(x.value??x.answer??'').trim();return v&&!/^(tidak|tidak ada|tidak diketahui|tidak relevan|negatif|bukan|belum|0|no)$/i.test(v)}).slice(0,4).map(x=>(x.label||x.question||'Faktor risiko')+': '+(x.value??x.answer??'')).join('; ')||'Belum teridentifikasi'};
+    body.innerHTML=cases.map(c=>'<tr data-case-id="'+esc105(c.id)+'"><td>'+esc105(c.id||'-')+'</td><td><b>'+esc105(c.name||'-')+'</b></td><td>'+esc105(c.address||'-')+'</td><td>'+esc105(c.desa||c.admin?.desa||'-')+'</td><td>'+esc105(c.kec||c.admin?.kec||'-')+'</td><td>'+esc105(c.age??'-')+'</td><td>'+esc105(c.sex||'-')+'</td><td>'+esc105(c.onset||'-')+'</td><td>'+esc105(symptom(c))+'</td><td>'+esc105(c.status||'-')+'</td><td>'+esc105(riskText(c))+'</td><td>'+esc105(c.outcome||'-')+'</td><td class="table-actions"><span class="case-actions-105"></span></td></tr>').join('')||'<tr><td colspan="13"><div class="notice">Belum ada kasus pada investigasi aktif ini. Periksa pilihan investigasi aktif atau gunakan pencarian untuk mengosongkan filter.</div></td></tr>';
+    body.querySelectorAll('tr[data-case-id]').forEach(tr=>{
+      const id=tr.getAttribute('data-case-id'), target=tr.querySelector('.case-actions-105');
+      const make=(label,fn,cls)=>{const b=document.createElement('button');b.type='button';b.textContent=label;if(cls)b.className=cls;b.addEventListener('click',fn);target.appendChild(b);return b};
+      make('🔎 Detail Lengkap',()=>{if(typeof window.showCaseQuestionnaireV73==='function')window.showCaseQuestionnaireV73(id);else alert('Fungsi detail kasus belum siap. Muat ulang aplikasi dan coba kembali.');});
+      make('Edit',()=>{if(typeof window.editCase==='function')window.editCase(id);});
+      make('Hapus',()=>{if(typeof window.deleteRecord==='function')window.deleteRecord('cases',id);else if(typeof window.deleteCase==='function')window.deleteCase(id);},'danger');
+    });
+  }
+  const oldCases105=window.cases;
+  window.cases=function(){let result;try{if(typeof oldCases105==='function')result=oldCases105.apply(this,arguments)}catch(err){console.warn('Renderer daftar kasus lama gagal; menggunakan renderer pemulihan.',err)}try{renderCaseList105()}catch(err){console.error('Renderer daftar kasus v105:',err)}return result};
+  const oldPage105=window.page;
+  window.page=function(id){let result;if(typeof oldPage105==='function')result=oldPage105.apply(this,arguments);if(id==='kasus')setTimeout(renderCaseList105,50);return result};
+  window.renderCaseListRecovery105=renderCaseList105;
+  setTimeout(()=>{try{renderCaseList105()}catch(e){}},1800);
+})();
