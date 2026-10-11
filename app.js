@@ -4321,3 +4321,114 @@ try{installBrandingV67();}catch(e){}
   };
   window.GORUT_V114 = {version:'v114', syncSafetyCheck:true, preserveDistinctServerRows:true};
 })();
+
+
+/* v115 — grouped case list with explicit per-record detail; display-only, non-destructive */
+(function(){
+  'use strict';
+  var esc = function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})};
+  var lastHtml = '';
+  function sourceRows(){
+    var all=Array.isArray(window.db&&window.db.cases)?window.db.cases:[];
+    var active=window.db&&window.db.active;
+    if(active) all=all.filter(function(c){return String(c.investigationId||'')===String(active)});
+    var query=String(document.getElementById('caseSearch')&&document.getElementById('caseSearch').value||'').trim().toLocaleLowerCase('id');
+    if(query) all=all.filter(function(c){
+      return [c.id,c.name,c.address,c.desa,c.kec,c.age,c.sex,c.onset,c.status,c.outcome,c.symptoms,JSON.stringify(c.answers||{})].join(' ').toLocaleLowerCase('id').includes(query);
+    });
+    return all;
+  }
+  function complete(c){
+    var n=0;
+    ['name','address','desa','kec','kab','prov','age','sex','onset','status','outcome','symptoms','lat','lng'].forEach(function(k){if(c[k]!==undefined&&c[k]!==null&&String(c[k]).trim()!=='')n++});
+    Object.keys(c.answers||{}).forEach(function(k){var v=c.answers[k];if(v!==undefined&&v!==null&&v!==''&&!(Array.isArray(v)&&!v.length))n++});
+    return n;
+  }
+  function displayValue(c, keys){
+    for(var i=0;i<keys.length;i++){var v=c[keys[i]];if(v!==undefined&&v!==null&&String(v).trim()!=='')return v}
+    if(keys.indexOf('desa')>=0&&c.admin&&c.admin.desa)return c.admin.desa;
+    if(keys.indexOf('kec')>=0&&c.admin&&c.admin.kec)return c.admin.kec;
+    return '';
+  }
+  function groups(){
+    var map=new Map();
+    sourceRows().forEach(function(c){
+      var key=String(c.id||'')+'::'+String(c.investigationId||'');
+      if(!map.has(key))map.set(key,[]);
+      map.get(key).push(c);
+    });
+    return Array.from(map.entries()).map(function(entry){
+      var rows=entry[1].slice().sort(function(a,b){return complete(b)-complete(a)});
+      var primary=rows[0];
+      // Fill only blank display fields from sibling rows; source objects are never changed.
+      var view=Object.assign({},primary);
+      ['name','address','desa','kec','kab','prov','age','sex','onset','status','outcome','symptoms','lat','lng'].forEach(function(k){
+        if(view[k]===undefined||view[k]===null||String(view[k]).trim()===''){
+          for(var i=1;i<rows.length;i++){if(rows[i][k]!==undefined&&rows[i][k]!==null&&String(rows[i][k]).trim()!==''){view[k]=rows[i][k];break}}
+        }
+      });
+      if(!view.desa)view.desa=view.admin&&view.admin.desa||'';
+      if(!view.kec)view.kec=view.admin&&view.admin.kec||'';
+      return {key:entry[0],rows:entry[1],primary:primary,view:view};
+    });
+  }
+  function detail(key){
+    var g=groups().find(function(x){return x.key===key});
+    if(!g)return;
+    var html='<h2>Detail Lengkap — '+esc(g.view.id||'-')+'</h2>'+
+      '<div class="notice">Terdapat <b>'+g.rows.length+' rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Semua rekaman ditampilkan terpisah; jawaban yang berbeda tidak ditimpa, dan tidak ada data yang dihapus atau digabung di database.</div>';
+    g.rows.forEach(function(c,i){
+      var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
+      var fields=[['ID server',c.serverId],['ID penyelidikan',c.investigationId],['Nama',c.name],['Alamat',c.address],['Desa',c.desa||c.admin&&c.admin.desa],['Kecamatan',c.kec||c.admin&&c.admin.kec],['Umur',c.age],['Jenis kelamin',c.sex],['Tanggal onset',c.onset],['Status kasus',c.status],['Outcome',c.outcome],['Gejala',c.symptoms]];
+      html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Rekaman sumber '+(i+1)+' — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+Object.keys(ans).filter(function(k){return ans[k]!==''&&ans[k]!==null&&ans[k]!==undefined}).length+' jawaban kuesioner)</small></summary>'+
+        '<div style="overflow:auto;max-height:28vh"><table class="report-table"><thead><tr><th>Variabel inti</th><th>Nilai</th></tr></thead><tbody>'+
+        fields.map(function(f){return '<tr><td>'+esc(f[0])+'</td><td>'+esc(f[1]===undefined||f[1]===null||f[1]===''?'Belum diisi':(typeof f[1]==='object'?JSON.stringify(f[1]):f[1]))+'</td></tr>'}).join('')+
+        '</tbody></table></div><h4>Seluruh jawaban kuesioner</h4><div style="overflow:auto;max-height:45vh"><table class="report-table"><thead><tr><th>Field</th><th>Jawaban</th></tr></thead><tbody>'+
+        (Object.keys(ans).length?Object.keys(ans).map(function(k){var v=ans[k];return '<tr><td><code>'+esc(k)+'</code></td><td>'+esc(v===undefined||v===null||v===''?'Belum diisi':(typeof v==='object'?JSON.stringify(v):v))+'</td></tr>'}).join(''):'<tr><td colspan="2">Belum ada jawaban kuesioner.</td></tr>')+
+        '</tbody></table></div></details>';
+    });
+    html+='<div class="toolbar" style="margin-top:12px"><button type="button" onclick="closeAppModal()">Tutup</button></div>';
+    var box=document.getElementById('modalbox'),modal=document.getElementById('modal');
+    if(box&&modal){box.innerHTML=html;modal.classList.add('show')}
+    else window.alert('Panel detail belum tersedia. Muat ulang aplikasi; data sumber tidak diubah.');
+  }
+  function render(){
+    var body=document.getElementById('caseRows');
+    if(!body)return;
+    var gs=groups();
+    var table=body.closest('table');
+    var head=table&&table.querySelector('thead tr');
+    if(head)head.innerHTML='<th>ID</th><th>Nama</th><th>Alamat</th><th>Desa/Kel.</th><th>Kecamatan</th><th>Umur</th><th>JK</th><th>Tanggal Onset</th><th>Gejala Utama</th><th>Status</th><th>Faktor Risiko (Kuesioner)</th><th>Outcome</th><th>Aksi</th>';
+    var html=gs.map(function(g){
+      var c=g.view,rf=[];
+      try{if(typeof window.deriveRiskFactors46==='function')rf=window.deriveRiskFactors46(c)||[];else rf=c.riskFactors||[]}catch(e){}
+      var positive=rf.filter(function(x){var v=String(x.value===undefined?x.answer:x.value).trim().toLowerCase();return v&&!/^(tidak|tidak ada|tidak diketahui|tidak relevan|negatif|bukan|belum|0|no)$/.test(v)});
+      var risk=positive.length?positive.slice(0,3).map(function(x){return '<span class="risk-chip"><span>'+esc(x.label||x.question||'Faktor risiko')+'</span><b>'+esc(x.value===undefined?x.answer:x.value)+'</b></span>'}).join('')+(positive.length>3?' <span class="risk-none">+'+(positive.length-3)+' lainnya</span>':''):'<span class="risk-none">Belum teridentifikasi</span>';
+      var keyAttr=esc(g.key);
+      return '<tr><td>'+esc(c.id||'-')+(g.rows.length>1?' <span class="badge">'+g.rows.length+' rekaman</span>':'')+'</td>'+
+        '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||'-')+'</td><td>'+esc(c.kec||'-')+'</td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'">Detail</button> <button type="button" data-v115-edit="'+esc(c.id||'')+'">Edit</button></td></tr>';
+    }).join('')||'<tr><td colspan="13"><div class="notice">Belum ada kasus yang cocok dengan pencarian.</div></td></tr>';
+    if(body.innerHTML!==html){body.innerHTML=html;lastHtml=html}
+    else lastHtml=html;
+    body.querySelectorAll('[data-v115-detail]').forEach(function(btn){btn.onclick=function(){detail(btn.getAttribute('data-v115-detail'))}});
+    body.querySelectorAll('[data-v115-edit]').forEach(function(btn){btn.onclick=function(){if(typeof window.editCase==='function')window.editCase(btn.getAttribute('data-v115-edit'))}});
+    var note=document.getElementById('caseListRecoveryNote106');
+    if(note)note.textContent='Menampilkan '+gs.length+' baris utama dari '+sourceRows().length+' rekaman sumber. Duplikasi dikelompokkan hanya untuk tampilan berdasarkan ID kasus + ID penyelidikan.';
+  }
+  var busy=false;
+  function schedule(){if(busy)return;busy=true;setTimeout(function(){busy=false;try{render()}catch(e){console.error('GORUT v115 render',e)}},30)}
+  var priorFinal=window.renderFinalDemographyAndCases66;
+  if(typeof priorFinal==='function')window.renderFinalDemographyAndCases66=function(){var r=priorFinal.apply(this,arguments);schedule();return r};
+  var priorCases=window.cases;
+  if(typeof priorCases==='function')window.cases=function(){var r=priorCases.apply(this,arguments);schedule();return r};
+  var priorPage=window.page;
+  if(typeof priorPage==='function')window.page=function(id){var r=priorPage.apply(this,arguments);if(id==='kasus')schedule();return r};
+  document.addEventListener('input',function(ev){if(ev.target&&ev.target.id==='caseSearch')schedule()});
+  document.addEventListener('click',function(ev){if(ev.target&&ev.target.closest&&ev.target.closest('[data-v115-detail],[data-v115-edit]'))return});
+  if(typeof MutationObserver!=='undefined'){
+    var target=document.getElementById('caseRows');
+    if(target)new MutationObserver(function(){if(target.innerHTML!==lastHtml)schedule()}).observe(target,{childList:true,subtree:true,characterData:true});
+  }
+  [100,800,2200,4500,8000].forEach(function(ms){setTimeout(schedule,ms)});
+  window.GORUT_V115={version:'v115',features:['one main row per case ID and investigation','record-level detail for every associated source row','preserve conflicting questionnaire answers','no database writes, merges, or deletions']};
+})();
