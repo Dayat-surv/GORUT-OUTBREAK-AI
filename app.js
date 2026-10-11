@@ -4171,3 +4171,47 @@ try{installBrandingV67();}catch(e){}
   }
   window.GORUT_V108={version:'v108',features:['preserve edited address and geography through Supabase sync','preserve symptoms field through server reload','keep questionnaire answers intact locally','no destructive database operations']};
 })();
+
+
+/* v110 — RESTORE FULL QUESTIONNAIRE DETAIL BUTTON AS FINAL CASE-LIST RENDERER
+   UI-only patch: no database writes, no deletion, and no record merging.
+*/
+(function(){
+  'use strict';
+  function renderV110(){
+    try{
+      if(typeof window.renderCaseListRecovery106==='function'){
+        window.renderCaseListRecovery106();
+      }
+    }catch(err){console.error('GORUT v110: gagal menampilkan daftar kasus/detail lengkap',err);}
+  }
+  const priorCases=window.cases;
+  window.cases=function(){
+    let result;
+    try{if(typeof priorCases==='function')result=priorCases.apply(this,arguments)}catch(err){console.warn('Renderer kasus sebelumnya:',err)}
+    renderV110();
+    return result;
+  };
+  const priorPage=window.page;
+  window.page=function(id){
+    let result;
+    try{if(typeof priorPage==='function')result=priorPage.apply(this,arguments)}catch(err){console.warn('Navigasi halaman sebelumnya:',err)}
+    if(id==='kasus')setTimeout(renderV110,80);
+    return result;
+  };
+  // Keep the full-detail renderer in control if an older delayed renderer runs afterward.
+  if(typeof window.renderFinalDemographyAndCases66==='function'){
+    const priorFinal=window.renderFinalDemographyAndCases66;
+    window.renderFinalDemographyAndCases66=function(){
+      let result;
+      try{result=priorFinal.apply(this,arguments)}catch(err){console.warn('Renderer demografi lama:',err)}
+      renderV110();
+      return result;
+    };
+  }
+  document.addEventListener('input',function(ev){
+    if(ev.target&&ev.target.id==='caseSearch')setTimeout(renderV110,0);
+  });
+  [100,600,1800,3600,7000,12000].forEach(ms=>setTimeout(renderV110,ms));
+  window.GORUT_V110={version:'v110',features:['restore Detail Lengkap action','use full questionnaire detail modal','UI-only rendering; preserve all data']};
+})();
