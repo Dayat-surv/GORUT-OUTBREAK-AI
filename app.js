@@ -4281,28 +4281,43 @@ try{installBrandingV67();}catch(e){}
 (function(){'use strict';window.GORUT_V112={version:'v112',features:['warn on invalid date formats','warn on age and birth-date mismatch','warn on questionnaire and investigation village mismatch','no automatic data corrections','repair garbled 14–21 label encoding where present']};})();
 
 
-/* v113: safety check before synchronizing duplicate case identities */
+/* v114: allow safe sync of existing duplicate case codes only when each row has its own server ID */
 (function(){
   'use strict';
   var originalSync = window.syncNow;
   if (typeof originalSync !== 'function') return;
   window.syncNow = async function(){
     var all = (window.db && Array.isArray(window.db.cases)) ? window.db.cases : [];
-    var keys = Object.create(null);
-    var duplicates = [];
+    var groups = Object.create(null);
+    var unsafe = [];
     all.forEach(function(item){
       if (!item || item.id == null) return;
       var key = String(item.id) + '::' + String(item.investigationId || '');
-      if (keys[key]) {
-        if (duplicates.indexOf(key) < 0) duplicates.push(key);
-      } else keys[key] = true;
+      (groups[key] || (groups[key] = [])).push(item);
     });
-    if (duplicates.length) {
-      window.alert('Sinkronisasi belum dijalankan karena ditemukan identitas kasus berulang pada penyelidikan yang sama. Periksa daftar kasus terlebih dahulu. Tidak ada data yang diubah.');
-      console.warn('GORUT v113: sync paused; repeated case identities', duplicates);
+    Object.keys(groups).forEach(function(key){
+      var rows = groups[key];
+      if (rows.length < 2) return;
+      var ids = rows.map(function(row){ return row.serverId == null ? '' : String(row.serverId).trim(); });
+      var allHaveIds = ids.every(function(id){ return !!id; });
+      var allIdsUnique = new Set(ids).size === ids.length;
+      if (!allHaveIds || !allIdsUnique) unsafe.push(key);
+    });
+    if (unsafe.length) {
+      window.alert('Sinkronisasi dihentikan demi keamanan karena ada kasus berulang yang belum memiliki ID server unik. Tidak ada data yang dikirim atau diubah. Periksa identitas kasus terlebih dahulu.');
+      console.warn('GORUT v114: sync paused; duplicate identities without distinct server IDs', unsafe);
       return false;
+    }
+    var safeDuplicates = Object.keys(groups).filter(function(key){
+      var rows = groups[key];
+      if (rows.length < 2) return false;
+      var ids = rows.map(function(row){ return String(row.serverId || '').trim(); });
+      return ids.every(Boolean) && new Set(ids).size === ids.length;
+    });
+    if (safeDuplicates.length) {
+      console.warn('GORUT v114: preserving repeated case-code rows; each will upsert by its existing distinct server ID. No merge or deletion performed.', safeDuplicates);
     }
     return originalSync.apply(this, arguments);
   };
-  window.GORUT_V113 = {version:'v113', syncSafetyCheck:true};
+  window.GORUT_V114 = {version:'v114', syncSafetyCheck:true, preserveDistinctServerRows:true};
 })();
