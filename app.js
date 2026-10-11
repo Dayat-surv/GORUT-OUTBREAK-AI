@@ -3524,6 +3524,25 @@ try{installBrandingV67();}catch(e){}
     const rows=keys.map((k,i)=>{const q=byId.get(String(k));const label=q?.label||qLabel(k)||k;return `<tr><td>${i+1}</td><td>${esc73(label)}</td><td><code>${esc73(k)}</code></td><td>${esc73(display(a[k]))}</td></tr>`}).join('');
     const filled=Object.keys(a).filter(k=>a[k]!==undefined&&a[k]!==null&&String(a[k])!=='').length;
     const meta=c.questionnaireMeta||{};
+    // v112: read-only data-quality checks; never auto-correct respondent answers.
+    const qaWarnings=[];
+    const qv=k=>a[k]===undefined||a[k]===null?'':String(a[k]).trim();
+    const onsetDate=qv('Q_tanggal_onset')||String(c.onset||'').slice(0,10);
+    const birthDate=qv('Q_tanggal_lahir');
+    const ageValue=Number(qv('Q_umur')||c.age);
+    const validISODate=s=>/^\\d{4}-\\d{2}-\\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
+    ['Q_tanggal_pertama_berobat','Q_tanggal_lahir','Q_tanggal_onset','Q_tanggal_dirawat','Q_tanggal_onset_gejala'].forEach(k=>{
+      const v=qv(k);if(v&&!validISODate(v))qaWarnings.push('Format tanggal tidak valid pada '+(qLabel(k)||k)+': '+v+'. Periksa sumber asli.');
+    });
+    if(birthDate&&onsetDate&&validISODate(birthDate)&&validISODate(onsetDate)&&Number.isFinite(ageValue)){
+      const b=new Date(birthDate+'T00:00:00Z'),o=new Date(onsetDate+'T00:00:00Z');
+      let ageAtOnset=o.getUTCFullYear()-b.getUTCFullYear();
+      if(o.getUTCMonth()<b.getUTCMonth()||(o.getUTCMonth()===b.getUTCMonth()&&o.getUTCDate()<b.getUTCDate()))ageAtOnset--;
+      if(Math.abs(ageAtOnset-ageValue)>1)qaWarnings.push('Umur ('+ageValue+' tahun) tidak sesuai dengan tanggal lahir ('+birthDate+') pada tanggal onset ('+onsetDate+'); verifikasi, jangan koreksi otomatis.');
+    }
+    const qVillage=qv('Q_desa_kelurahan'),caseVillage=String(c.desa||c.admin?.desa||'').trim();
+    if(qVillage&&caseVillage&&qVillage.toLocaleLowerCase('id')!==caseVillage.toLocaleLowerCase('id'))qaWarnings.push('Desa pada kuesioner ('+qVillage+') berbeda dari desa data penyelidikan ('+caseVillage+'); pastikan lokasi yang benar.');
+    const qaWarningHtml=qaWarnings.length?'<div class="notice" style="border-left:4px solid #d97706;margin:10px 0"><b>⚠️ Perlu verifikasi data ('+qaWarnings.length+')</b><ul>'+qaWarnings.map(w=>'<li>'+esc73(w)+'</li>').join('')+'</ul><small>Peringatan ini hanya pemeriksaan tampilan. Tidak ada jawaban yang diubah.</small></div>':'';
     const core=[['ID Kasus',c.id],['Nama',c.name],['Penyakit/sindrom',c.disease||window.db?.investigations?.find(x=>String(x.id)===String(c.investigationId))?.disease],['Status kasus',c.status],['Umur',c.age],['Jenis kelamin',c.sex],['Tanggal onset',c.onset],['Outcome',c.outcome],['Alamat',c.address],['Desa/Kelurahan',c.desa||c.admin?.desa],['Kecamatan',c.kec||c.admin?.kec],['Kabupaten',c.kab||c.admin?.kab],['Provinsi',c.prov||c.admin?.prov],['Puskesmas',c.pkm||c.puskesmas],['Latitude',c.lat],['Longitude',c.lng],['Gejala utama',c.symptoms||c.foodCase?.symptoms],['Dibuat',c.createdAt],['Diperbarui',c.updatedAt]];
     const coreRows=core.map(([k,v])=>`<tr><td>${esc73(k)}</td><td>${esc73(display(v))}</td></tr>`).join('');
     const nestedRows=['foodCase','priority','admin'].filter(k=>c[k]&&typeof c[k]==='object'&&Object.keys(c[k]).length).map(k=>`<tr><th colspan="2">${esc73(({foodCase:'Detail keracunan pangan',priority:'Variabel prioritas penyakit',admin:'Informasi wilayah hasil pemetaan'})[k])}</th></tr>`+Object.entries(c[k]).map(([field,value])=>`<tr><td>${esc73(field)}</td><td>${esc73(display(value))}</td></tr>`).join('')).join('');
@@ -3532,6 +3551,7 @@ try{installBrandingV67();}catch(e){}
     modal(`<h2>🔎 Detail Lengkap Kasus — ${esc73(c.id)}</h2>
       <div class="grid"><div class="stat"><small>Nama</small><b>${esc73(c.name||'-')}</b></div><div class="stat"><small>Jawaban kuesioner terisi</small><b>${filled}/${keys.length}</b></div><div class="stat"><small>Versi instrumen</small><b>${esc73(meta.version||schema[0]?.version||'-')}</b></div><div class="stat"><small>Terakhir diperbarui</small><b>${esc73(c.updatedAt||c.createdAt||'-')}</b></div></div>
       <div class="notice">Ringkasan identitas dan klinis ditampilkan terpisah dari jawaban kuesioner. Field kosong ditandai <b>Belum diisi</b>; seluruh kunci jawaban tersimpan tetap ditampilkan, termasuk jawaban dari versi instrumen sebelumnya.</div>
+      ${qaWarningHtml}
       <details open><summary><b>1. Data inti kasus, klinis, dan lokasi</b></summary><div style="overflow:auto;max-height:32vh"><table class="report-table"><thead><tr><th>Variabel</th><th>Nilai</th></tr></thead><tbody>${coreRows}${nestedRows}</tbody></table></div></details>
       <details open style="margin-top:12px"><summary><b>2. Seluruh jawaban kuesioner (${keys.length} field)</b></summary><div style="overflow:auto;max-height:45vh"><table class="report-table"><thead><tr><th>No.</th><th>Pertanyaan</th><th>Field</th><th>Jawaban</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Belum ada jawaban kuesioner.</td></tr>'}</tbody></table></div></details>
       <details style="margin-top:12px"><summary><b>3. Ringkasan faktor risiko (${risks.length})</b></summary><div style="overflow:auto;max-height:30vh"><table class="report-table"><thead><tr><th>Faktor/pertanyaan</th><th>Jawaban</th></tr></thead><tbody>${riskRows||'<tr><td colspan="2">Belum ada ringkasan faktor risiko terhitung.</td></tr>'}</tbody></table></div></details>
@@ -4255,3 +4275,7 @@ try{installBrandingV67();}catch(e){}
   'use strict';
   window.GORUT_V111={version:'v111',features:['deduplicate rows by case ID plus investigation ID in display only','combine questionnaire fields from matching source rows in detail view','preserve original db.cases records; no database writes or deletions']};
 })();
+
+
+/* v112 — read-only questionnaire data quality warnings; no automatic edits */
+(function(){'use strict';window.GORUT_V112={version:'v112',features:['warn on invalid date formats','warn on age and birth-date mismatch','warn on questionnaire and investigation village mismatch','no automatic data corrections','repair garbled 14–21 label encoding where present']};})();
