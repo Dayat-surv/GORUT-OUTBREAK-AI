@@ -3501,7 +3501,10 @@ try{installBrandingV67();}catch(e){}
     if(!sourceCases.length)return;
     // v111: present the union of questionnaire fields from duplicate source rows in the same investigation.
     // No underlying record is modified; conflicting non-empty answers remain visible in the modal.
-    const activeSource=sourceCases.find(x=>String(x.investigationId||'')===String(window.db?.active||''))||sourceCases[0];
+    const activeMatches=sourceCases.filter(x=>String(x.investigationId||'')===String(window.db?.active||''));
+    const candidatePool=activeMatches.length?activeMatches:sourceCases;
+    const detailCompleteness=x=>['address','desa','kec','kab','prov','pkm','puskesmas','lat','lng','symptoms','status','outcome'].reduce((n,k)=>n+(x[k]!==undefined&&x[k]!==null&&String(x[k]).trim()!==''?1:0),0)+Object.values(x.answers||{}).filter(v=>v!==undefined&&v!==null&&String(v)!=='').length+Object.keys(x.admin||{}).length;
+    const activeSource=[...candidatePool].sort((a,b)=>detailCompleteness(b)-detailCompleteness(a))[0];
     const siblings=sourceCases.filter(x=>String(x.investigationId||'')===String(activeSource.investigationId||''));
     const mergedAnswers={};
     siblings.forEach(x=>Object.entries(x.answers||{}).forEach(([k,v])=>{
