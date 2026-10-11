@@ -509,8 +509,10 @@ function clearFieldForm(){['fieldSubject','fieldOfficer','fieldLat','fieldLng','
 function exportFieldVisits(){const a=db.fieldVisits||[];const head=['id','investigationId','activity','subject','date','officer','lat','lng','location','finding','action','syncStatus'];const csv=[head.join(','),...a.map(x=>head.map(k=>`"${String(x[k]??'').replaceAll('"','""')}"`).join(','))].join('\n');const blob=new Blob([csv],{type:'text/csv'});const u=URL.createObjectURL(blob),aEl=document.createElement('a');aEl.href=u;aEl.download='gorut-field-visits.csv';aEl.click();URL.revokeObjectURL(u)}
 function renderMaster(){
  const rows=document.getElementById('masterRows'); if(!rows)return;
- const search=(val('masterSearch')||'').toLowerCase(), group=val('masterGroup')||'';
- const arr=Object.entries(diseases).filter(([id,d])=>(!search||(`${d.name} ${d.group} ${id}`).toLowerCase().includes(search))&&(!group||d.group===group));
+ const diseaseFilter=document.getElementById('masterDiseaseSearch');
+ if(diseaseFilter&&diseaseFilter.options.length<=1){const current=diseaseFilter.value;diseaseFilter.innerHTML='<option value="">▼ Cari penyakit / Semua penyakit</option>'+Object.entries(diseases).map(([id,d])=>`<option value="${esc(id)}">${esc(d.name||id)}</option>`).join('');diseaseFilter.value=current;}
+ const search=val('masterDiseaseSearch')||'', group=val('masterGroup')||'';
+ const arr=Object.entries(diseases).filter(([id,d])=>(!search||id===search)&&(!group||d.group===group));
  rows.innerHTML=arr.map(([id,d])=>{const src=instrumentSource(id,d);return `<tr><td><b>${esc(d.name)}</b><br><span class="badge">${id}</span></td><td>${esc(d.group)}</td><td>${d.q.length}</td><td>${esc(src)}</td><td><span class="badge">${d.validationStatus||'Perlu validasi akhir'}</span></td></tr>`}).join('')||'<tr><td colspan="5">Tidak ditemukan.</td></tr>';
 }
 function instrumentSource(id,d){
