@@ -4099,3 +4099,75 @@ try{installBrandingV67();}catch(e){}
   window.saveEditedCaseV107=saveEdited107;
   window.GORUT_V107={version:'v107',features:['reliable case edit modal','core and location fields','food-poisoning fields','preserve questionnaire answers','validation and sync queue']};
 })();
+
+
+/* ==================== v108 — CASE EDIT SYNC METADATA PRESERVATION ====================
+   Keeps edited operational fields in questionnaire_response (JSONB) so they survive
+   Supabase sync/reload without requiring destructive schema changes.
+   Existing answers are restored locally after sync; no records are deleted.
+*/
+(function(){
+  'use strict';
+  const oldSync108=window.syncNow;
+  if(typeof oldSync108==='function'){
+    window.syncNow=async function(){
+      const cases=Array.isArray(window.db?.cases)?window.db.cases:[];
+      const originals=new Map();
+      try{
+        for(const c of cases){
+          originals.set(c,c.answers);
+          const oldAnswers=c.answers&&typeof c.answers==='object'?c.answers:{};
+          c.answers={
+            ...oldAnswers,
+            __gorut_case_meta_v1:{
+              address:c.address??'',
+              prov:c.prov??c.admin?.prov??'',
+              kab:c.kab??c.admin?.kab??'',
+              kec:c.kec??c.admin?.kec??'',
+              desa:c.desa??c.admin?.desa??'',
+              symptoms:c.symptoms??'',
+              admin:c.admin&&typeof c.admin==='object'?{...c.admin}:{}
+            }
+          };
+        }
+        return await oldSync108.apply(this,arguments);
+      } finally {
+        for(const [c,answers] of originals){
+          if(answers===undefined) delete c.answers;
+          else c.answers=answers;
+        }
+        try{if(typeof save==='function')save()}catch(e){console.warn('v108: gagal menyimpan cache lokal setelah sinkronisasi',e)}
+      }
+    };
+  }
+
+  const oldLoad108=window.loadServerOperationalData;
+  if(typeof oldLoad108==='function'){
+    window.loadServerOperationalData=async function(){
+      const result=await oldLoad108.apply(this,arguments);
+      for(const c of (window.db?.cases||[])){
+        const answers=c.answers&&typeof c.answers==='object'?{...c.answers}:{};
+        const meta=answers.__gorut_case_meta_v1;
+        if(meta&&typeof meta==='object'){
+          c.address=meta.address??c.address??'';
+          c.prov=meta.prov??c.prov??'';
+          c.kab=meta.kab??c.kab??'';
+          c.kec=meta.kec??c.kec??'';
+          c.desa=meta.desa??c.desa??'';
+          c.symptoms=meta.symptoms??c.symptoms??'';
+          c.admin=Object.assign({},c.admin||{},meta.admin||{},{
+            prov:c.prov||c.admin?.prov||'',
+            kab:c.kab||c.admin?.kab||'',
+            kec:c.kec||c.admin?.kec||'',
+            desa:c.desa||c.admin?.desa||''
+          });
+          delete answers.__gorut_case_meta_v1;
+          c.answers=answers;
+        }
+      }
+      try{if(typeof save==='function')save()}catch(e){console.warn('v108: cache lokal setelah pemuatan server tidak tersimpan',e)}
+      return result;
+    };
+  }
+  window.GORUT_V108={version:'v108',features:['preserve edited address and geography through Supabase sync','preserve symptoms field through server reload','keep questionnaire answers intact locally','no destructive database operations']};
+})();
