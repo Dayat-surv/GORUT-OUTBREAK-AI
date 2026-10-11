@@ -423,18 +423,25 @@ window.gorutHandleLogin = async function () {
     if(el){el.style.display='block';el.textContent=text;el.style.background=ok?'#ecfdf3':'#eff6ff';el.style.borderLeftColor=ok?'#16803c':'#1769aa';}
   }
   function showRecovery(){
+    /* Pemulihan harus tampil meski aplikasi sebelumnya masih menyimpan sesi lokal/demo. */
+    var login=document.getElementById('login');
+    var app=document.getElementById('app');
+    if(login){login.style.display='grid';login.style.position='fixed';login.style.inset='0';login.style.zIndex='99999';}
+    if(app)app.style.display='none';
     var panel=document.getElementById('passwordRecoveryPanel');
     if(panel)panel.style.display='block';
     var pass=document.getElementById('password');
     if(pass&&pass.closest('.field'))pass.closest('.field').style.display='none';
     var submit=document.getElementById('loginSubmit');if(submit)submit.style.display='none';
+    var email=document.getElementById('email');if(email)email.removeAttribute('required');
+    var newPass=document.getElementById('newPassword');if(newPass)newPass.focus();
   }
   window.gorutRequestPasswordReset=async function(){
     var email=(document.getElementById('email')?.value||'').trim();
     if(!email){showMsg('Masukkan email akun terlebih dahulu, lalu pilih “Lupa kata sandi?”.',false);document.getElementById('email')?.focus();return;}
     try{
       var sb=await client();
-      var redirectTo=window.location.origin+window.location.pathname;
+      var redirectTo=window.location.origin+window.location.pathname+'?password-recovery=1';
       var r=await sb.auth.resetPasswordForEmail(email,{redirectTo:redirectTo});
       if(r.error)throw r.error;
       showMsg('Jika email tersebut terdaftar, instruksi pemulihan akan dikirim. Periksa Kotak Masuk dan Spam. Tautan dapat kedaluwarsa; jangan bagikan tautan atau token kepada siapa pun.',true);
@@ -465,13 +472,25 @@ window.gorutHandleLogin = async function () {
       await sb.auth.signOut();
     }catch(e){console.error('Password update failed',e);showMsg('Kata sandi belum diperbarui: '+(e.message||String(e)),false);}
   };
+  /* Deteksi hash recovery secara langsung; jangan bergantung pada event yang bisa terlewat. */
+  var recoveryHash=window.location.hash||'';
+  var recoveryQuery=new URLSearchParams(window.location.search);
+  if(recoveryHash.includes('type=recovery')||
+     (recoveryQuery.has('password-recovery')&&recoveryHash.includes('access_token'))){
+    showRecovery();
+  }
   (async function(){
     try{
       var sb=await client();
       sb.auth.onAuthStateChange(function(event){
         if(event==='PASSWORD_RECOVERY')showRecovery();
       });
-      if(new URLSearchParams(window.location.search).has('password-recovery')&&window.location.hash.includes('access_token'))showRecovery();
+      /* Periksa lagi setelah client Supabase selesai diinisialisasi. */
+      var hashNow=window.location.hash||'';
+      if(hashNow.includes('type=recovery')||
+         (new URLSearchParams(window.location.search).has('password-recovery')&&hashNow.includes('access_token'))){
+        showRecovery();
+      }
     }catch(e){console.warn('Password recovery initialization:',e.message||e);}
   })();
 })();
