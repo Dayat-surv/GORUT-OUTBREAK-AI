@@ -4019,3 +4019,83 @@ try{installBrandingV67();}catch(e){}
   let tries=0;const retry=setInterval(()=>{tries++;try{if(E('caseRows')&&window.db&&Array.isArray(window.db.cases))list()}catch(e){}if(tries>=20)clearInterval(retry)},1000);
   window.GORUT_V106={version:'v106',features:['case list recovery','disease and clinical summary','risk-factor summary','active-investigation fallback','search across questionnaire answers','full case detail action','read-only rendering']};
 })();
+
+/* ==================== v107 — RELIABLE CASE EDITOR ==================== */
+(function(){
+  const esc107=v=>String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const E107=id=>document.getElementById(id);
+  const dateValue107=(v,type)=>{if(!v)return '';const s=String(v);return type==='datetime-local'?s.replace(/Z$/,'').slice(0,16):s.slice(0,10)};
+  const input107=(id,label,type,value)=>'<div class="field"><label for="'+id+'">'+label+'</label><input id="'+id+'" type="'+type+'" value="'+esc107(value)+'"></div>';
+  const textarea107=(id,label,value)=>'<div class="field"><label for="'+id+'">'+label+'</label><textarea id="'+id+'" rows="2">'+esc107(value)+'</textarea></div>';
+  const select107=(id,label,current,options)=>{
+    const values=[...new Set([...(options||[]),...(current!=null&&String(current)!==''?[String(current)]:[])])];
+    return '<div class="field"><label for="'+id+'">'+label+'</label><select id="'+id+'">'+values.map(v=>'<option value="'+esc107(v)+'" '+(String(v)===String(current==null?'':current)?'selected':'')+'>'+esc107(v)+'</option>').join('')+'</select></div>';
+  };
+  function edit107(id){
+    const c=(window.db?.cases||[]).find(x=>String(x.id)===String(id));
+    if(!c){alert('Kasus tidak ditemukan pada data aplikasi. Data tidak diubah.');return;}
+    const inv=(window.db?.investigations||[]).find(x=>String(x.id)===String(c.investigationId));
+    const food=inv?.disease==='keracunan-pangan'||!!c.foodCase,fc=c.foodCase||{};
+    const onsetType=String(c.onset||'').includes('T')?'datetime-local':'date';
+    let html='<h2>Edit Kasus — '+esc107(c.id)+'</h2><div class="notice">ID kasus dan investigasi tidak diubah. Seluruh jawaban kuesioner serta field lain yang tidak ditampilkan akan tetap dipertahankan.</div>';
+    html+=input107('ed107_id','ID Kasus','text',c.id);
+    html+=input107('ed107_name','Nama','text',c.name||'');
+    html+=input107('ed107_age','Umur (tahun)','number',c.age==null?'':c.age);
+    html+=select107('ed107_sex','Jenis kelamin',c.sex,['Laki-laki','Perempuan','Tidak diketahui']);
+    html+=input107('ed107_onset','Tanggal/waktu onset',onsetType,dateValue107(c.onset,onsetType));
+    html+=select107('ed107_status','Status kasus',c.status,['Suspek','Probable','Konfirmasi','Bukan kasus','Belum diklasifikasi']);
+    html+=select107('ed107_outcome','Outcome',c.outcome,['Rawat jalan','Dirawat','Sembuh','Meninggal','Masih sakit/dirawat','Tidak diketahui']);
+    html+=textarea107('ed107_symptoms','Gejala utama',c.symptoms||c.answers?.symptoms||c.answers?.symptom||c.answers?.gejala||'');
+    html+='<details open style="margin-top:12px"><summary><b>Alamat dan wilayah</b></summary>';
+    html+=input107('ed107_address','Alamat lengkap','text',c.address||'');
+    html+=input107('ed107_prov','Provinsi','text',c.prov||c.admin?.prov||'');
+    html+=input107('ed107_kab','Kabupaten/Kota','text',c.kab||c.admin?.kab||'');
+    html+=input107('ed107_kec','Kecamatan','text',c.kec||c.admin?.kec||'');
+    html+=input107('ed107_desa','Desa/Kelurahan','text',c.desa||c.admin?.desa||'');
+    html+=input107('ed107_lat','Latitude','number',c.lat==null?'':c.lat);
+    html+=input107('ed107_lng','Longitude','number',c.lng==null?'':c.lng);
+    html+='</details>';
+    if(food){
+      html+='<details open style="margin-top:12px"><summary><b>Detail keracunan pangan</b></summary>';
+      html+=input107('ed107_food','Makanan/minuman dikonsumsi','text',fc.food||fc.exposureFood||'');
+      html+=input107('ed107_consumed','Waktu konsumsi','datetime-local',dateValue107(fc.consumedAt,'datetime-local'));
+      html+=input107('ed107_foodonset','Waktu onset','datetime-local',dateValue107(fc.onsetAt||fc.onsetTime,'datetime-local'));
+      html+=input107('ed107_incubation','Masa inkubasi (jam)','number',fc.incubationHours==null?'':fc.incubationHours);
+      html+=input107('ed107_foodsource','Sumber pangan','text',fc.foodSource||fc.source||'');
+      html+=select107('ed107_hospitalized','Dirawat inap?',fc.hospitalized||'Tidak',['Tidak','Ya']);
+      html+=input107('ed107_specimen','Spesimen klinis','text',fc.clinicalSpecimen||fc.specimenClinical||'');
+      html+='</details>';
+    }
+    html+='<div class="toolbar" style="margin-top:14px"><button type="button" class="primary" id="ed107_save">Simpan Perubahan</button><button type="button" id="ed107_cancel">Batal</button></div>';
+    const box=E107('modalbox'),modalEl=E107('modal');
+    if(!box||!modalEl){alert('Panel edit belum tersedia. Muat ulang halaman dan coba kembali.');return;}
+    box.innerHTML=html;E107('ed107_id').readOnly=true;modalEl.classList.add('show');
+    E107('ed107_save').addEventListener('click',()=>saveEdited107(id));
+    E107('ed107_cancel').addEventListener('click',()=>modalEl.classList.remove('show'));
+  }
+  function saveEdited107(id){
+    const c=(window.db?.cases||[]).find(x=>String(x.id)===String(id));
+    if(!c){alert('Kasus tidak ditemukan. Tidak ada perubahan yang disimpan.');return;}
+    const v=id=>E107(id)?.value??'';
+    const ageRaw=v('ed107_age'),age=ageRaw===''?null:Number(ageRaw);
+    if(age!==null&&(!Number.isFinite(age)||age<0)){alert('Umur harus berupa angka nol atau lebih.');return;}
+    const coord=id=>{const x=v(id);if(x.trim()==='')return null;const n=Number(x);return Number.isFinite(n)?n:NaN};
+    const lat=coord('ed107_lat'),lng=coord('ed107_lng');
+    if(Number.isNaN(lat)||Number.isNaN(lng)||(lat!==null&&(lat < -90||lat>90))||(lng!==null&&(lng < -180||lng>180))){alert('Latitude harus -90 sampai 90 dan longitude -180 sampai 180.');return;}
+    Object.assign(c,{name:v('ed107_name').trim(),age:age===null?0:age,sex:v('ed107_sex'),onset:v('ed107_onset'),status:v('ed107_status'),outcome:v('ed107_outcome'),symptoms:v('ed107_symptoms'),address:v('ed107_address'),prov:v('ed107_prov'),kab:v('ed107_kab'),kec:v('ed107_kec'),desa:v('ed107_desa'),lat:lat,lng:lng,updatedAt:new Date().toISOString()});
+    c.admin=Object.assign({},c.admin||{},{prov:c.prov||c.admin?.prov||'',kab:c.kab||c.admin?.kab||'',kec:c.kec||c.admin?.kec||'',desa:c.desa||c.admin?.desa||'',lat:lat,lng:lng,source:c.admin?.source||'input manual'});
+    const inv=(window.db?.investigations||[]).find(x=>String(x.id)===String(c.investigationId));
+    if(inv?.disease==='keracunan-pangan'||c.foodCase){
+      const old=c.foodCase||{};
+      c.foodCase=Object.assign({},old,{food:v('ed107_food'),consumedAt:v('ed107_consumed'),onsetAt:v('ed107_foodonset'),incubationHours:v('ed107_incubation')===''?null:Number(v('ed107_incubation')),symptoms:v('ed107_symptoms'),foodSource:v('ed107_foodsource'),hospitalized:v('ed107_hospitalized'),clinicalSpecimen:v('ed107_specimen')});
+    }
+    try{if(typeof queueSync==='function')queueSync('cases')}catch(e){console.warn('Antrean sinkronisasi kasus:',e)}
+    try{if(typeof save==='function')save();else localStorage.setItem('gorut-v8',JSON.stringify(window.db))}catch(e){alert('Perubahan belum dapat disimpan lokal: '+e.message);return;}
+    E107('modal')?.classList.remove('show');
+    try{if(typeof window.renderCaseListRecovery106==='function')window.renderCaseListRecovery106();else if(typeof window.cases==='function')window.cases()}catch(e){console.warn('Refresh daftar kasus:',e)}
+    alert('Perubahan kasus berhasil disimpan pada aplikasi. Jawaban kuesioner tetap dipertahankan. Jika menggunakan Supabase, jalankan Sinkronisasi Supabase untuk mengirim perubahan ke server.');
+  }
+  window.editCase=edit107;
+  window.saveEditedCaseV107=saveEdited107;
+  window.GORUT_V107={version:'v107',features:['reliable case edit modal','core and location fields','food-poisoning fields','preserve questionnaire answers','validation and sync queue']};
+})();
