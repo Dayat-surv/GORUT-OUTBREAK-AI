@@ -412,6 +412,49 @@ async function syncNow(){
 }
 function uuidFrom(v){let h=String(v).replace(/[^0-9a-f]/gi,'').padEnd(32,'0').slice(0,32);return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20,32);}
 
+/* GORUT_SERVER_DATA_LOADER_V1 — baca data operasional dari Supabase tanpa mengirim data lokal. */
+async function loadServerOperationalData(){
+  const sb=await backendClient();
+  const user=window.GORUT_USER||GORUT_USER;
+  if(!sb||!user?.id||user.id==='offline') throw new Error('Sesi Supabase tidak tersedia.');
+  const tables=['investigations','cases','contacts','specimens','field_visits','alerts'];
+  const results=await Promise.all(tables.map(async name=>({name,...await sb.from(name).select('*')})));
+  const failed=results.filter(x=>x.error);
+  if(failed.length) throw new Error('Data server belum dapat dibaca ('+failed.map(x=>x.name+': '+x.error.message).join('; ')+'). Data lokal tidak dikirim atau dihapus.');
+  const raw=Object.fromEntries(results.map(x=>[x.name,x.data||[]]));
+  const backupKey='gorut-pre-server-backup-v1';
+  if(!localStorage.getItem(backupKey)){
+    try{const existing=localStorage.getItem(K);if(existing)localStorage.setItem(backupKey,existing)}catch(e){console.warn('Backup lokal tidak dapat dibuat',e)}
+  }
+  const localId=(r,fallback)=>String(r?.metadata?.local_id??fallback??r?.id??'');
+  const invMap=new Map();
+  const investigations=raw.investigations.map(r=>{
+    const id=localId(r,r.id);invMap.set(String(r.id),id);
+    return {id,name:r.name||'Investigasi tanpa nama',type:r.outbreak_type||'Penyakit Menular',disease:r.metadata?.local_disease||r.disease_id||'campak',prov:r.province||'Gorontalo',kab:r.district||'Gorontalo Utara',kec:r.subdistrict||'',desa:r.village||'',pkm:r.facility||'',date:r.start_date||'',status:r.status||'Berjalan',serverId:r.id,owner_id:r.owner_id};
+  });
+  const caseMap=new Map();
+  const cases=raw.cases.map(r=>{
+    const id=String(r.case_code||r.metadata?.local_id||r.id);caseMap.set(String(r.id),id);
+    const q=r.questionnaire_response&&typeof r.questionnaire_response==='object'?r.questionnaire_response:{};
+    const inv=invMap.get(String(r.investigation_id))||String(r.investigation_id||'');
+    return {id,investigationId:inv,name:r.full_name||'',age:r.age??'',sex:r.sex||'',onset:r.onset_date||'',status:r.status||'',outcome:r.outcome||'',lat:r.latitude??null,lng:r.longitude??null,answers:q,foodCase:q.foodCase||null,priority:q.priority||null,disease:investigations.find(x=>String(x.id)===String(inv))?.disease||q.disease||'',serverId:r.id};
+  });
+  const contacts=raw.contacts.map(r=>({id:localId(r,r.id),investigationId:invMap.get(String(r.investigation_id))||String(r.investigation_id||''),caseId:caseMap.get(String(r.index_case_id))||r.metadata?.linked_case_id||'',name:r.contact_name||'',relation:r.relation||'',last:r.last_contact_date||'',status:r.monitoring_status||'',follow:r.follow_up||'',phone:r.metadata?.phone||'',address:r.metadata?.address||'',exposureType:r.metadata?.exposure_type||'',symptoms:r.metadata?.symptoms||'',onset:r.metadata?.onset||'',nextFollowUp:r.metadata?.next_follow_up||'',isolation:r.metadata?.isolation||'',specimen:r.metadata?.specimen||'',notes:r.metadata?.notes||'',serverId:r.id}));
+  const specimens=raw.specimens.map(r=>({id:localId(r,r.id),investigationId:invMap.get(String(r.investigation_id))||String(r.investigation_id||''),caseId:caseMap.get(String(r.case_id))||r.metadata?.linked_case_id||'',type:r.specimen_type||'',date:r.collected_at||'',lab:r.lab_name||'',result:r.result||'',status:r.status||'',serverId:r.id}));
+  const fieldVisits=raw.field_visits.map(r=>({id:localId(r,r.id),investigationId:invMap.get(String(r.investigation_id))||String(r.investigation_id||''),activity:r.activity||'',subject:r.subject||'',date:r.visit_at||'',officer:r.officer_name||'',lat:r.latitude??null,lng:r.longitude??null,location:r.location_text||'',finding:r.finding||'',action:r.action_taken||'',photo:r.media?.[0]?.data||'',syncStatus:r.sync_status||'synced',serverId:r.id}));
+  const alerts=raw.alerts.map(r=>({id:localId(r,r.id),disease:r.metadata?.local_disease||r.disease_id||'campak',week:r.epi_week||'',date:r.alert_date||'',facility:r.reporting_facility||'',count:r.count||0,result:r.verification_result||'',serverId:r.id}));
+  /* Swap operational arrays only after every required query succeeds. Keep local backup untouched. */
+  db.investigations=investigations;db.cases=cases;db.contacts=contacts;db.specimens=specimens;db.fieldVisits=fieldVisits;db.alerts=alerts;
+  if(!db.investigations.some(x=>String(x.id)===String(db.active))) db.active=db.investigations[0]?.id||null;
+  window.db=db;
+  const badge=document.getElementById('backendBadge'),detail=document.getElementById('backendDetail');
+  if(badge)badge.textContent='Backend: data server dimuat';
+  if(detail)detail.textContent='Sumber: Supabase sesuai akses akun. Investigasi '+investigations.length+', kasus '+cases.length+', kontak '+contacts.length+', spesimen '+specimens.length+', kunjungan '+fieldVisits.length+', alert '+alerts.length+'. Data lokal lama dipertahankan sebagai cadangan pada perangkat ini.';
+  return {investigations:investigations.length,cases:cases.length,contacts:contacts.length,specimens:specimens.length,fieldVisits:fieldVisits.length,alerts:alerts.length};
+}
+window.loadServerOperationalData=loadServerOperationalData;
+
+
 function render(){db.fieldVisits=db.fieldVisits||[]; disease.innerHTML=diseaseOptions();qDisease.innerHTML=diseaseOptions();if(act()){disease.value=act().disease||db.selectedDisease||'campak';qDisease.value=act().disease||db.selectedDisease||'campak'}else{disease.value=db.selectedDisease||'campak';qDisease.value=db.selectedDisease||'campak'}dash();if(typeof window.cases==='function')window.cases();contacts();specimens();alerts();renderQ();report();populateFieldInvestigations();fieldVisits();if(document.getElementById('chain'))document.getElementById('chain').innerHTML=act()?.type==='Penyakit Menular'?'<h2>Rantai Penularan</h2><p>Gunakan menu 🧬 Rantai Penularan untuk visualisasi hubungan kasus dan kontak.</p>':'';renderChain();populateRiskInvestigations();if(document.getElementById('risiko')?.classList.contains('show'))runRiskAssessment()}
 const loginEl=document.getElementById('login'),app=document.getElementById('app'),title=document.getElementById('title'),klbRows=document.getElementById('klbRows'),stats=document.getElementById('stats'),bankEl=document.getElementById('bank'),preview=document.getElementById('preview'),caseRows=document.getElementById('caseRows'),modalEl=document.getElementById('modal');
 
@@ -1794,11 +1837,21 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       window.GORUT_USER={...user,id:user.id,email:user.email||name,role:pr.data.role,displayName:pr.data.full_name||user.email,facility:pr.data.facility||null};
       GORUT_USER=window.GORUT_USER;
       localStorage.removeItem(SESSION_KEY);
-      const app=document.getElementById('app');if(app)app.style.display='block';
-      const login=document.getElementById('login');if(login)login.style.display='none';
-      const rb=document.getElementById('roleBadge');if(rb)rb.textContent='User: '+pr.data.role;
-      try{setRoleUI()}catch(e){}
-      try{await window.render()}catch(e){console.error('Render after Supabase login failed',e)}
+      try{
+        const counts=await window.loadServerOperationalData();
+        const app=document.getElementById('app');if(app)app.style.display='block';
+        const login=document.getElementById('login');if(login)login.style.display='none';
+        const rb=document.getElementById('roleBadge');if(rb)rb.textContent='User: '+pr.data.role+' · Data Supabase';
+        try{setRoleUI()}catch(e){}
+        await window.render();
+        const detail=document.getElementById('backendDetail');
+        if(detail)detail.textContent='Data Supabase berhasil dimuat: '+counts.investigations+' investigasi, '+counts.cases+' kasus, '+counts.contacts+' kontak, '+counts.specimens+' spesimen, '+counts.fieldVisits+' kunjungan, '+counts.alerts+' alert.';
+      }catch(loadError){
+        console.error('Supabase data load failed',loadError);
+        window.GORUT_USER=null;GORUT_USER=null;
+        try{await sb.auth.signOut()}catch(e){}
+        showLogin('Login berhasil, tetapi data operasional belum dapat dibaca. '+(loadError?.message||'Periksa kebijakan akses/RLS dan skema tabel. Tidak ada data lokal yang dikirim ke server.'));
+      }
       return;
     }
     let users=readUsers();
