@@ -3497,7 +3497,22 @@ try{installBrandingV67();}catch(e){}
   }
   function answerCount(a){return Object.keys(a||{}).filter(k=>String(a[k]??'')!=='').length}
   function detailCase(id){
-    const c=(window.db?.cases||[]).find(x=>String(x.id)===String(id));if(!c)return;
+    const sourceCases=(window.db?.cases||[]).filter(x=>String(x.id)===String(id));
+    if(!sourceCases.length)return;
+    // v111: present the union of questionnaire fields from duplicate source rows in the same investigation.
+    // No underlying record is modified; conflicting non-empty answers remain visible in the modal.
+    const activeSource=sourceCases.find(x=>String(x.investigationId||'')===String(window.db?.active||''))||sourceCases[0];
+    const siblings=sourceCases.filter(x=>String(x.investigationId||'')===String(activeSource.investigationId||''));
+    const mergedAnswers={};
+    siblings.forEach(x=>Object.entries(x.answers||{}).forEach(([k,v])=>{
+      if(mergedAnswers[k]===undefined||mergedAnswers[k]===null||mergedAnswers[k]==='')mergedAnswers[k]=v;
+      else if(v!==undefined&&v!==null&&v!==''&&JSON.stringify(mergedAnswers[k])!==JSON.stringify(v)){
+        const old=Array.isArray(mergedAnswers[k])?mergedAnswers[k]:[mergedAnswers[k]];
+        const vals=[...old,...(Array.isArray(v)?v:[v])];
+        mergedAnswers[k]=vals.filter((z,i)=>vals.findIndex(y=>JSON.stringify(y)===JSON.stringify(z))===i);
+      }
+    }));
+    const c={...siblings.reduce((acc,x)=>({...acc,...Object.fromEntries(Object.entries(x).filter(([k,v])=>v!==undefined&&v!==null&&v!==''))}),{}),...activeSource,answers:mergedAnswers};
     const a=c.answers||{},current=questions(),saved=Array.isArray(c.questionnaireSchema)?c.questionnaireSchema:[];
     const schema=saved.length?saved:current.map(q=>({id:q.id,label:q.label,cat:q.cat||'',version:q.version||''}));
     const byId=new Map(schema.map(q=>[String(q.id),q]));
@@ -3981,7 +3996,22 @@ try{installBrandingV67();}catch(e){}
       return answers.slice(0,4).map(([k,v])=>k+': '+(typeof v==='object'?JSON.stringify(v):v)).join('; ')||'Belum teridentifikasi';
     };
     const haystack=c=>[c.id,c.name,c.address,c.desa,c.admin?.desa,c.kec,c.admin?.kec,c.age,c.sex,c.onset,c.status,c.outcome,disease(c),symptom(c),JSON.stringify(c.answers||{})].map(v=>String(v??'')).join(' ').toLocaleLowerCase('id');
-    const rows=source.filter(c=>!query||haystack(c).includes(query));
+    const filteredRows=source.filter(c=>!query||haystack(c).includes(query));
+    // v111: deduplicate display only by case ID + investigation. Keep all source records untouched.
+    const completeness=c=>{
+      const nonempty=v=>v!==undefined&&v!==null&&String(v).trim()!=='';
+      return ['address','desa','kec','kab','prov','pkm','puskesmas','lat','lng','symptoms','status','outcome'].reduce((n,k)=>n+(nonempty(c[k])?1:0),0)
+        + Object.keys(c.answers||{}).filter(k=>nonempty(c.answers[k])).length
+        + (c.admin&&typeof c.admin==='object'?Object.keys(c.admin).filter(k=>nonempty(c.admin[k])).length:0);
+    };
+    const grouped=new Map();
+    filteredRows.forEach(c=>{
+      const key=String(c.id||'')+'|'+String(c.investigationId||'');
+      const prev=grouped.get(key);
+      if(!prev)grouped.set(key,c);
+      else if(completeness(c)>completeness(prev))grouped.set(key,c);
+    });
+    const rows=[...grouped.values()];
     const head=table.querySelector('thead tr');
     if(head)head.innerHTML='<th>ID Kasus</th><th>Nama</th><th>Penyakit</th><th>Umur</th><th>JK</th><th>Gejala / Klinis</th><th>Alamat</th><th>Desa/Kel.</th><th>Kecamatan</th><th>Tanggal Onset</th><th>Status Kasus</th><th>Faktor Risiko</th><th>Outcome</th><th>Tindakan</th><th>Aksi</th>';
     let note=E('caseListRecoveryNote106');
@@ -4214,4 +4244,11 @@ try{installBrandingV67();}catch(e){}
   });
   [100,600,1800,3600,7000,12000].forEach(ms=>setTimeout(renderV110,ms));
   window.GORUT_V110={version:'v110',features:['restore Detail Lengkap action','use full questionnaire detail modal','UI-only rendering; preserve all data']};
+})();
+
+
+/* v111 — display-only duplicate grouping and combined read-only questionnaire detail */
+(function(){
+  'use strict';
+  window.GORUT_V111={version:'v111',features:['deduplicate rows by case ID plus investigation ID in display only','combine questionnaire fields from matching source rows in detail view','preserve original db.cases records; no database writes or deletions']};
 })();
