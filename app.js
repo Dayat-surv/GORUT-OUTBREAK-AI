@@ -3530,7 +3530,7 @@ try{installBrandingV67();}catch(e){}
     const onsetDate=qv('Q_tanggal_onset')||String(c.onset||'').slice(0,10);
     const birthDate=qv('Q_tanggal_lahir');
     const ageValue=Number(qv('Q_umur')||c.age);
-    const validISODate=s=>/^\\d{4}-\\d{2}-\\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
+    const validISODate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
     ['Q_tanggal_pertama_berobat','Q_tanggal_lahir','Q_tanggal_onset','Q_tanggal_dirawat','Q_tanggal_onset_gejala'].forEach(k=>{
       const v=qv(k);if(v&&!validISODate(v))qaWarnings.push('Format tanggal tidak valid pada '+(qLabel(k)||k)+': '+v+'. Periksa sumber asli.');
     });
