@@ -4,6 +4,7 @@
 
 const K='gorut-v8';let db=JSON.parse(localStorage.getItem(K)||'null')||{investigations:[],cases:[],questions:[],contacts:[],specimens:[],fieldVisits:[],alerts:[],active:null,outbox:[]};
 db.contacts ||= []; db.specimens ||= []; db.alerts ||= []; db.outbox ||= [];
+window.db=db;
 const diseases={
 'kolera':{name:'Tersangka Kolera',group:'SKDR',q:['Tanggal onset diare','Diare cair akut','Frekuensi BAB per hari','Muntah','Tanda dehidrasi','Sumber air minum','Air tidak diolah','Konsumsi makanan berisiko','Konsumsi makanan laut','Riwayat kontak kasus diare','Riwayat perjalanan','Lokasi paparan bersama','Spesimen tinja','Kultur/PCR','Hasil laboratorium','Status kasus','Outcome']},
 'diare-akut':{name:'Diare Akut',group:'SKDR',q:['Tanggal onset','Frekuensi BAB','Konsistensi tinja','Muntah','Demam','Darah/lendir dalam tinja','Tanda dehidrasi','Makanan/minuman 3 hari sebelum sakit','Sumber air minum','Sanitasi/jamban','Riwayat kontak','Klaster tempat tinggal/sekolah','Spesimen tinja','Hasil laboratorium','Status kasus','Outcome']},
@@ -1844,6 +1845,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
         const rb=document.getElementById('roleBadge');if(rb)rb.textContent='User: '+pr.data.role+' · Data Supabase';
         try{setRoleUI()}catch(e){}
         await window.render();
+        window.dispatchEvent(new Event('gorut:auth-changed'));
         const detail=document.getElementById('backendDetail');
         if(detail)detail.textContent='Data Supabase berhasil dimuat: '+counts.investigations+' investigasi, '+counts.cases+' kasus, '+counts.contacts+' kontak, '+counts.specimens+' spesimen, '+counts.fieldVisits+' kunjungan, '+counts.alerts+' alert.';
       }catch(loadError){
