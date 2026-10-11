@@ -374,10 +374,48 @@ window.gorutHandleLogin = async function () {
 <script>
 /* Pemulihan kata sandi via Supabase Auth; tidak mengubah tabel/data aplikasi. */
 (function(){
-  function client(){
+  function backendConfig(){
     var cfg=window.GORUT_BACKEND||{};
-    if(!cfg.enabled||!cfg.url||!cfg.anonKey||!window.supabase) throw new Error('Backend Supabase belum siap. Muat ulang halaman lalu coba lagi.');
-    if(!window.__gorutSupabase) window.__gorutSupabase=window.supabase.createClient(cfg.url,cfg.anonKey);
+    /* Fallback aman: hanya URL proyek dan publishable key yang memang digunakan frontend. */
+    if(!cfg.url||!cfg.anonKey||cfg.enabled!==true){
+      cfg={
+        provider:'supabase',
+        url:'https://lheuszdhprwmtajhdukc.supabase.co',
+        anonKey:'sb_publishable_avKj9iO9b_VMaOPNvPB9_g_TyMoKotr',
+        enabled:true,
+        publicSurveyEnabled:true
+      };
+      window.GORUT_BACKEND=cfg;
+    }
+    return cfg;
+  }
+  function loadSupabaseFrom(url){
+    return new Promise(function(resolve,reject){
+      var script=document.createElement('script');
+      script.src=url;
+      script.async=true;
+      script.onload=function(){
+        if(window.supabase&&typeof window.supabase.createClient==='function')resolve();
+        else reject(new Error('Pustaka Supabase termuat tetapi tidak menyediakan createClient.'));
+      };
+      script.onerror=function(){reject(new Error('CDN tidak dapat dimuat: '+url));};
+      document.head.appendChild(script);
+    });
+  }
+  async function client(){
+    var cfg=backendConfig();
+    if(!window.supabase||typeof window.supabase.createClient!=='function'){
+      try{
+        await loadSupabaseFrom('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+      }catch(firstError){
+        try{await loadSupabaseFrom('https://unpkg.com/@supabase/supabase-js@2');}
+        catch(secondError){
+          throw new Error('Pustaka Supabase tidak berhasil dimuat dari dua CDN. Periksa koneksi internet, pemblokir konten, atau jaringan kantor. Detail: '+secondError.message);
+        }
+      }
+    }
+    if(!cfg.enabled||!cfg.url||!cfg.anonKey)throw new Error('Konfigurasi backend belum lengkap. Periksa backend-config.js.');
+    if(!window.__gorutSupabase)window.__gorutSupabase=window.supabase.createClient(cfg.url,cfg.anonKey);
     return window.__gorutSupabase;
   }
   function showMsg(text,ok){
@@ -395,12 +433,17 @@ window.gorutHandleLogin = async function () {
     var email=(document.getElementById('email')?.value||'').trim();
     if(!email){showMsg('Masukkan email akun terlebih dahulu, lalu pilih “Lupa kata sandi?”.',false);document.getElementById('email')?.focus();return;}
     try{
-      var sb=client();
+      var sb=await client();
       var redirectTo=window.location.origin+window.location.pathname;
       var r=await sb.auth.resetPasswordForEmail(email,{redirectTo:redirectTo});
       if(r.error)throw r.error;
       showMsg('Jika email tersebut terdaftar, instruksi pemulihan akan dikirim. Periksa Kotak Masuk dan Spam. Tautan dapat kedaluwarsa; jangan bagikan tautan atau token kepada siapa pun.',true);
-    }catch(e){console.error('Password recovery request failed',e);showMsg('Permintaan pemulihan gagal: '+(e.message||String(e))+' Pastikan URL aplikasi diizinkan pada Supabase Authentication → URL Configuration.',false);}
+    }catch(e){
+      console.error('Password recovery request failed',e);
+      var message=e&&e.message?e.message:String(e);
+      if(/redirect|url.*allow|not allowed/i.test(message))message+=' Periksa URL aplikasi pada Supabase Authentication → URL Configuration.';
+      showMsg('Permintaan pemulihan gagal: '+message,false);
+    }
   };
   window.gorutSaveNewPassword=async function(){
     var p=document.getElementById('newPassword')?.value||'';
@@ -408,10 +451,10 @@ window.gorutHandleLogin = async function () {
     if(p.length<8){showMsg('Gunakan kata sandi minimal 8 karakter (atau sesuai kebijakan Supabase).',false);return;}
     if(p!==q){showMsg('Kedua kata sandi belum sama. Periksa kembali.',false);return;}
     try{
-      var sb=client();
+      var sb=await client();
       var s=await sb.auth.getSession();
       if(s.error)throw s.error;
-      if(!s.data.session){throw new Error('Sesi pemulihan tidak ditemukan. Buka kembali tautan terbaru dari email pemulihan.');}
+      if(!s.data.session)throw new Error('Sesi pemulihan tidak ditemukan. Buka kembali tautan terbaru dari email pemulihan.');
       var r=await sb.auth.updateUser({password:p});
       if(r.error)throw r.error;
       showMsg('Kata sandi berhasil diperbarui. Silakan masuk menggunakan email dan kata sandi baru.',true);
@@ -422,13 +465,15 @@ window.gorutHandleLogin = async function () {
       await sb.auth.signOut();
     }catch(e){console.error('Password update failed',e);showMsg('Kata sandi belum diperbarui: '+(e.message||String(e)),false);}
   };
-  try{
-    var sb=client();
-    sb.auth.onAuthStateChange(function(event){
-      if(event==='PASSWORD_RECOVERY')showRecovery();
-    });
-    if(new URLSearchParams(window.location.search).has('password-recovery')&&window.location.hash.includes('access_token'))showRecovery();
-  }catch(e){console.warn('Password recovery initialization:',e.message||e);}
+  (async function(){
+    try{
+      var sb=await client();
+      sb.auth.onAuthStateChange(function(event){
+        if(event==='PASSWORD_RECOVERY')showRecovery();
+      });
+      if(new URLSearchParams(window.location.search).has('password-recovery')&&window.location.hash.includes('access_token'))showRecovery();
+    }catch(e){console.warn('Password recovery initialization:',e.message||e);}
+  })();
 })();
 </script>
 </body></html>
