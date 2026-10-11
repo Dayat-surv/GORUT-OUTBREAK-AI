@@ -4279,3 +4279,30 @@ try{installBrandingV67();}catch(e){}
 
 /* v112 — read-only questionnaire data quality warnings; no automatic edits */
 (function(){'use strict';window.GORUT_V112={version:'v112',features:['warn on invalid date formats','warn on age and birth-date mismatch','warn on questionnaire and investigation village mismatch','no automatic data corrections','repair garbled 14–21 label encoding where present']};})();
+
+
+/* v113: safety check before synchronizing duplicate case identities */
+(function(){
+  'use strict';
+  var originalSync = window.syncNow;
+  if (typeof originalSync !== 'function') return;
+  window.syncNow = async function(){
+    var all = (window.db && Array.isArray(window.db.cases)) ? window.db.cases : [];
+    var keys = Object.create(null);
+    var duplicates = [];
+    all.forEach(function(item){
+      if (!item || item.id == null) return;
+      var key = String(item.id) + '::' + String(item.investigationId || '');
+      if (keys[key]) {
+        if (duplicates.indexOf(key) < 0) duplicates.push(key);
+      } else keys[key] = true;
+    });
+    if (duplicates.length) {
+      window.alert('Sinkronisasi belum dijalankan karena ditemukan identitas kasus berulang pada penyelidikan yang sama. Periksa daftar kasus terlebih dahulu. Tidak ada data yang diubah.');
+      console.warn('GORUT v113: sync paused; repeated case identities', duplicates);
+      return false;
+    }
+    return originalSync.apply(this, arguments);
+  };
+  window.GORUT_V113 = {version:'v113', syncSafetyCheck:true};
+})();
