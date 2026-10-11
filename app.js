@@ -3951,3 +3951,71 @@ try{installBrandingV67();}catch(e){}
   window.renderCaseListRecovery105=renderCaseList105;
   setTimeout(()=>{try{renderCaseList105()}catch(e){}},1800);
 })();
+
+
+/* v106 — case list recovery: preserve source data, resilient active-investigation filter, full questionnaire search and detail action */
+(function(){
+  'use strict';
+  const E=id=>document.getElementById(id);
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  function list(){
+    const body=E('caseRows'); if(!body)return;
+    const table=body.closest('table'); if(!table)return;
+    const data=window.db;
+    if(!data || !Array.isArray(data.cases))return;
+    const query=String(E('caseSearch')?.value||'').trim().toLocaleLowerCase('id');
+    const all=data.cases;
+    const active=String(data.active??'');
+    const activeRows=active?all.filter(c=>String(c.investigationId??'')===active):all;
+    // If the active investigation has no linked cases but cases exist, don't make the whole list look empty.
+    const fallback=!!(active && activeRows.length===0 && all.length>0);
+    const source=fallback?all:activeRows;
+    const symptom=c=>c.symptoms||c.answers?.symptoms||c.answers?.symptom||c.answers?.gejala||c.answers?.gejalaUtama||c.foodCase?.symptoms||c.caseSymptoms||'-';
+    const disease=c=>c.disease||data.investigations?.find(i=>String(i.id)===String(c.investigationId))?.disease||c.foodCase?.disease||'-';
+    const risk=c=>{
+      let items=[];
+      try{if(typeof window.deriveRiskFactors46==='function')items=window.deriveRiskFactors46(c)||[];else if(typeof window.showCaseRiskFactors59==='function')items=c.riskFactors||[];else items=c.riskFactors||[]}catch(_){items=c.riskFactors||[]}
+      const positives=items.filter(x=>{const v=String(x?.value??x?.answer??'').trim();return v&&!/^(tidak|tidak ada|tidak diketahui|tidak relevan|negatif|bukan|belum|0|no)$/i.test(v)});
+      if(positives.length)return positives.slice(0,4).map(x=>(x.label||x.question||'Faktor risiko')+': '+(x.value??x.answer??'')).join('; ')+(positives.length>4?' …':'');
+      const answers=c.answers&&typeof c.answers==='object'?Object.entries(c.answers).filter(([k,v])=>v!==''&&v!==null&&v!==undefined&&!/^(tidak|tidak ada|tidak diketahui|tidak relevan|negatif|bukan|belum|0|no)$/i.test(String(v).trim())):[];
+      return answers.slice(0,4).map(([k,v])=>k+': '+(typeof v==='object'?JSON.stringify(v):v)).join('; ')||'Belum teridentifikasi';
+    };
+    const haystack=c=>[c.id,c.name,c.address,c.desa,c.admin?.desa,c.kec,c.admin?.kec,c.age,c.sex,c.onset,c.status,c.outcome,disease(c),symptom(c),JSON.stringify(c.answers||{})].map(v=>String(v??'')).join(' ').toLocaleLowerCase('id');
+    const rows=source.filter(c=>!query||haystack(c).includes(query));
+    const head=table.querySelector('thead tr');
+    if(head)head.innerHTML='<th>ID Kasus</th><th>Nama</th><th>Penyakit</th><th>Umur</th><th>JK</th><th>Gejala / Klinis</th><th>Alamat</th><th>Desa/Kel.</th><th>Kecamatan</th><th>Tanggal Onset</th><th>Status Kasus</th><th>Faktor Risiko</th><th>Outcome</th><th>Tindakan</th><th>Aksi</th>';
+    let note=E('caseListRecoveryNote106');
+    if(!note){note=document.createElement('div');note.id='caseListRecoveryNote106';note.className='notice';table.parentElement?.insertBefore(note,table);}
+    note.textContent=fallback?'Perhatian: tidak ditemukan kasus yang tertaut ke investigasi aktif. Untuk menghindari daftar kosong, seluruh kasus tersimpan ditampilkan. Periksa tautan investigasi setiap kasus.':('Menampilkan '+rows.length+' dari '+source.length+' kasus'+(active?' pada investigasi aktif':' tersimpan')+'. Detail Lengkap memuat data inti dan seluruh jawaban kuesioner.');
+    body.innerHTML=rows.map(c=>{
+      const id=String(c.id??'');
+      const action=c.action||c.initialAction||c.followUp||c.treatment||c.management||'-';
+      return '<tr data-case-id="'+esc(id)+'">'+
+        '<td>'+esc(id||'-')+'</td><td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(disease(c))+'</td>'+
+        '<td>'+esc(c.age??'-')+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(symptom(c))+'</td>'+
+        '<td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||c.admin?.desa||'-')+'</td><td>'+esc(c.kec||c.admin?.kec||'-')+'</td>'+
+        '<td>'+esc(c.onset||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td>'+
+        '<td class="risk-cell">'+esc(risk(c))+'</td><td>'+esc(c.outcome||'-')+'</td><td>'+esc(action)+'</td>'+
+        '<td class="table-actions"><span class="case-actions-106"></span></td></tr>';
+    }).join('')||'<tr><td colspan="15"><div class="notice">'+(query?'Tidak ada kasus yang cocok dengan pencarian. Hapus teks pencarian untuk melihat seluruh kasus.':'Belum ada data kasus pada sumber data aplikasi.')+'</div></td></tr>';
+    body.querySelectorAll('tr[data-case-id]').forEach(tr=>{
+      const id=tr.getAttribute('data-case-id'), target=tr.querySelector('.case-actions-106'); if(!target)return;
+      const btn=(label,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',fn);target.appendChild(b)};
+      btn('🔎 Detail Lengkap',()=>{
+        if(typeof window.showCaseQuestionnaireV73==='function')window.showCaseQuestionnaireV73(id);
+        else if(typeof window.showCaseRiskFactors59==='function')window.showCaseRiskFactors59(id);
+        else alert('Panel detail belum siap. Muat ulang aplikasi; data kasus tidak diubah.');
+      });
+      btn('Edit',()=>{if(typeof window.editCase==='function')window.editCase(id)});
+    });
+  }
+  window.renderCaseListRecovery106=list;
+  const priorCases=window.cases;
+  window.cases=function(){let result;try{if(typeof priorCases==='function')result=priorCases.apply(this,arguments)}catch(err){console.warn('Renderer lama daftar kasus gagal; pemulihan v106 mengambil alih.',err)}try{list()}catch(err){console.error('Pemulihan daftar kasus v106 gagal:',err)}return result};
+  const priorPage=window.page;
+  window.page=function(id){let result;if(typeof priorPage==='function')result=priorPage.apply(this,arguments);if(id==='kasus')setTimeout(list,100);return result};
+  document.addEventListener('input',ev=>{if(ev.target?.id==='caseSearch')setTimeout(list,0)});
+  // Retry after asynchronous backend hydration without writing to or deleting any data.
+  let tries=0;const retry=setInterval(()=>{tries++;try{if(E('caseRows')&&window.db&&Array.isArray(window.db.cases))list()}catch(e){}if(tries>=20)clearInterval(retry)},1000);
+  window.GORUT_V106={version:'v106',features:['case list recovery','disease and clinical summary','risk-factor summary','active-investigation fallback','search across questionnaire answers','full case detail action','read-only rendering']};
+})();
