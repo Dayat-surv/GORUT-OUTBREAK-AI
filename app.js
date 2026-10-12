@@ -4475,12 +4475,24 @@ try{installBrandingV67();}catch(e){}
     var answersForEdit=c.answers&&typeof c.answers==='object'?c.answers:{};
     // v120: build the complete questionnaire for the selected record's investigation disease,
     // rather than rendering only keys that happened to exist in this record's saved answers.
-    var qDiseaseId=String((inv&&inv.disease)||c.disease||'');
-    var qDef=(typeof diseases!=='undefined'&&diseases)?diseases[qDiseaseId]:null;
+    var rawDiseaseId=String((inv&&inv.disease)||c.disease||(answersForEdit.disease)||window.db.selectedDisease||'').trim();
+    var qDiseaseId=rawDiseaseId;
+    var qDef=null;
+    if(typeof diseases!=='undefined'&&diseases){
+      qDef=diseases[rawDiseaseId]||null;
+      if(!qDef){
+        var rawNorm=rawDiseaseId.toLowerCase().replace(/[^a-z0-9]+/g,'');
+        var matchedDisease=Object.keys(diseases).find(function(k){
+          var d=diseases[k]||{};
+          return k.toLowerCase().replace(/[^a-z0-9]+/g,'')===rawNorm||
+            String(d.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'')===rawNorm;
+        });
+        if(matchedDisease){qDiseaseId=matchedDisease;qDef=diseases[matchedDisease]}
+      }
+    }
     var questionList=[];
     if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
-      // Always start from the complete default questionnaire for the case disease;
-      // then append configured/custom questions not already represented.
+      // Load common questions plus disease-specific questions from the matched disease instrument.
       questionList=baseQ.map(function(q){return buildQuestion(q[1],q[0])});
       if(qDef&&Array.isArray(qDef.q))questionList=questionList.concat(qDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+(qDef.name||qDiseaseId))}));
       var knownQ=new Set(questionList.map(function(q){return String(q.id||'')}));
