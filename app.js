@@ -4358,8 +4358,10 @@ try{installBrandingV67();}catch(e){}
       map.get(key).push(c);
     });
     return Array.from(map.entries()).map(function(entry){
-      var rows=entry[1].slice().sort(function(a,b){return complete(b)-complete(a)});
-      var primary=rows[0];
+      // v119: use the second/source-2 record as the active record for this case group.
+      // Keep legacy source-1 data untouched in local storage; it is excluded from the active UI.
+      var rows=entry[1].slice();
+      var primary=rows[rows.length-1];
       // Fill only blank display fields from sibling rows; source objects are never changed.
       var view=Object.assign({},primary);
       ['name','address','desa','kec','kab','prov','age','sex','onset','status','outcome','symptoms','lat','lng'].forEach(function(k){
@@ -4377,7 +4379,10 @@ try{installBrandingV67();}catch(e){}
     if(!g)return;
     var html='<h2>Detail Lengkap — '+esc(g.view.id||'-')+'</h2>'+
       '<div class="notice">Terdapat <b>'+g.rows.length+' rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Semua rekaman ditampilkan terpisah; jawaban yang berbeda tidak ditimpa, dan tidak ada data yang dihapus atau digabung di database.</div>';
-    g.rows.forEach(function(c,i){
+    // Only source 2 is active in the detail/edit workflow. Earlier source records remain
+    // preserved in storage and are not deleted; they are simply not used as the active form.
+    var activeRows=g.rows.length? [g.rows[g.rows.length-1]] : [];
+    activeRows.forEach(function(c,i){
       var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
       var sourceIndex=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(c):-1;
       var fields=[['ID server',c.serverId],['ID penyelidikan',c.investigationId],['Nama',c.name],['Alamat',c.address],['Desa',c.desa||c.admin&&c.admin.desa],['Kecamatan',c.kec||c.admin&&c.admin.kec],['Umur',c.age],['Jenis kelamin',c.sex],['Tanggal onset',c.onset],['Status kasus',c.status],['Outcome',c.outcome],['Gejala',c.symptoms]];
@@ -4424,7 +4429,7 @@ try{installBrandingV67();}catch(e){}
       var positive=rf.filter(function(x){var v=String(x.value===undefined?x.answer:x.value).trim().toLowerCase();return v&&!/^(tidak|tidak ada|tidak diketahui|tidak relevan|negatif|bukan|belum|0|no)$/.test(v)});
       var risk=positive.length?positive.slice(0,3).map(function(x){return '<span class="risk-chip"><span>'+esc(x.label||x.question||'Faktor risiko')+'</span><b>'+esc(x.value===undefined?x.answer:x.value)+'</b></span>'}).join('')+(positive.length>3?' <span class="risk-none">+'+(positive.length-3)+' lainnya</span>':''):'<span class="risk-none">Belum teridentifikasi</span>';
       var keyAttr=esc(g.key);
-      return '<tr><td>'+esc(c.id||'-')+(g.rows.length>1?' <span class="badge">'+g.rows.length+' rekaman</span>':'')+'</td>'+
+      return '<tr><td>'+esc(c.id||'-')+'</td>'+
         '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||'-')+'</td><td>'+esc(c.kec||'-')+'</td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'" onclick="return window.openCaseDetailRecovery118(this)">Detail</button> <button type="button" data-v116-edit-group="'+keyAttr+'" onclick="return window.openCaseEditRecovery118(this)">Edit</button></td></tr>';
     }).join('')||'<tr><td colspan="13"><div class="notice">Belum ada kasus yang cocok dengan pencarian.</div></td></tr>';
     if(body.innerHTML!==html){body.innerHTML=html;lastHtml=html}
@@ -4432,7 +4437,7 @@ try{installBrandingV67();}catch(e){}
     body.querySelectorAll('[data-v115-detail]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.openCaseDetailRecovery118(btn)}});
     body.querySelectorAll('[data-v116-edit-group]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.openCaseEditRecovery118(btn)}});
     var note=document.getElementById('caseListRecoveryNote106');
-    if(note)note.textContent='Menampilkan '+gs.length+' baris utama dari '+sourceRows().length+' rekaman sumber. Duplikasi dikelompokkan hanya untuk tampilan berdasarkan ID kasus + ID penyelidikan.';
+    if(note)note.textContent='Menampilkan '+gs.length+' kasus aktif menggunakan Rekaman Sumber 2. Rekaman lama tetap tersimpan dan tidak dihapus.';
   }
   var busy=false;
   function schedule(){if(busy)return;busy=true;setTimeout(function(){busy=false;try{render()}catch(e){console.error('GORUT v115 render',e)}},30)}
