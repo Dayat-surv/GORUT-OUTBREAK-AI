@@ -4478,11 +4478,15 @@ try{installBrandingV67();}catch(e){}
     var qDiseaseId=String((inv&&inv.disease)||c.disease||'');
     var qDef=(typeof diseases!=='undefined'&&diseases)?diseases[qDiseaseId]:null;
     var questionList=[];
-    if(Array.isArray(window.db&&window.db.questions)&&window.db.questionMeta&&String(window.db.questionMeta.disease||'')===qDiseaseId){
-      questionList=window.db.questions.slice();
-    }else if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
+    if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
+      // Always start from the complete default questionnaire for the case disease;
+      // then append configured/custom questions not already represented.
       questionList=baseQ.map(function(q){return buildQuestion(q[1],q[0])});
       if(qDef&&Array.isArray(qDef.q))questionList=questionList.concat(qDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+(qDef.name||qDiseaseId))}));
+      var knownQ=new Set(questionList.map(function(q){return String(q.id||'')}));
+      (Array.isArray(window.db&&window.db.questions)?window.db.questions:[]).forEach(function(q){
+        if(q&&q.id&&!knownQ.has(String(q.id))){questionList.push(q);knownQ.add(String(q.id))}
+      });
     }else if(Array.isArray(window.db&&window.db.questions)){
       questionList=window.db.questions.slice();
     }
