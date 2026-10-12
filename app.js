@@ -4450,10 +4450,11 @@ try{installBrandingV67();}catch(e){}
       var key=btn&&btn.getAttribute('data-v116-edit-group');
       var g=groups().find(function(x){return x.key===key});
       if(!g){alert('Kelompok kasus tidak ditemukan. Muat ulang daftar kasus.');return false}
-      if(g.rows.length>1){detail(g.key);return false}
-      var ix=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(g.rows[0]):-1;
-      if(ix<0){alert('Rekaman sumber tidak ditemukan. Tidak ada data yang diubah.');return false}
-      window.editCaseSourceByServerId(g.rows[0].serverId||'',ix);
+      /* v122: tombol Edit pada tabel utama langsung membuka form rekaman aktif (Sumber 2). */
+      var target=g.rows.length?g.rows[g.rows.length-1]:null;
+      var ix=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(target):-1;
+      if(ix<0){alert('Rekaman sumber aktif tidak ditemukan. Tidak ada data yang diubah.');return false}
+      window.editCaseSourceByServerId(target.serverId||'',ix);
     }catch(e){console.error('Edit kasus gagal dibuka:',e);alert('Form edit belum dapat dibuka: '+(e&&e.message||e))}
     return false;
   };
