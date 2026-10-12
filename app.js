@@ -4833,3 +4833,124 @@ try{installBrandingV67();}catch(e){}
   [1500,3500,7000].forEach(function(ms){setTimeout(install125,ms)});
   window.GORUT_V125={version:'v125',features:['canonical questionnaire deduplication','clickable investigation selector','full source-record answer matrix','CSV export of all stored answers','no deletion or merge of case records']};
 })();
+
+
+/* ==================== v126 — INVESTIGATION REGISTRY + DASHBOARD LINKAGE ==================== */
+(function(){
+  'use strict';
+  var E=function(id){return document.getElementById(id)};
+  var esc126=function(v){return String(v===null||v===undefined?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})};
+  var n126=function(v){return String(v===null||v===undefined?'':v)};
+  function diseaseName126(id){return window.diseases&&window.diseases[id]?window.diseases[id].name:(id||'Penyakit belum ditentukan')}
+  function caseRows126(id){return (window.db&&Array.isArray(db.cases)?db.cases:[]).filter(function(c){return String(c.investigationId)===String(id)})}
+  function countLabel126(inv){
+    var cs=caseRows126(inv.id),contacts=(db.contacts||[]).filter(function(x){return String(x.investigationId)===String(inv.id)}),
+      specs=(db.specimens||[]).filter(function(x){return String(x.investigationId)===String(inv.id)}),
+      visits=(db.fieldVisits||[]).filter(function(x){return String(x.investigationId)===String(inv.id)});
+    return {cases:cs.length,contacts:contacts.length,specs:specs.length,visits:visits.length};
+  }
+  function select126(id){
+    var inv=(db.investigations||[]).find(function(x){return String(x.id)===String(id)});
+    if(!inv){alert('Investigasi tidak ditemukan.');return}
+    db.active=inv.id;db.selectedDisease=inv.disease||'campak';
+    try{if(typeof save==='function')save()}catch(e){console.warn('Simpan investigasi aktif',e)}
+    try{if(typeof window.render==='function')window.render()}catch(e){}
+    renderRegistry126();
+    renderContext126();
+  }
+  function renderRegistry126(){
+    var host=E('v126InvestigationRegistry');if(!host)return;
+    var invs=Array.isArray(db.investigations)?db.investigations:[],active=String(db.active||'');
+    var rows=invs.map(function(inv){
+      var ct=countLabel126(inv),isActive=String(inv.id)===active;
+      return '<tr class="'+(isActive?'v126-active-row':'')+'"><td><button class="v126-name-link" type="button" data-v126-select="'+esc126(inv.id)+'">'+esc126(inv.name||'Investigasi tanpa nama')+'</button><div class="small">'+esc126(inv.id)+'</div></td><td>'+esc126(diseaseName126(inv.disease))+'</td><td>'+esc126(inv.type||'Penyakit Menular')+'</td><td>'+esc126([inv.desa,inv.kec].filter(Boolean).join(', ')||'—')+'</td><td>'+esc126(inv.date||'—')+'</td><td>'+ct.cases+'</td><td>'+esc126(inv.status||'Berjalan')+'</td><td><div class="v126-actions"><button type="button" data-v126-select="'+esc126(inv.id)+'">'+(isActive?'Terpilih':'Pilih')+'</button><button type="button" data-v126-go="laporan" data-v126-id="'+esc126(inv.id)+'">Laporan PE</button><button type="button" data-v126-go="penelitian" data-v126-id="'+esc126(inv.id)+'">Penelitian</button><button type="button" data-v126-go="kasus" data-v126-id="'+esc126(inv.id)+'">Kasus</button></div></td></tr>';
+    }).join('');
+    host.innerHTML='<div class="v126-registry-head"><div><h3 style="margin:0">Daftar Investigasi KLB</h3><div class="small">Pilih nama investigasi untuk menetapkannya sebagai sumber aktif di dashboard terkait.</div></div><div class="v126-registry-count">'+invs.length+' investigasi</div></div><div class="v126-table-scroll"><table class="report-table v126-table"><thead><tr><th>Nama investigasi</th><th>Penyakit</th><th>Tipe</th><th>Lokasi</th><th>Tanggal mulai</th><th>Kasus</th><th>Status</th><th>Akses dashboard</th></tr></thead><tbody>'+ (rows||'<tr><td colspan="8">Belum ada investigasi KLB. Isi formulir di bawah lalu klik Simpan.</td></tr>')+'</tbody></table></div>';
+    host.querySelectorAll('[data-v126-select]').forEach(function(b){b.onclick=function(){select126(b.getAttribute('data-v126-select'))}});
+    host.querySelectorAll('[data-v126-go]').forEach(function(b){b.onclick=function(){
+      var id=b.getAttribute('data-v126-id'),dest=b.getAttribute('data-v126-go');select126(id);
+      if(dest==='laporan'){if(typeof window.page==='function')window.page('laporan');if(typeof window.report==='function')window.report()}
+      else if(dest==='penelitian'){if(typeof window.page==='function')window.page('penelitian');renderContext126();showResearchLink126()}
+      else if(dest==='kasus'){if(typeof window.page==='function')window.page('kasus');if(typeof window.cases==='function')window.cases();renderContext126()}
+    }});
+  }
+  function renderContext126(){
+    var inv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)});
+    var label=inv?esc126(inv.name)+' — '+esc126(diseaseName126(inv.disease)):'Belum ada investigasi aktif';
+    ['report','researchResults','researchDataStatus','researchDataPreview'].forEach(function(id){
+      var el=E(id);if(!el)return;
+      var target=id==='report'?el.parentElement:el;
+      if(!target||target.querySelector('.v126-context'))return;
+      var bar=document.createElement('div');bar.className='v126-context notice';bar.innerHTML='<b>Sumber investigasi aktif:</b> '+label+' <span class="small">· dashboard memakai filter investigasi aktif</span>';
+      target.insertBefore(bar,target.firstChild);
+    });
+    var rep=E('report');if(rep){var old=rep.querySelector('.v126-context');if(old){old.innerHTML='<b>Sumber investigasi aktif:</b> '+label+' <span class="small">· kasus, kontak, spesimen, dan kunjungan ditarik dari investigasi ini</span>'}}
+    var res=E('researchResults');if(res){var oldr=res.querySelector('.v126-context');if(oldr)oldr.innerHTML='<b>Sumber investigasi aktif:</b> '+label+' <span class="small">· analisis langsung mengikuti kasus investigasi kecuali dataset impor dipilih</span>'}
+  }
+  function showResearchLink126(){
+    var sec=E('penelitian');if(!sec)return;
+    var host=E('v126ResearchLink');
+    if(!host){host=document.createElement('div');host.id='v126ResearchLink';host.className='card';sec.insertBefore(host,sec.firstChild)}
+    var inv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)}),cs=inv?caseRows126(inv.id):[];
+    host.innerHTML='<div class="v126-registry-head"><div><h3 style="margin:0">Integrasi Data Penelitian</h3><div class="small">Sumber: '+esc126(inv?inv.name:'investigasi aktif belum dipilih')+' · '+cs.length+' kasus · data kasus dan seluruh jawaban yang tersimpan</div></div><button class="primary" type="button" id="v126UseCases">Gunakan data investigasi ini untuk penelitian</button></div><div class="notice">Tindakan ini membuat dataset penelitian lokal dari investigasi aktif. Dataset penelitian tersimpan terpisah dan tidak mengubah atau menghapus rekaman kasus operasional. Pilih kembali sumber investigasi untuk memperbarui dataset.</div><div id="v126ResearchLinkStatus" class="small"></div>';
+    var btn=E('v126UseCases');if(btn)btn.onclick=function(){
+      var activeInv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)});if(!activeInv){alert('Pilih investigasi terlebih dahulu.');return}
+      var records=caseRows126(activeInv.id);
+      var cols={id:'ID Kasus',name:'Nama',age:'Umur',sex:'Jenis kelamin',onset:'Tanggal onset',status:'Status kasus',outcome:'Outcome',address:'Alamat',desa:'Desa/Kelurahan',kec:'Kecamatan'};
+      var rows=records.map(function(c){
+        var row={};Object.keys(cols).forEach(function(k){row[cols[k]]=c[k]===undefined||c[k]===null?'':c[k]});
+        row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';row['Penyakit']=diseaseName126(activeInv.disease);
+        var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
+        Object.keys(ans).forEach(function(k){if(k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId')row[k]=Array.isArray(ans[k])?ans[k].join(', '):(ans[k]&&typeof ans[k]==='object'?JSON.stringify(ans[k]):ans[k])});
+        if(c.foodCase&&typeof c.foodCase==='object')Object.keys(c.foodCase).forEach(function(k){row['Keracunan pangan: '+k]=c.foodCase[k]});
+        if(c.priority&&typeof c.priority==='object')Object.keys(c.priority).forEach(function(k){row['Prioritas: '+k]=c.priority[k]});
+        return row;
+      });
+      if(!rows.length){E('v126ResearchLinkStatus').textContent='Belum ada kasus pada investigasi ini. Dataset belum dibuat.';return}
+      var columns=[];rows.forEach(function(row){Object.keys(row).forEach(function(k){if(!columns.includes(k))columns.push(k)})});
+      rows=rows.map(function(row){var out={};columns.forEach(function(k){out[k]=row[k]===undefined?'':row[k]});return out});
+      researchState=researchState||{};researchState.dataset={name:'Investigasi - '+activeInv.name,source:'GORUT-OUTBREAK AI / Investigasi KLB',importedAt:new Date().toISOString(),rows:rows};researchState.dataSource='dataset';
+      localStorage.setItem('gorut-research-plan',JSON.stringify(researchState));
+      var st=E('researchDataStatus');if(st)st.innerHTML='<b>Dataset dari investigasi berhasil dibuat.</b> '+rows.length+' kasus · '+columns.length+' variabel. Data operasional tidak diubah.';
+      var nm=E('researchDatasetName');if(nm)nm.value=researchState.dataset.name;
+      if(typeof window.previewResearchDataset==='function')window.previewResearchDataset();
+      if(typeof window.generateAutoDictionary==='function')window.generateAutoDictionary();
+      if(typeof window.generateAnalysisPipeline==='function')window.generateAnalysisPipeline();
+      var msg=E('v126ResearchLinkStatus');if(msg)msg.textContent='Dataset penelitian lokal berhasil dibuat dari '+rows.length+' rekaman kasus dan seluruh jawaban yang tersimpan.';
+      if(typeof window.runResearchAnalysis==='function')window.runResearchAnalysis();
+    };
+  }
+  function install126(){
+    var sec=E('investigasi');if(sec&&!E('v126InvestigationRegistry')){
+      var host=document.createElement('div');host.id='v126InvestigationRegistry';host.className='card';host.style.marginBottom='14px';
+      var formCard=sec.querySelector('.card');if(formCard)sec.insertBefore(host,formCard);else sec.insertBefore(host,sec.firstChild);
+    }
+    if(!E('v126Style')){
+      var st=document.createElement('style');st.id='v126Style';st.textContent=`
+      .v126-registry-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+      .v126-registry-count{padding:6px 10px;background:#edf4fb;border-radius:20px;font-size:12px;font-weight:700;color:#174a73}
+      .v126-table-scroll{overflow:auto;max-height:55vh;border:1px solid #e4e7ec;border-radius:9px}
+      .v126-table{min-width:920px;width:100%;border-collapse:collapse}
+      .v126-table th{position:sticky;top:0;background:#edf3f8;z-index:1;white-space:nowrap}
+      .v126-table td{vertical-align:top}
+      .v126-active-row{background:#f0f8ff}
+      .v126-name-link{border:0;background:transparent;color:#1769aa;font-weight:700;text-align:left;padding:0;cursor:pointer;text-decoration:underline}
+      .v126-actions{display:flex;gap:5px;flex-wrap:wrap}.v126-actions button{font-size:11px;padding:5px 7px;white-space:nowrap}
+      .v126-context{margin:8px 0;padding:9px 12px}
+      @media(max-width:700px){.v126-actions button{font-size:10px}}
+      `;document.head.appendChild(st);
+    }
+    renderRegistry126();
+    var research=E('penelitian');if(research&&!E('v126ResearchLink'))showResearchLink126();
+    renderContext126();
+  }
+  var oldPage=window.page;
+  if(typeof oldPage==='function')window.page=function(id){var out=oldPage.apply(this,arguments);setTimeout(function(){install126();if(id==='penelitian')showResearchLink126();if(id==='laporan'||id==='penelitian'||id==='kasus')renderContext126()},80);return out};
+  var oldRender=window.render;
+  if(typeof oldRender==='function')window.render=function(){var out=oldRender.apply(this,arguments);setTimeout(function(){renderRegistry126();renderContext126()},80);return out};
+  var oldSaveKlb=window.saveKlb;
+  if(typeof oldSaveKlb==='function')window.saveKlb=function(){var out=oldSaveKlb.apply(this,arguments);setTimeout(function(){renderRegistry126()},100);return out};
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(install126,1000)});
+  [1800,4000,7500].forEach(function(ms){setTimeout(install126,ms)});
+  window.GORUT_V126={version:'v126',features:['KLB investigation registry','active investigation navigation to PE report/research/case dashboards','research dataset generation from active investigation answers','no operational case deletion or overwrite']};
+})();
