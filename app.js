@@ -4429,8 +4429,8 @@ try{installBrandingV67();}catch(e){}
     }).join('')||'<tr><td colspan="13"><div class="notice">Belum ada kasus yang cocok dengan pencarian.</div></td></tr>';
     if(body.innerHTML!==html){body.innerHTML=html;lastHtml=html}
     else lastHtml=html;
-    body.querySelectorAll('[data-v115-detail]').forEach(function(btn){btn.onclick=function(){detail(btn.getAttribute('data-v115-detail'))}});
-    body.querySelectorAll('[data-v116-edit-group]').forEach(function(btn){btn.onclick=function(){var g=groups().find(function(x){return x.key===btn.getAttribute('data-v116-edit-group')});if(!g)return;if(g.rows.length>1){detail(g.key);return}var ix=window.db&&window.db.cases?window.db.cases.indexOf(g.rows[0]):-1;if(ix>=0)window.editCaseSource(ix)}});
+    body.querySelectorAll('[data-v115-detail]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.openCaseDetailRecovery118(btn)}});
+    body.querySelectorAll('[data-v116-edit-group]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.openCaseEditRecovery118(btn)}});
     var note=document.getElementById('caseListRecoveryNote106');
     if(note)note.textContent='Menampilkan '+gs.length+' baris utama dari '+sourceRows().length+' rekaman sumber. Duplikasi dikelompokkan hanya untuk tampilan berdasarkan ID kasus + ID penyelidikan.';
   }
