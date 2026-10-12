@@ -4378,7 +4378,7 @@ try{installBrandingV67();}catch(e){}
     var g=groups().find(function(x){return x.key===key});
     if(!g)return;
     var html='<h2>Detail Lengkap — '+esc(g.view.id||'-')+'</h2>'+
-      '<div class="notice">Terdapat <b>'+g.rows.length+' rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Semua rekaman ditampilkan terpisah; jawaban yang berbeda tidak ditimpa, dan tidak ada data yang dihapus atau digabung di database.</div>';
+      '<div class="notice">Terdapat <b>'+g.rows.length+' rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Detail/edit aktif diarahkan ke rekaman terakhir dalam kelompok (diasumsikan Sumber 2); rekaman lain tetap tersimpan dan tidak dihapus.</div>';
     // Only source 2 is active in the detail/edit workflow. Earlier source records remain
     // preserved in storage and are not deleted; they are simply not used as the active form.
     var activeRows=g.rows.length? [g.rows[g.rows.length-1]] : [];
@@ -4386,7 +4386,7 @@ try{installBrandingV67();}catch(e){}
       var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
       var sourceIndex=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(c):-1;
       var fields=[['ID server',c.serverId],['ID penyelidikan',c.investigationId],['Nama',c.name],['Alamat',c.address],['Desa',c.desa||c.admin&&c.admin.desa],['Kecamatan',c.kec||c.admin&&c.admin.kec],['Umur',c.age],['Jenis kelamin',c.sex],['Tanggal onset',c.onset],['Status kasus',c.status],['Outcome',c.outcome],['Gejala',c.symptoms]];
-      html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Rekaman sumber '+(i+1)+' — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+Object.keys(ans).filter(function(k){return ans[k]!==''&&ans[k]!==null&&ans[k]!==undefined}).length+' jawaban kuesioner)</small> <button type="button" onclick="event.preventDefault();event.stopPropagation();window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')" style="margin-left:8px">Edit rekaman ini</button></summary>'+
+      html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Rekaman sumber '+g.rows.length+' (aktif) — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+Object.keys(ans).filter(function(k){return ans[k]!==''&&ans[k]!==null&&ans[k]!==undefined}).length+' jawaban kuesioner)</small> <button type="button" onclick="event.preventDefault();event.stopPropagation();window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')" style="margin-left:8px">Edit rekaman ini</button></summary>'+
         '<div class="toolbar" style="margin:8px 0"><button type="button" onclick="window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')">Edit rekaman sumber ini</button></div><div style="overflow:auto;max-height:28vh"><table class="report-table"><thead><tr><th>Variabel inti</th><th>Nilai</th></tr></thead><tbody>'+
         fields.map(function(f){return '<tr><td>'+esc(f[0])+'</td><td>'+esc(f[1]===undefined||f[1]===null||f[1]===''?'Belum diisi':(typeof f[1]==='object'?JSON.stringify(f[1]):f[1]))+'</td></tr>'}).join('')+
         '</tbody></table></div><h4>Seluruh jawaban kuesioner</h4><div style="overflow:auto;max-height:45vh"><table class="report-table"><thead><tr><th>Field</th><th>Jawaban</th></tr></thead><tbody>'+
