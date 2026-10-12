@@ -4467,6 +4467,13 @@ try{installBrandingV67();}catch(e){}
     html+=f('ID Kasus','ed116_id','text',c.id);
     html+=f('Nama','ed116_name','text',c.name||'')+f('Umur (tahun)','ed116_age','number',c.age==null?'':c.age)+f('Jenis kelamin','ed116_sex','select','Laki-laki|Perempuan|Tidak diketahui')+f('Tanggal/waktu onset','ed116_onset',onsetType,dateValue116(c.onset,onsetType))+f('Status kasus','ed116_status','select','Suspek|Probable|Konfirmasi|Bukan kasus|Belum diklasifikasi')+f('Outcome','ed116_outcome','select','Rawat jalan|Dirawat|Sembuh|Meninggal|Masih sakit/dirawat|Tidak diketahui');
     html+='<div class="field"><label>Gejala utama</label><textarea id="ed116_symptoms" rows="3">'+esc116(c.symptoms||(c.answers&&(c.answers.symptoms||c.answers.symptom||c.answers.gejala))||'')+'</textarea></div>';
+    var answersForEdit=c.answers&&typeof c.answers==='object'?c.answers:{};
+    html+='<details open style="margin:12px 0"><summary><b>Seluruh item kuesioner ('+Object.keys(answersForEdit).length+')</b></summary><div class="notice">Setiap field jawaban yang tersimpan pada rekaman sumber ini ditampilkan di bawah. Jawaban sumber lain tidak digunakan. Field yang tidak diubah akan dipertahankan.</div><div style="max-height:45vh;overflow:auto">';
+    Object.keys(answersForEdit).forEach(function(k,i){
+      var av=answersForEdit[k],shown=(av===null||av===undefined)?'':(typeof av==='object'?JSON.stringify(av,null,2):String(av));
+      html+='<div class="field" style="margin:8px 0"><label for="ed116_answer_'+i+'">'+esc116(k)+'</label><textarea class="answer-edit-v116" id="ed116_answer_'+i+'" data-answer-key="'+esc116(k)+'" rows="2">'+esc116(shown)+'</textarea></div>';
+    });
+    html+='</div></details>';
     html+=f('Alamat lengkap','ed116_address','text',c.address||'')+f('Provinsi','ed116_prov','text',c.prov||(c.admin&&c.admin.prov)||'')+f('Kabupaten/Kota','ed116_kab','text',c.kab||(c.admin&&c.admin.kab)||'')+f('Kecamatan','ed116_kec','text',c.kec||(c.admin&&c.admin.kec)||'')+f('Desa/Kelurahan','ed116_desa','text',c.desa||(c.admin&&c.admin.desa)||'')+f('Latitude','ed116_lat','number',c.lat==null?'':c.lat)+f('Longitude','ed116_lng','number',c.lng==null?'':c.lng);
     if(food){html+='<details open style="margin-top:12px"><summary><b>Detail keracunan pangan</b></summary>'+f('Makanan/minuman dikonsumsi','ed116_food','text',fc.food||fc.exposureFood||'')+f('Waktu konsumsi','ed116_consumed','datetime-local',dateValue116(fc.consumedAt,'datetime-local'))+f('Waktu onset','ed116_foodonset','datetime-local',dateValue116(fc.onsetAt||fc.onsetTime,'datetime-local'))+f('Masa inkubasi (jam)','ed116_incubation','number',fc.incubationHours==null?'':fc.incubationHours)+f('Sumber pangan','ed116_foodsource','text',fc.foodSource||fc.source||'')+f('Dirawat inap?','ed116_hospitalized','select','Tidak|Ya')+f('Spesimen klinis','ed116_specimen','text',fc.clinicalSpecimen||fc.specimenClinical||'')+'</details>'}
     html+='<div class="toolbar" style="margin-top:14px"><button type="button" class="primary" id="ed116_save">Simpan Perubahan</button><button type="button" id="ed116_cancel">Batal</button></div>';
@@ -4499,6 +4506,17 @@ try{installBrandingV67();}catch(e){}
     var coord=function(id){var x=v(id);if(x.trim()==='')return null;var n=Number(x);return Number.isFinite(n)?n:NaN};
     var lat=coord('ed116_lat'),lng=coord('ed116_lng');
     if(Number.isNaN(lat)||Number.isNaN(lng)||(lat!==null&&(lat < -90||lat>90))||(lng!==null&&(lng < -180||lng>180))){alert('Latitude harus -90 sampai 90 dan longitude -180 sampai 180.');return}
+    var answerEls=Array.from(document.querySelectorAll('#modalbox .answer-edit-v116'));
+    if(answerEls.length){
+      var updatedAnswers=Object.assign({},c.answers&&typeof c.answers==='object'?c.answers:{});
+      answerEls.forEach(function(el){
+        var k=el.getAttribute('data-answer-key'),raw=el.value,prior=updatedAnswers[k];
+        if(typeof prior==='object'&&prior!==null){
+          try{updatedAnswers[k]=JSON.parse(raw)}catch(parseErr){updatedAnswers[k]=raw}
+        }else updatedAnswers[k]=raw;
+      });
+      c.answers=updatedAnswers;
+    }
     Object.assign(c,{name:v('ed116_name').trim(),age:age===null?0:age,sex:v('ed116_sex'),onset:v('ed116_onset'),status:v('ed116_status'),outcome:v('ed116_outcome'),symptoms:v('ed116_symptoms'),address:v('ed116_address'),prov:v('ed116_prov'),kab:v('ed116_kab'),kec:v('ed116_kec'),desa:v('ed116_desa'),lat:lat,lng:lng,updatedAt:new Date().toISOString()});
     c.admin=Object.assign({},c.admin||{},{prov:c.prov||(c.admin&&c.admin.prov)||'',kab:c.kab||(c.admin&&c.admin.kab)||'',kec:c.kec||(c.admin&&c.admin.kec)||'',desa:c.desa||(c.admin&&c.admin.desa)||'',lat:lat,lng:lng,source:(c.admin&&c.admin.source)||'input manual'});
     if(food){var old=c.foodCase||{};c.foodCase=Object.assign({},old,{food:v('ed116_food'),consumedAt:v('ed116_consumed'),onsetAt:v('ed116_foodonset'),incubationHours:v('ed116_incubation')===''?null:Number(v('ed116_incubation')),symptoms:v('ed116_symptoms'),foodSource:v('ed116_foodsource'),hospitalized:v('ed116_hospitalized'),clinicalSpecimen:v('ed116_specimen')})}
