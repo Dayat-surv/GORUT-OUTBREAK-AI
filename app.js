@@ -4405,6 +4405,15 @@ try{installBrandingV67();}catch(e){}
       }else if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
         qs=baseQ.map(function(q){return buildQuestion(q[1],q[0])});
         if(diseaseDef&&Array.isArray(diseaseDef.q))qs=qs.concat(diseaseDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+diseaseDef.name)}));
+        var activeMetaDisease=window.db&&window.db.questionMeta&&window.db.questionMeta.disease;
+        if(normDetail121(activeMetaDisease)===normDetail121(diseaseId)&&Array.isArray(window.db&&window.db.questions)){
+          var seenQuestions=new Set(qs.map(function(q){return normDetail121(q.id)+'|'+normDetail121(q.label)}));
+          window.db.questions.forEach(function(q){
+            if(!q||!q.label)return;
+            var sig=normDetail121(q.id)+'|'+normDetail121(q.label);
+            if(!seenQuestions.has(sig)){qs.push(q);seenQuestions.add(sig)}
+          });
+        }
       }
       function answerKey(q){
         if(Object.prototype.hasOwnProperty.call(ans,q.id))return q.id;
