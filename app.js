@@ -4385,12 +4385,44 @@ try{installBrandingV67();}catch(e){}
     activeRows.forEach(function(c,i){
       var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
       var sourceIndex=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(c):-1;
-      var fields=[['ID server',c.serverId],['ID penyelidikan',c.investigationId],['Nama',c.name],['Alamat',c.address],['Desa',c.desa||c.admin&&c.admin.desa],['Kecamatan',c.kec||c.admin&&c.admin.kec],['Umur',c.age],['Jenis kelamin',c.sex],['Tanggal onset',c.onset],['Status kasus',c.status],['Outcome',c.outcome],['Gejala',c.symptoms]];
-      html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Rekaman sumber '+g.rows.length+' (aktif) — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+Object.keys(ans).filter(function(k){return ans[k]!==''&&ans[k]!==null&&ans[k]!==undefined}).length+' jawaban kuesioner)</small> <button type="button" onclick="event.preventDefault();event.stopPropagation();window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')" style="margin-left:8px">Edit rekaman ini</button></summary>'+
-        '<div class="toolbar" style="margin:8px 0"><button type="button" onclick="window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')">Edit rekaman sumber ini</button></div><div style="overflow:auto;max-height:28vh"><table class="report-table"><thead><tr><th>Variabel inti</th><th>Nilai</th></tr></thead><tbody>'+
-        fields.map(function(f){return '<tr><td>'+esc(f[0])+'</td><td>'+esc(f[1]===undefined||f[1]===null||f[1]===''?'Belum diisi':(typeof f[1]==='object'?JSON.stringify(f[1]):f[1]))+'</td></tr>'}).join('')+
-        '</tbody></table></div><h4>Seluruh jawaban kuesioner</h4><div style="overflow:auto;max-height:45vh"><table class="report-table"><thead><tr><th>Field</th><th>Jawaban</th></tr></thead><tbody>'+
-        (Object.keys(ans).length?Object.keys(ans).map(function(k){var v=ans[k];return '<tr><td><code>'+esc(k)+'</code></td><td>'+esc(v===undefined||v===null||v===''?'Belum diisi':(typeof v==='object'?JSON.stringify(v):v))+'</td></tr>'}).join(''):'<tr><td colspan="2">Belum ada jawaban kuesioner.</td></tr>')+
+      var inv=(window.db.investigations||[]).find(function(x){return String(x.id)===String(c.investigationId)});
+      var instrument=c.questionnaire||c.instrument||{};
+      function normDetail121(x){return String(x==null?'':x).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
+      var diseaseCandidates=[c.disease,instrument.disease,instrument.diseaseId,ans.disease,ans.diseaseId,inv&&inv.disease].filter(function(x){return x!==undefined&&x!==null&&String(x).trim()!==''});
+      var diseaseId='',diseaseDef=null;
+      for(var di=0;di<diseaseCandidates.length&&!diseaseDef;di++){
+        var cand=String(diseaseCandidates[di]).trim();
+        if(typeof diseases!=='undefined'&&diseases[cand]){diseaseId=cand;diseaseDef=diseases[cand];break}
+        if(typeof diseases!=='undefined'&&diseases){
+          var matched=Object.keys(diseases).find(function(k){return normDetail121(k)===normDetail121(cand)||normDetail121(diseases[k]&&diseases[k].name)===normDetail121(cand)});
+          if(matched){diseaseId=matched;diseaseDef=diseases[matched]}
+        }
+      }
+      var storedQuestions=(Array.isArray(c.questionnaireQuestions)&&c.questionnaireQuestions)||(Array.isArray(c.questions)&&c.questions)||(Array.isArray(instrument.questions)&&instrument.questions)||null;
+      var qs=[];
+      if(storedQuestions&&storedQuestions.length){
+        qs=storedQuestions.map(function(q){if(typeof q==='string')return buildQuestion(q,'Spesifik — '+(diseaseDef&&diseaseDef.name||diseaseId));if(q&&q.label&&!q.id)return Object.assign({},buildQuestion(q.label,q.cat||'Kuesioner'),q);return q}).filter(function(q){return q&&q.label});
+      }else if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
+        qs=baseQ.map(function(q){return buildQuestion(q[1],q[0])});
+        if(diseaseDef&&Array.isArray(diseaseDef.q))qs=qs.concat(diseaseDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+diseaseDef.name)}));
+      }
+      function answerKey(q){
+        if(Object.prototype.hasOwnProperty.call(ans,q.id))return q.id;
+        if(Object.prototype.hasOwnProperty.call(ans,q.label))return q.label;
+        var ids=[normDetail121(q.id),normDetail121(q.label)];
+        return Object.keys(ans).find(function(k){return ids.indexOf(normDetail121(k))>=0})||'';
+      }
+      var answered=0;
+      var questionnaireRows=qs.map(function(q,qi){
+        var key=answerKey(q),v=key?ans[key]:'';
+        if(v!==undefined&&v!==null&&String(v).trim()!=='')answered++;
+        return '<tr><td>'+(qi+1)+'. '+esc(q.label)+'</td><td>'+esc(v===undefined||v===null||v===''?'Belum diisi':(typeof v==='object'?JSON.stringify(v):v))+'</td></tr>';
+      }).join('');
+      html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Kuesioner lengkap — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+answered+'/'+qs.length+' pertanyaan terisi)</small> <button type="button" onclick="event.preventDefault();event.stopPropagation();window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')" style="margin-left:8px">Edit kuesioner</button></summary>'+
+        '<div class="toolbar" style="margin:8px 0"><button type="button" onclick="window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')">Edit rekaman ini</button></div>'+
+        '<p class="muted">Ditampilkan hanya pertanyaan instrumen kuesioner untuk rekaman aktif. Field lama dari sumber lain tidak ditampilkan di sini dan tidak dihapus dari penyimpanan.</p>'+
+        '<div style="overflow:auto;max-height:60vh"><table class="report-table"><thead><tr><th>Pertanyaan kuesioner</th><th>Jawaban</th></tr></thead><tbody>'+
+        (qs.length?questionnaireRows:'<tr><td colspan="2">Instrumen kuesioner belum dapat dikenali untuk rekaman ini.</td></tr>')+
         '</tbody></table></div></details>';
     });
     html+='<div class="toolbar" style="margin-top:12px"><button type="button" onclick="closeAppModal()">Tutup</button></div>';
