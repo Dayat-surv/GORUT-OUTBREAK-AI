@@ -4473,33 +4473,63 @@ try{installBrandingV67();}catch(e){}
     html+=f('Nama','ed116_name','text',c.name||'')+f('Umur (tahun)','ed116_age','number',c.age==null?'':c.age)+f('Jenis kelamin','ed116_sex','select','Laki-laki|Perempuan|Tidak diketahui')+f('Tanggal/waktu onset','ed116_onset',onsetType,dateValue116(c.onset,onsetType))+f('Status kasus','ed116_status','select','Suspek|Probable|Konfirmasi|Bukan kasus|Belum diklasifikasi')+f('Outcome','ed116_outcome','select','Rawat jalan|Dirawat|Sembuh|Meninggal|Masih sakit/dirawat|Tidak diketahui');
     html+='<div class="field"><label>Gejala utama</label><textarea id="ed116_symptoms" rows="3">'+esc116(c.symptoms||(c.answers&&(c.answers.symptoms||c.answers.symptom||c.answers.gejala))||'')+'</textarea></div>';
     var answersForEdit=c.answers&&typeof c.answers==='object'?c.answers:{};
-    // v120: build the complete questionnaire for the selected record's investigation disease,
-    // rather than rendering only keys that happened to exist in this record's saved answers.
-    var rawDiseaseId=String((inv&&inv.disease)||c.disease||(answersForEdit.disease)||window.db.selectedDisease||'').trim();
+    // v121: prioritize the disease/instrument attached to this source record, not only the
+    // investigation-wide disease. Sibling source records may use different disease instruments.
+    var recordInstrument=c.questionnaire||c.instrument||{};
+    var invInstrument=inv&&(inv.questionnaire||inv.instrument)||{};
+    function normDisease121(x){return String(x==null?'':x).toLowerCase().replace(/[^a-z0-9]+/g,'')}
+    var diseaseCandidates=[c.disease,recordInstrument.disease,recordInstrument.diseaseId,
+      answersForEdit.disease,answersForEdit.diseaseId,inv&&inv.disease,invInstrument.disease,invInstrument.diseaseId]
+      .filter(function(x){return x!==undefined&&x!==null&&String(x).trim()!==''});
+    var rawDiseaseId=String(diseaseCandidates[0]||'').trim();
     var qDiseaseId=rawDiseaseId;
     var qDef=null;
     if(typeof diseases!=='undefined'&&diseases){
-      qDef=diseases[rawDiseaseId]||null;
-      if(!qDef){
-        var rawNorm=rawDiseaseId.toLowerCase().replace(/[^a-z0-9]+/g,'');
+      for(var di=0;di<diseaseCandidates.length&&!qDef;di++){
+        var candidate=String(diseaseCandidates[di]).trim();
+        if(diseases[candidate]){qDiseaseId=candidate;qDef=diseases[candidate];break}
+        var candidateNorm=normDisease121(candidate);
         var matchedDisease=Object.keys(diseases).find(function(k){
           var d=diseases[k]||{};
-          return k.toLowerCase().replace(/[^a-z0-9]+/g,'')===rawNorm||
-            String(d.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'')===rawNorm;
+          return normDisease121(k)===candidateNorm||normDisease121(d.name)===candidateNorm;
         });
         if(matchedDisease){qDiseaseId=matchedDisease;qDef=diseases[matchedDisease]}
       }
+      if(!qDef&&diseases[window.db&&window.db.selectedDisease]){
+        qDiseaseId=window.db.selectedDisease;qDef=diseases[qDiseaseId];
+      }
     }
+    // Prefer a questionnaire snapshot stored with this specific record. An investigation-level
+    // snapshot is accepted only when its disease metadata matches the selected record's disease.
+    // Never append the global questionnaire editor blindly; it may belong to Source 1.
+    var storedQuestionList=
+      (Array.isArray(c.questionnaireQuestions)&&c.questionnaireQuestions)||
+      (Array.isArray(c.questions)&&c.questions)||
+      (Array.isArray(recordInstrument.questions)&&recordInstrument.questions)||
+      (normDisease121(invInstrument.disease||invInstrument.diseaseId)===normDisease121(qDiseaseId)&&Array.isArray(invInstrument.questions)&&invInstrument.questions)||null;
     var questionList=[];
-    if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
-      // Load common questions plus disease-specific questions from the matched disease instrument.
+    if(storedQuestionList&&storedQuestionList.length){
+      questionList=storedQuestionList.map(function(q){
+        if(typeof q==='string')return buildQuestion(q,'Spesifik — '+(qDef&&qDef.name||qDiseaseId||'Instrumen rekaman'));
+        if(q&&q.label&&!q.id)return Object.assign({},buildQuestion(q.label,q.cat||'Kuesioner'),q);
+        return q;
+      }).filter(function(q){return q&&q.label});
+    }else if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
+      // Fallback to the complete common instrument plus the disease-specific instrument.
       questionList=baseQ.map(function(q){return buildQuestion(q[1],q[0])});
       if(qDef&&Array.isArray(qDef.q))questionList=questionList.concat(qDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+(qDef.name||qDiseaseId))}));
-      var knownQ=new Set(questionList.map(function(q){return String(q.id||'')}));
-      (Array.isArray(window.db&&window.db.questions)?window.db.questions:[]).forEach(function(q){
-        if(q&&q.id&&!knownQ.has(String(q.id))){questionList.push(q);knownQ.add(String(q.id))}
-      });
-    }else if(Array.isArray(window.db&&window.db.questions)){
+      // Include custom questions only when their saved metadata explicitly matches this disease.
+      var metaDisease=window.db&&window.db.questionMeta&&window.db.questionMeta.disease;
+      if(normDisease121(metaDisease)===normDisease121(qDiseaseId)&&Array.isArray(window.db&&window.db.questions)){
+        var knownQ=new Set(questionList.map(function(q){return normAnswerKey120(q.id)+'|'+normAnswerKey120(q.label)}));
+        window.db.questions.forEach(function(q){
+          if(!q||!q.label)return;
+          var signature=normAnswerKey120(q.id)+'|'+normAnswerKey120(q.label);
+          if(!knownQ.has(signature)){questionList.push(q);knownQ.add(signature)}
+        });
+      }
+    }else if(Array.isArray(window.db&&window.db.questions)&&
+      normDisease121(window.db&&window.db.questionMeta&&window.db.questionMeta.disease)===normDisease121(qDiseaseId)){
       questionList=window.db.questions.slice();
     }
     var usedAnswerKeys={};
