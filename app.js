@@ -4393,6 +4393,24 @@ try{installBrandingV67();}catch(e){}
     if(box&&modal){box.innerHTML=html;modal.classList.add('show')}
     else window.alert('Panel detail belum tersedia. Muat ulang aplikasi; data sumber tidak diubah.');
   }
+  /* v118.1: direct, delegated-safe button entry points for the main case table. */
+  window.openCaseDetailRecovery118=function(btn){
+    try{var key=btn&&btn.getAttribute('data-v115-detail');if(!key){alert('ID kelompok kasus tidak ditemukan.');return false}detail(key)}
+    catch(e){console.error('Detail kasus gagal dibuka:',e);alert('Detail belum dapat dibuka: '+(e&&e.message||e))}
+    return false;
+  };
+  window.openCaseEditRecovery118=function(btn){
+    try{
+      var key=btn&&btn.getAttribute('data-v116-edit-group');
+      var g=groups().find(function(x){return x.key===key});
+      if(!g){alert('Kelompok kasus tidak ditemukan. Muat ulang daftar kasus.');return false}
+      if(g.rows.length>1){detail(g.key);return false}
+      var ix=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(g.rows[0]):-1;
+      if(ix<0){alert('Rekaman sumber tidak ditemukan. Tidak ada data yang diubah.');return false}
+      window.editCaseSourceByServerId(g.rows[0].serverId||'',ix);
+    }catch(e){console.error('Edit kasus gagal dibuka:',e);alert('Form edit belum dapat dibuka: '+(e&&e.message||e))}
+    return false;
+  };
   function render(){
     var body=document.getElementById('caseRows');
     if(!body)return;
@@ -4407,7 +4425,7 @@ try{installBrandingV67();}catch(e){}
       var risk=positive.length?positive.slice(0,3).map(function(x){return '<span class="risk-chip"><span>'+esc(x.label||x.question||'Faktor risiko')+'</span><b>'+esc(x.value===undefined?x.answer:x.value)+'</b></span>'}).join('')+(positive.length>3?' <span class="risk-none">+'+(positive.length-3)+' lainnya</span>':''):'<span class="risk-none">Belum teridentifikasi</span>';
       var keyAttr=esc(g.key);
       return '<tr><td>'+esc(c.id||'-')+(g.rows.length>1?' <span class="badge">'+g.rows.length+' rekaman</span>':'')+'</td>'+
-        '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||'-')+'</td><td>'+esc(c.kec||'-')+'</td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'">Detail</button> <button type="button" data-v116-edit-group="'+keyAttr+'">Edit</button></td></tr>';
+        '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||'-')+'</td><td>'+esc(c.kec||'-')+'</td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'" onclick="return window.openCaseDetailRecovery118(this)">Detail</button> <button type="button" data-v116-edit-group="'+keyAttr+'" onclick="return window.openCaseEditRecovery118(this)">Edit</button></td></tr>';
     }).join('')||'<tr><td colspan="13"><div class="notice">Belum ada kasus yang cocok dengan pencarian.</div></td></tr>';
     if(body.innerHTML!==html){body.innerHTML=html;lastHtml=html}
     else lastHtml=html;
