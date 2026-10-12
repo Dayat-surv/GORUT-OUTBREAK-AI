@@ -4554,7 +4554,28 @@ try{installBrandingV67();}catch(e){}
           q=Object.assign({},q,{label:q.question||q.text||q.title||q.name});
         }
         if(!q||!q.label)return;
-        var labelKey=normAnswerKey120(q.label);
+        function canonicalQuestionKey125(label){
+          var n=normAnswerKey120(label);
+          var aliases={
+            idkasus:'idkasus',caseid:'idkasus',nomorkasus:'idkasus',kodekasus:'idkasus',
+            alamat:'alamatlengkap',alamatlengkap:'alamatlengkap',alamatrumah:'alamatlengkap',
+            umur:'umur',usia:'umur',umurpasien:'umur',
+            jeniskelamin:'jeniskelamin',jk:'jeniskelamin',sex:'jeniskelamin',
+            desakelurahan:'desakelurahan',desa:'desakelurahan',kelurahan:'desakelurahan',
+            kecamatan:'kecamatan',kec:'kecamatan',
+            kabupaten:'kabupaten',kabupatenkota:'kabupaten',
+            provinsi:'provinsi',prov:'provinsi',
+            puskesmas:'puskesmas',fasilitaskesehatan:'puskesmas',
+            tanggalonset:'tanggalonset',tanggalonsetgejala:'tanggalonset',tanggalonsetdemam:'tanggalonset',
+          };
+          if(aliases[n])return aliases[n];
+          if(/^(tanggal)?onset(gejala|demam|ruam)?$/.test(n))return 'tanggalonset';
+          if(/^(gejalautama|gejaladominan|keluhanutama|symptoms?)$/.test(n))return 'gejalautama';
+          if(/^(statuskasus|klasifikasikasus|klasifikasiakhir)$/.test(n))return 'statuskasus';
+          if(/^(outcome|keadaanakhir|statusakhir)$/.test(n))return 'outcome';
+          return n;
+        }
+        var labelKey=canonicalQuestionKey125(q.label);
         if(!labelKey||seenQuestionLabels.has(labelKey))return;
         seenQuestionLabels.add(labelKey);
         questionList.push(Object.assign({},q,{label:String(q.label)}));
@@ -4698,4 +4719,117 @@ try{installBrandingV67();}catch(e){}
     alert('Perubahan disimpan pada rekaman sumber yang dipilih. Jawaban kuesioner lain tetap dipertahankan. Jalankan Sinkronisasi Supabase untuk mengirim perubahan ke server.');
   };
   window.GORUT_V116={version:'v118',features:['edit selected source record by unique server ID','duplicate-group Edit opens source selection','preserve questionnaire answers and server identifiers']};
+})();
+
+
+/* ==================== v125 — QUESTIONNAIRE DEDUPLICATION + FULL ANSWER MATRIX ==================== */
+(function(){
+  var E=function(id){return document.getElementById(id)};
+  var esc125=function(v){return String(v===null||v===undefined?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})};
+  var norm125=function(v){return String(v===null||v===undefined?'':v).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')};
+  function invName125(inv){var d=window.diseases&&window.diseases[inv.disease];return String(inv.name||'Investigasi tanpa nama')+' — '+String(d&&d.name||inv.disease||'Penyakit belum ditentukan')}
+  function val125(v){if(v===null||v===undefined||v==='')return '';if(Array.isArray(v))return v.map(val125).join(', ');if(typeof v==='object')return JSON.stringify(v);return String(v)}
+  function answerKeys125(c){
+    var ans=c&&c.answers&&typeof c.answers==='object'?c.answers:{};
+    return Object.keys(ans).filter(function(k){return k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId'});
+  }
+  function coreValue125(c,k){
+    var a=c.answers&&typeof c.answers==='object'?c.answers:{};
+    var aliases={
+      'ID Kasus':['ID Kasus','id_kasus','case_id','caseId'],
+      'Nama':['Nama lengkap','Nama','nama','full_name'],
+      'Umur':['Umur','Usia','umur','age'],
+      'Jenis kelamin':['Jenis kelamin','jenis_kelamin','sex'],
+      'Alamat':['Alamat lengkap','Alamat','address'],
+      'Desa/Kelurahan':['Desa/Kelurahan','Desa','desa'],
+      'Kecamatan':['Kecamatan','kec'],
+      'Tanggal onset':['Tanggal onset','Tanggal onset gejala','Tanggal onset demam','onset'],
+      'Status kasus':['Status kasus','Klasifikasi kasus','status'],
+      'Gejala utama':['Gejala utama','Gejala','symptoms']
+    };
+    var field={ 'ID Kasus':c.id,'Nama':c.name,'Umur':c.age,'Jenis kelamin':c.sex,'Alamat':c.address,'Desa/Kelurahan':c.desa||c.admin&&c.admin.desa,'Kecamatan':c.kec||c.admin&&c.admin.kec,'Tanggal onset':c.onset,'Status kasus':c.status,'Gejala utama':c.symptoms };
+    if(field[k]!==undefined&&field[k]!==null&&field[k]!=='')return val125(field[k]);
+    var ks=aliases[k]||[];
+    for(var i=0;i<ks.length;i++)if(a[ks[i]]!==undefined&&a[ks[i]]!==null&&a[ks[i]]!=='')return val125(a[ks[i]]);
+    return '';
+  }
+  function renderMatrix125(){
+    var host=E('v125FullAnswers');
+    if(!host)return;
+    var db=window.db||{},invs=Array.isArray(db.investigations)?db.investigations:[];
+    var selected=String(db.active||'');
+    var inv=invs.find(function(x){return String(x.id)===selected});
+    var allRows=(Array.isArray(db.cases)?db.cases:[]).filter(function(c){return !selected||String(c.investigationId)===selected});
+    var keys=[];
+    allRows.forEach(function(c){answerKeys125(c).forEach(function(k){if(keys.indexOf(k)<0)keys.push(k)})});
+    // Stable, readable column order: core case fields first, then every saved questionnaire answer key.
+    var core=['ID Kasus','Nama','Umur','Jenis kelamin','Alamat','Desa/Kelurahan','Kecamatan','Tanggal onset','Gejala utama','Status kasus','Outcome'];
+    var h='<div class="v125-matrix-card"><div class="v125-matrix-head"><div><h3 style="margin:0">Jawaban Kuesioner Lengkap</h3><div class="small">'+(inv?esc125(invName125(inv)):'Semua investigasi')+' · '+allRows.length+' rekaman sumber · '+keys.length+' kolom jawaban kuesioner</div></div><button type="button" id="v125Export">Ekspor tabel lengkap CSV</button></div>';
+    h+='<div class="notice">Tabel ini memuat seluruh jawaban yang tersimpan pada setiap rekaman sumber. Kolom dapat digeser ke samping; nilai kosong ditampilkan sebagai “—”. Rekaman sumber tidak digabung atau dihapus.</div>';
+    h+='<div class="v125-matrix-scroll"><table class="report-table v125-matrix"><thead><tr><th>No.</th><th>Investigasi</th>'+core.map(function(k){return '<th>'+esc125(k)+'</th>'}).join('')+keys.map(function(k){return '<th>'+esc125(k)+'</th>'}).join('')+'</tr></thead><tbody>';
+    h+=allRows.map(function(c,i){
+      var iv=invs.find(function(x){return String(x.id)===String(c.investigationId)});
+      return '<tr><td>'+(i+1)+'</td><td>'+esc125(iv?invName125(iv):c.investigationId||'—')+'</td>'+core.map(function(k){var v=k==='Outcome'?c.outcome:coreValue125(c,k);return '<td>'+esc125(v||'—')+'</td>'}).join('')+keys.map(function(k){var a=c.answers&&typeof c.answers==='object'?c.answers:{};return '<td>'+esc125(val125(a[k])||'—')+'</td>'}).join('')+'</tr>';
+    }).join('')||'<tr><td colspan="'+(core.length+keys.length+2)+'">Belum ada rekaman kasus pada investigasi ini.</td></tr>';
+    h+='</tbody></table></div></div>';
+    host.innerHTML=h;
+    var ex=E('v125Export');if(ex)ex.onclick=function(){
+      var cols=['No.','Investigasi'].concat(core,keys);
+      var csv=[cols].concat(allRows.map(function(c,i){var iv=invs.find(function(x){return String(x.id)===String(c.investigationId)});return [i+1,iv?invName125(iv):c.investigationId||'',...core.map(function(k){return k==='Outcome'?c.outcome:coreValue125(c,k)}),...keys.map(function(k){return val125(c.answers&&c.answers[k])})]}));
+      var content='\ufeff'+csv.map(function(row){return row.map(function(v){return '"'+String(v===null||v===undefined?'':v).replace(/"/g,'""')+'"'}).join(',')}).join('\r\n');
+      var blob=new Blob([content],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='GORUT-OUTBREAK-AI-jawaban-lengkap.csv';a.click();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+    };
+  }
+  function renderInvestigationPicker125(){
+    var host=E('v125InvestigationPicker');if(!host)return;
+    var db=window.db||{},invs=Array.isArray(db.investigations)?db.investigations:[];
+    var active=String(db.active||'');
+    host.innerHTML='<div class="v125-picker-head"><div><h3 style="margin:0">Pilih Investigasi</h3><div class="small">Klik nama investigasi penyakit untuk memanggil otomatis seluruh kasus dan jawaban kuesionernya.</div></div><button type="button" id="v125All">Semua investigasi</button></div><div class="v125-investigation-list">'+invs.map(function(inv){
+      var count=(db.cases||[]).filter(function(c){return String(c.investigationId)===String(inv.id)}).length;
+      return '<button type="button" class="v125-investigation '+(String(inv.id)===active?'active':'')+'" data-v125-inv="'+esc125(inv.id)+'"><b>'+esc125(inv.name||'Investigasi tanpa nama')+'</b><span>'+esc125((window.diseases&&window.diseases[inv.disease]&&window.diseases[inv.disease].name)||inv.disease||'Penyakit belum ditentukan')+'</span><small>'+count+' rekaman kasus</small></button>';
+    }).join('')||'<div class="notice">Belum ada investigasi. Buat dan simpan investigasi terlebih dahulu.</div>'+'</div>';
+    host.querySelectorAll('[data-v125-inv]').forEach(function(btn){btn.onclick=function(){
+      var id=btn.getAttribute('data-v125-inv');if(!id)return;
+      db.active=id;
+      try{if(typeof window.save==='function')window.save()}catch(e){}
+      try{if(typeof window.cases==='function')window.cases()}catch(e){}
+      renderInvestigationPicker125();renderMatrix125();
+    }});
+    var all=E('v125All');if(all)all.onclick=function(){db.active='';try{if(typeof window.save==='function')window.save()}catch(e){};try{if(typeof window.cases==='function')window.cases()}catch(e){};renderInvestigationPicker125();renderMatrix125()};
+  }
+  function install125(){
+    var sec=E('kasus');if(!sec)return;
+    var tableWrap=sec.querySelector('.case-table-wrap');
+    if(!E('v125InvestigationPicker')){
+      var picker=document.createElement('div');picker.id='v125InvestigationPicker';picker.className='card v125-selector-card';picker.style.margin='12px 0';
+      var matrix=document.createElement('div');matrix.id='v125FullAnswers';
+      if(tableWrap){tableWrap.parentNode.insertBefore(picker,tableWrap);tableWrap.parentNode.insertBefore(matrix,tableWrap.nextSibling)}
+      else {sec.firstElementChild&&sec.firstElementChild.appendChild(picker);sec.appendChild(matrix)}
+    }
+    if(!E('v125Style')){
+      var style=document.createElement('style');style.id='v125Style';style.textContent=`
+      .v125-selector-card,.v125-matrix-card{border:1px solid #d6e0ea;border-radius:14px;padding:14px;background:var(--card,#fff);box-shadow:0 4px 18px rgba(16,24,40,.06)}
+      .v125-picker-head,.v125-matrix-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+      .v125-investigation-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
+      .v125-investigation{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:5px;padding:12px;border:1px solid #d0d9e4;border-radius:10px;background:#f8fafc;color:#172b4d;cursor:pointer;min-height:88px}
+      .v125-investigation span{font-size:12px;color:#475467}.v125-investigation small{font-size:11px;color:#667085}
+      .v125-investigation.active{border:2px solid #1769aa;background:#eaf4ff}
+      .v125-matrix-scroll{overflow:auto;max-height:70vh;border:1px solid #e4e7ec;border-radius:8px}
+      .v125-matrix{border-collapse:separate;border-spacing:0;min-width:max-content;font-size:12px}
+      .v125-matrix th{position:sticky;top:0;background:#edf3f8;z-index:2;white-space:nowrap}
+      .v125-matrix td{max-width:320px;white-space:pre-wrap;overflow-wrap:anywhere;vertical-align:top}
+      .v125-matrix th:first-child,.v125-matrix td:first-child{position:sticky;left:0;background:#f8fafc;z-index:3}
+      .v125-matrix th:first-child{z-index:4}
+      `;
+      document.head.appendChild(style);
+    }
+    renderInvestigationPicker125();renderMatrix125();
+  }
+  var oldPage=window.page;
+  if(typeof oldPage==='function')window.page=function(id){var r=oldPage.apply(this,arguments);if(id==='kasus')setTimeout(install125,120);return r};
+  var oldCases=window.cases;
+  if(typeof oldCases==='function')window.cases=function(){var r=oldCases.apply(this,arguments);if(E('kasus'))setTimeout(function(){renderInvestigationPicker125();renderMatrix125()},30);return r};
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(install125,900)});
+  [1500,3500,7000].forEach(function(ms){setTimeout(install125,ms)});
+  window.GORUT_V125={version:'v125',features:['canonical questionnaire deduplication','clickable investigation selector','full source-record answer matrix','CSV export of all stored answers','no deletion or merge of case records']};
 })();
