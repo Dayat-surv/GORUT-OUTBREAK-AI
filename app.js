@@ -4541,38 +4541,46 @@ try{installBrandingV67();}catch(e){}
         qDiseaseId=window.db.selectedDisease;qDef=diseases[qDiseaseId];
       }
     }
-    // Prefer a questionnaire snapshot stored with this specific record. An investigation-level
-    // snapshot is accepted only when its disease metadata matches the selected record's disease.
-    // Never append the global questionnaire editor blindly; it may belong to Source 1.
-    var storedQuestionList=
-      (Array.isArray(c.questionnaireQuestions)&&c.questionnaireQuestions)||
-      (Array.isArray(c.questions)&&c.questions)||
-      (Array.isArray(recordInstrument.questions)&&recordInstrument.questions)||
-      (normDisease121(invInstrument.disease||invInstrument.diseaseId)===normDisease121(qDiseaseId)&&Array.isArray(invInstrument.questions)&&invInstrument.questions)||null;
+    // v123: gabungkan semua sumber pertanyaan agar snapshot yang tidak lengkap
+    // tidak menyebabkan sebagian pertanyaan formulir hilang dari editor.
     var questionList=[];
-    if(storedQuestionList&&storedQuestionList.length){
-      questionList=storedQuestionList.map(function(q){
-        if(typeof q==='string')return buildQuestion(q,'Spesifik — '+(qDef&&qDef.name||qDiseaseId||'Instrumen rekaman'));
-        if(q&&q.label&&!q.id)return Object.assign({},buildQuestion(q.label,q.cat||'Kuesioner'),q);
-        return q;
-      }).filter(function(q){return q&&q.label});
-    }else if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
-      // Fallback to the complete common instrument plus the disease-specific instrument.
-      questionList=baseQ.map(function(q){return buildQuestion(q[1],q[0])});
-      if(qDef&&Array.isArray(qDef.q))questionList=questionList.concat(qDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+(qDef.name||qDiseaseId))}));
-      // Include custom questions only when their saved metadata explicitly matches this disease.
-      var metaDisease=window.db&&window.db.questionMeta&&window.db.questionMeta.disease;
-      if(normDisease121(metaDisease)===normDisease121(qDiseaseId)&&Array.isArray(window.db&&window.db.questions)){
-        var knownQ=new Set(questionList.map(function(q){return normAnswerKey120(q.id)+'|'+normAnswerKey120(q.label)}));
-        window.db.questions.forEach(function(q){
-          if(!q||!q.label)return;
-          var signature=normAnswerKey120(q.id)+'|'+normAnswerKey120(q.label);
-          if(!knownQ.has(signature)){questionList.push(q);knownQ.add(signature)}
-        });
-      }
-    }else if(Array.isArray(window.db&&window.db.questions)&&
-      normDisease121(window.db&&window.db.questionMeta&&window.db.questionMeta.disease)===normDisease121(qDiseaseId)){
-      questionList=window.db.questions.slice();
+    var seenQuestionLabels=new Set();
+    function appendQuestionSource(source,category){
+      if(!Array.isArray(source))return;
+      source.forEach(function(q){
+        if(typeof q==='string')q=buildQuestion(q,category||('Spesifik — '+(qDef&&qDef.name||qDiseaseId||'Instrumen')));
+        else if(q&&typeof q==='object'&&!q.label&&(q.question||q.text||q.title)){
+          q=Object.assign({},q,{label:q.question||q.text||q.title});
+        }
+        if(!q||!q.label)return;
+        var labelKey=normAnswerKey120(q.label);
+        if(!labelKey||seenQuestionLabels.has(labelKey))return;
+        seenQuestionLabels.add(labelKey);
+        questionList.push(Object.assign({},q,{label:String(q.label)}));
+      });
+    }
+    var recordInstrument=c.questionnaire||c.instrument||{};
+    var investigationInstrument=inv&&(inv.questionnaire||inv.instrument)||{};
+    // Record-specific instrument has priority, followed by matching investigation snapshot.
+    appendQuestionSource(c.questionnaireQuestions,'Kuesioner rekaman');
+    appendQuestionSource(c.questions,'Kuesioner rekaman');
+    appendQuestionSource(recordInstrument.questions,'Kuesioner rekaman');
+    if(normDisease121(investigationInstrument.disease||investigationInstrument.diseaseId)===normDisease121(qDiseaseId)){
+      appendQuestionSource(investigationInstrument.questions,'Kuesioner investigasi');
+      appendQuestionSource(investigationInstrument.schema_json&&investigationInstrument.schema_json.questions,'Kuesioner investigasi');
+    }
+    // Always include the full common questionnaire and the selected disease module.
+    if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
+      appendQuestionSource(baseQ.map(function(q){return buildQuestion(q[1],q[0])}),'PE Umum');
+    }
+    if(qDef&&Array.isArray(qDef.q)){
+      appendQuestionSource(qDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+(qDef.name||qDiseaseId))}),'Spesifik');
+    }
+    // Include custom/global questions only when metadata identifies this disease,
+    // or metadata is absent (older saved versions may not have it).
+    var metaDisease=window.db&&window.db.questionMeta&&window.db.questionMeta.disease;
+    if(Array.isArray(window.db&&window.db.questions)&&(!metaDisease||normDisease121(metaDisease)===normDisease121(qDiseaseId))){
+      appendQuestionSource(window.db.questions,'Kuesioner tersimpan');
     }
     var usedAnswerKeys={};
     function normAnswerKey120(x){return String(x==null?'':x).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
