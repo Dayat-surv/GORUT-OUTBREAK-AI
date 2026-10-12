@@ -4379,9 +4379,10 @@ try{installBrandingV67();}catch(e){}
       '<div class="notice">Terdapat <b>'+g.rows.length+' rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Semua rekaman ditampilkan terpisah; jawaban yang berbeda tidak ditimpa, dan tidak ada data yang dihapus atau digabung di database.</div>';
     g.rows.forEach(function(c,i){
       var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
+      var sourceIndex=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(c):-1;
       var fields=[['ID server',c.serverId],['ID penyelidikan',c.investigationId],['Nama',c.name],['Alamat',c.address],['Desa',c.desa||c.admin&&c.admin.desa],['Kecamatan',c.kec||c.admin&&c.admin.kec],['Umur',c.age],['Jenis kelamin',c.sex],['Tanggal onset',c.onset],['Status kasus',c.status],['Outcome',c.outcome],['Gejala',c.symptoms]];
       html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Rekaman sumber '+(i+1)+' — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+Object.keys(ans).filter(function(k){return ans[k]!==''&&ans[k]!==null&&ans[k]!==undefined}).length+' jawaban kuesioner)</small></summary>'+
-        '<div style="overflow:auto;max-height:28vh"><table class="report-table"><thead><tr><th>Variabel inti</th><th>Nilai</th></tr></thead><tbody>'+
+        '<div class="toolbar" style="margin:8px 0"><button type="button" onclick="window.editCaseSource('+sourceIndex+')">Edit rekaman sumber ini</button></div><div style="overflow:auto;max-height:28vh"><table class="report-table"><thead><tr><th>Variabel inti</th><th>Nilai</th></tr></thead><tbody>'+
         fields.map(function(f){return '<tr><td>'+esc(f[0])+'</td><td>'+esc(f[1]===undefined||f[1]===null||f[1]===''?'Belum diisi':(typeof f[1]==='object'?JSON.stringify(f[1]):f[1]))+'</td></tr>'}).join('')+
         '</tbody></table></div><h4>Seluruh jawaban kuesioner</h4><div style="overflow:auto;max-height:45vh"><table class="report-table"><thead><tr><th>Field</th><th>Jawaban</th></tr></thead><tbody>'+
         (Object.keys(ans).length?Object.keys(ans).map(function(k){var v=ans[k];return '<tr><td><code>'+esc(k)+'</code></td><td>'+esc(v===undefined||v===null||v===''?'Belum diisi':(typeof v==='object'?JSON.stringify(v):v))+'</td></tr>'}).join(''):'<tr><td colspan="2">Belum ada jawaban kuesioner.</td></tr>')+
@@ -4406,12 +4407,12 @@ try{installBrandingV67();}catch(e){}
       var risk=positive.length?positive.slice(0,3).map(function(x){return '<span class="risk-chip"><span>'+esc(x.label||x.question||'Faktor risiko')+'</span><b>'+esc(x.value===undefined?x.answer:x.value)+'</b></span>'}).join('')+(positive.length>3?' <span class="risk-none">+'+(positive.length-3)+' lainnya</span>':''):'<span class="risk-none">Belum teridentifikasi</span>';
       var keyAttr=esc(g.key);
       return '<tr><td>'+esc(c.id||'-')+(g.rows.length>1?' <span class="badge">'+g.rows.length+' rekaman</span>':'')+'</td>'+
-        '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||'-')+'</td><td>'+esc(c.kec||'-')+'</td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'">Detail</button> <button type="button" data-v115-edit="'+esc(c.id||'')+'">Edit</button></td></tr>';
+        '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||'-')+'</td><td>'+esc(c.kec||'-')+'</td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'">Detail</button> <button type="button" data-v116-edit-group="'+keyAttr+'">Edit</button></td></tr>';
     }).join('')||'<tr><td colspan="13"><div class="notice">Belum ada kasus yang cocok dengan pencarian.</div></td></tr>';
     if(body.innerHTML!==html){body.innerHTML=html;lastHtml=html}
     else lastHtml=html;
     body.querySelectorAll('[data-v115-detail]').forEach(function(btn){btn.onclick=function(){detail(btn.getAttribute('data-v115-detail'))}});
-    body.querySelectorAll('[data-v115-edit]').forEach(function(btn){btn.onclick=function(){if(typeof window.editCase==='function')window.editCase(btn.getAttribute('data-v115-edit'))}});
+    body.querySelectorAll('[data-v116-edit-group]').forEach(function(btn){btn.onclick=function(){var g=groups().find(function(x){return x.key===btn.getAttribute('data-v116-edit-group')});if(!g)return;if(g.rows.length>1){detail(g.key);return}var ix=window.db&&window.db.cases?window.db.cases.indexOf(g.rows[0]):-1;if(ix>=0)window.editCaseSource(ix)}});
     var note=document.getElementById('caseListRecoveryNote106');
     if(note)note.textContent='Menampilkan '+gs.length+' baris utama dari '+sourceRows().length+' rekaman sumber. Duplikasi dikelompokkan hanya untuk tampilan berdasarkan ID kasus + ID penyelidikan.';
   }
@@ -4431,4 +4432,48 @@ try{installBrandingV67();}catch(e){}
   }
   [100,800,2200,4500,8000].forEach(function(ms){setTimeout(schedule,ms)});
   window.GORUT_V115={version:'v115',features:['one main row per case ID and investigation','record-level detail for every associated source row','preserve conflicting questionnaire answers','no database writes, merges, or deletions']};
+})();
+
+
+/* ==================== v116 — EDIT PER SOURCE RECORD ==================== */
+(function(){
+  function esc116(v){if(typeof esc==='function')return esc(v);return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+  function getCase(index){var a=window.db&&window.db.cases;return Array.isArray(a)&&Number.isInteger(Number(index))?a[Number(index)]:null}
+  window.editCaseSource=function(index){
+    var c=getCase(index);if(!c){alert('Rekaman sumber tidak ditemukan. Tidak ada perubahan yang disimpan.');return}
+    var inv=(window.db.investigations||[]).find(function(x){return String(x.id)===String(c.investigationId)});
+    var food=(inv&&inv.disease==='keracunan-pangan')||!!c.foodCase,fc=c.foodCase||{};
+    var onsetType=String(c.onset||'').includes('T')?'datetime-local':'date';
+    var html='<h2>Edit rekaman sumber — '+esc116(c.id)+'</h2><div class="notice">Rekaman dipilih berdasarkan sumber data yang spesifik, bukan hanya ID kasus. ID server dan ID penyelidikan tidak diubah. Jawaban kuesioner yang tidak ditampilkan tetap dipertahankan.</div>';
+    html+=f('ID Kasus','ed116_id','text',c.id);
+    html+=f('Nama','ed116_name','text',c.name||'')+f('Umur (tahun)','ed116_age','number',c.age==null?'':c.age)+f('Jenis kelamin','ed116_sex','select','Laki-laki|Perempuan|Tidak diketahui')+f('Tanggal/waktu onset','ed116_onset',onsetType,c.onset||'')+f('Status kasus','ed116_status','select','Suspek|Probable|Konfirmasi|Bukan kasus|Belum diklasifikasi')+f('Outcome','ed116_outcome','select','Rawat jalan|Dirawat|Sembuh|Meninggal|Masih sakit/dirawat|Tidak diketahui');
+    html+='<div class="field"><label>Gejala utama</label><textarea id="ed116_symptoms" rows="3">'+esc116(c.symptoms||(c.answers&&(c.answers.symptoms||c.answers.symptom||c.answers.gejala))||'')+'</textarea></div>';
+    html+=f('Alamat lengkap','ed116_address','text',c.address||'')+f('Provinsi','ed116_prov','text',c.prov||(c.admin&&c.admin.prov)||'')+f('Kabupaten/Kota','ed116_kab','text',c.kab||(c.admin&&c.admin.kab)||'')+f('Kecamatan','ed116_kec','text',c.kec||(c.admin&&c.admin.kec)||'')+f('Desa/Kelurahan','ed116_desa','text',c.desa||(c.admin&&c.admin.desa)||'')+f('Latitude','ed116_lat','number',c.lat==null?'':c.lat)+f('Longitude','ed116_lng','number',c.lng==null?'':c.lng);
+    if(food){html+='<details open style="margin-top:12px"><summary><b>Detail keracunan pangan</b></summary>'+f('Makanan/minuman dikonsumsi','ed116_food','text',fc.food||fc.exposureFood||'')+f('Waktu konsumsi','ed116_consumed','datetime-local',fc.consumedAt||'')+f('Waktu onset','ed116_foodonset','datetime-local',fc.onsetAt||fc.onsetTime||'')+f('Masa inkubasi (jam)','ed116_incubation','number',fc.incubationHours==null?'':fc.incubationHours)+f('Sumber pangan','ed116_foodsource','text',fc.foodSource||fc.source||'')+f('Dirawat inap?','ed116_hospitalized','select','Tidak|Ya')+f('Spesimen klinis','ed116_specimen','text',fc.clinicalSpecimen||fc.specimenClinical||'')+'</details>'}
+    html+='<div class="toolbar" style="margin-top:14px"><button type="button" class="primary" id="ed116_save">Simpan Perubahan</button><button type="button" id="ed116_cancel">Batal</button></div>';
+    var box=document.getElementById('modalbox'),modalEl=document.getElementById('modal');if(!box||!modalEl){alert('Panel edit belum tersedia. Muat ulang halaman dan coba kembali.');return}
+    box.innerHTML=html;var idEl=document.getElementById('ed116_id');if(idEl)idEl.readOnly=true;
+    [['ed116_sex',c.sex],['ed116_status',c.status],['ed116_outcome',c.outcome],['ed116_hospitalized',fc.hospitalized||'Tidak']].forEach(function(pair){var el=document.getElementById(pair[0]);if(el&&pair[1]!=null&&pair[1]!=='')el.value=pair[1]});
+    modalEl.classList.add('show');
+    document.getElementById('ed116_save').onclick=function(){window.saveCaseSource(index,food)};
+    document.getElementById('ed116_cancel').onclick=function(){modalEl.classList.remove('show')};
+  };
+  window.saveCaseSource=async function(index,food){
+    var c=getCase(index);if(!c){alert('Rekaman sumber tidak ditemukan. Tidak ada perubahan yang disimpan.');return}
+    var v=function(id){var el=document.getElementById(id);return el?el.value:''};
+    var ageRaw=v('ed116_age'),age=ageRaw===''?null:Number(ageRaw);
+    if(age!==null&&(!Number.isFinite(age)||age<0)){alert('Umur harus berupa angka nol atau lebih.');return}
+    var coord=function(id){var x=v(id);if(x.trim()==='')return null;var n=Number(x);return Number.isFinite(n)?n:NaN};
+    var lat=coord('ed116_lat'),lng=coord('ed116_lng');
+    if(Number.isNaN(lat)||Number.isNaN(lng)||(lat!==null&&(lat < -90||lat>90))||(lng!==null&&(lng < -180||lng>180))){alert('Latitude harus -90 sampai 90 dan longitude -180 sampai 180.');return}
+    Object.assign(c,{name:v('ed116_name').trim(),age:age===null?0:age,sex:v('ed116_sex'),onset:v('ed116_onset'),status:v('ed116_status'),outcome:v('ed116_outcome'),symptoms:v('ed116_symptoms'),address:v('ed116_address'),prov:v('ed116_prov'),kab:v('ed116_kab'),kec:v('ed116_kec'),desa:v('ed116_desa'),lat:lat,lng:lng,updatedAt:new Date().toISOString()});
+    c.admin=Object.assign({},c.admin||{},{prov:c.prov||(c.admin&&c.admin.prov)||'',kab:c.kab||(c.admin&&c.admin.kab)||'',kec:c.kec||(c.admin&&c.admin.kec)||'',desa:c.desa||(c.admin&&c.admin.desa)||'',lat:lat,lng:lng,source:(c.admin&&c.admin.source)||'input manual'});
+    if(food){var old=c.foodCase||{};c.foodCase=Object.assign({},old,{food:v('ed116_food'),consumedAt:v('ed116_consumed'),onsetAt:v('ed116_foodonset'),incubationHours:v('ed116_incubation')===''?null:Number(v('ed116_incubation')),symptoms:v('ed116_symptoms'),foodSource:v('ed116_foodsource'),hospitalized:v('ed116_hospitalized'),clinicalSpecimen:v('ed116_specimen')})}
+    try{if(typeof queueSync==='function')queueSync('cases')}catch(e){console.warn('Antrean sinkronisasi kasus:',e)}
+    try{if(typeof save==='function')save();else localStorage.setItem('gorut-v8',JSON.stringify(window.db))}catch(e){alert('Perubahan belum dapat disimpan lokal: '+e.message);return}
+    document.getElementById('modal').classList.remove('show');
+    try{if(typeof window.renderCaseListRecovery106==='function')window.renderCaseListRecovery106();else if(typeof window.cases==='function')window.cases()}catch(e){console.warn('Refresh daftar kasus:',e)}
+    alert('Perubahan disimpan pada rekaman sumber yang dipilih. Jawaban kuesioner lain tetap dipertahankan. Jalankan Sinkronisasi Supabase untuk mengirim perubahan ke server.');
+  };
+  window.GORUT_V116={version:'v116',features:['edit selected source record independently','duplicate-group Edit opens source selection','preserve questionnaire answers and server identifiers']};
 })();
