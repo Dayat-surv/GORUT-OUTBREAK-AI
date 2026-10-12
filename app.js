@@ -4541,16 +4541,17 @@ try{installBrandingV67();}catch(e){}
         qDiseaseId=window.db.selectedDisease;qDef=diseases[qDiseaseId];
       }
     }
-    // v123: gabungkan semua sumber pertanyaan agar snapshot yang tidak lengkap
-    // tidak menyebabkan sebagian pertanyaan formulir hilang dari editor.
+    // v124: rekonstruksi daftar kuesioner dari semua snapshot yang tersedia.
+    // Jangan memilih satu objek instrument saja: objek questionnaire yang kosong
+    // sebelumnya dapat menutupi instrument/schema_json yang justru berisi pertanyaan.
     var questionList=[];
     var seenQuestionLabels=new Set();
     function appendQuestionSource(source,category){
       if(!Array.isArray(source))return;
       source.forEach(function(q){
         if(typeof q==='string')q=buildQuestion(q,category||('Spesifik — '+(qDef&&qDef.name||qDiseaseId||'Instrumen')));
-        else if(q&&typeof q==='object'&&!q.label&&(q.question||q.text||q.title)){
-          q=Object.assign({},q,{label:q.question||q.text||q.title});
+        else if(q&&typeof q==='object'&&!q.label&&(q.question||q.text||q.title||q.name)){
+          q=Object.assign({},q,{label:q.question||q.text||q.title||q.name});
         }
         if(!q||!q.label)return;
         var labelKey=normAnswerKey120(q.label);
@@ -4559,28 +4560,64 @@ try{installBrandingV67();}catch(e){}
         questionList.push(Object.assign({},q,{label:String(q.label)}));
       });
     }
-    var recordInstrument=c.questionnaire||c.instrument||{};
-    var investigationInstrument=inv&&(inv.questionnaire||inv.instrument)||{};
-    // Record-specific instrument has priority, followed by matching investigation snapshot.
+    function appendInstrumentObject(obj,category){
+      if(!obj||typeof obj!=='object')return;
+      appendQuestionSource(obj.questions,category);
+      appendQuestionSource(obj.questionnaireQuestions,category);
+      appendQuestionSource(obj.items,category);
+      appendQuestionSource(obj.fields,category);
+      appendQuestionSource(obj.schema_json&&obj.schema_json.questions,category);
+      appendQuestionSource(obj.schema_json&&obj.schema_json.items,category);
+      appendQuestionSource(obj.schema_json&&obj.schema_json.fields,category);
+      appendQuestionSource(obj.schema_json&&obj.schema_json.schema_json&&obj.schema_json.schema_json.questions,category);
+      appendQuestionSource(obj.schemaJson&&obj.schemaJson.questions,category);
+      if(Array.isArray(obj.sections))obj.sections.forEach(function(sec){
+        if(!sec||typeof sec!=='object')return;
+        appendQuestionSource(sec.questions,category);
+        appendQuestionSource(sec.items,category);
+        appendQuestionSource(sec.fields,category);
+      });
+    }
+    var recordQuestionnaire=c.questionnaire;
+    var recordInstrument=c.instrument;
+    var investigationQuestionnaire=inv&&inv.questionnaire;
+    var investigationInstrument=inv&&inv.instrument;
+    // Snapshot pada rekaman adalah sumber paling tepat; lanjutkan dengan semua
+    // bentuk snapshot dari investigasi, termasuk schema_json bersarang.
     appendQuestionSource(c.questionnaireQuestions,'Kuesioner rekaman');
     appendQuestionSource(c.questions,'Kuesioner rekaman');
-    appendQuestionSource(recordInstrument.questions,'Kuesioner rekaman');
-    if(normDisease121(investigationInstrument.disease||investigationInstrument.diseaseId)===normDisease121(qDiseaseId)){
-      appendQuestionSource(investigationInstrument.questions,'Kuesioner investigasi');
-      appendQuestionSource(investigationInstrument.schema_json&&investigationInstrument.schema_json.questions,'Kuesioner investigasi');
-    }
-    // Always include the full common questionnaire and the selected disease module.
+    appendInstrumentObject(recordQuestionnaire,'Kuesioner rekaman');
+    appendInstrumentObject(recordInstrument,'Kuesioner rekaman');
+    appendQuestionSource(inv&&inv.questionnaireQuestions,'Kuesioner investigasi');
+    appendQuestionSource(inv&&inv.questions,'Kuesioner investigasi');
+    appendInstrumentObject(investigationQuestionnaire,'Kuesioner investigasi');
+    appendInstrumentObject(investigationInstrument,'Kuesioner investigasi');
+    // Selalu lengkapi dengan PE umum dan modul penyakit yang dikenali.
     if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
       appendQuestionSource(baseQ.map(function(q){return buildQuestion(q[1],q[0])}),'PE Umum');
     }
     if(qDef&&Array.isArray(qDef.q)){
-      appendQuestionSource(qDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+(qDef.name||qDiseaseId))}),'Spesifik');
+      appendQuestionSource(qDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+(qDef.name||qDiseaseId))}),'Spesifik — '+(qDef.name||qDiseaseId));
     }
-    // Include custom/global questions only when metadata identifies this disease,
-    // or metadata is absent (older saved versions may not have it).
-    var metaDisease=window.db&&window.db.questionMeta&&window.db.questionMeta.disease;
-    if(Array.isArray(window.db&&window.db.questions)&&(!metaDisease||normDisease121(metaDisease)===normDisease121(qDiseaseId))){
+    // Metadata bisa menyimpan ID penyakit atau nama tampilan. Samakan keduanya
+    // agar kuesioner aktif tidak keliru dianggap berasal dari penyakit lain.
+    var qMeta=window.db&&window.db.questionMeta||{};
+    var metaDisease=qMeta.disease||qMeta.diseaseId||qMeta.diseaseName||'';
+    var metaNorm=normDisease121(metaDisease);
+    var qDiseaseNorm=normDisease121(qDiseaseId);
+    var qDiseaseNameNorm=normDisease121(qDef&&qDef.name||'');
+    var metaMatches=!metaNorm||metaNorm===qDiseaseNorm||metaNorm===qDiseaseNameNorm||
+      (typeof diseases!=='undefined'&&Object.keys(diseases).some(function(k){
+        var d=diseases[k]||{};
+        return normDisease121(k)===metaNorm&&(normDisease121(k)===qDiseaseNorm||normDisease121(d.name)===qDiseaseNameNorm);
+      }));
+    if(Array.isArray(window.db&&window.db.questions)&&metaMatches){
       appendQuestionSource(window.db.questions,'Kuesioner tersimpan');
+    }
+    // Jika tidak ada snapshot sama sekali, gunakan kuesioner tersimpan sebagai
+    // fallback agar item buatan khusus tidak hilang hanya karena metadata lama.
+    if(!questionList.length&&Array.isArray(window.db&&window.db.questions)){
+      appendQuestionSource(window.db.questions,'Kuesioner tersimpan — fallback');
     }
     var usedAnswerKeys={};
     function normAnswerKey120(x){return String(x==null?'':x).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
