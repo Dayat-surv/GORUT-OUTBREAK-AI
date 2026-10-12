@@ -4381,8 +4381,8 @@ try{installBrandingV67();}catch(e){}
       var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
       var sourceIndex=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(c):-1;
       var fields=[['ID server',c.serverId],['ID penyelidikan',c.investigationId],['Nama',c.name],['Alamat',c.address],['Desa',c.desa||c.admin&&c.admin.desa],['Kecamatan',c.kec||c.admin&&c.admin.kec],['Umur',c.age],['Jenis kelamin',c.sex],['Tanggal onset',c.onset],['Status kasus',c.status],['Outcome',c.outcome],['Gejala',c.symptoms]];
-      html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Rekaman sumber '+(i+1)+' — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+Object.keys(ans).filter(function(k){return ans[k]!==''&&ans[k]!==null&&ans[k]!==undefined}).length+' jawaban kuesioner)</small> <button type="button" onclick="event.preventDefault();event.stopPropagation();window.editCaseSource('+sourceIndex+')" style="margin-left:8px">Edit rekaman ini</button></summary>'+
-        '<div class="toolbar" style="margin:8px 0"><button type="button" onclick="window.editCaseSource('+sourceIndex+')">Edit rekaman sumber ini</button></div><div style="overflow:auto;max-height:28vh"><table class="report-table"><thead><tr><th>Variabel inti</th><th>Nilai</th></tr></thead><tbody>'+
+      html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Rekaman sumber '+(i+1)+' — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+Object.keys(ans).filter(function(k){return ans[k]!==''&&ans[k]!==null&&ans[k]!==undefined}).length+' jawaban kuesioner)</small> <button type="button" onclick="event.preventDefault();event.stopPropagation();window.editCaseSourceByServerId(\''+esc116(c.serverId||'')+'\','+sourceIndex+')" style="margin-left:8px">Edit rekaman ini</button></summary>'+
+        '<div class="toolbar" style="margin:8px 0"><button type="button" onclick="window.editCaseSourceByServerId(\''+esc116(c.serverId||'')+'\','+sourceIndex+')">Edit rekaman sumber ini</button></div><div style="overflow:auto;max-height:28vh"><table class="report-table"><thead><tr><th>Variabel inti</th><th>Nilai</th></tr></thead><tbody>'+
         fields.map(function(f){return '<tr><td>'+esc(f[0])+'</td><td>'+esc(f[1]===undefined||f[1]===null||f[1]===''?'Belum diisi':(typeof f[1]==='object'?JSON.stringify(f[1]):f[1]))+'</td></tr>'}).join('')+
         '</tbody></table></div><h4>Seluruh jawaban kuesioner</h4><div style="overflow:auto;max-height:45vh"><table class="report-table"><thead><tr><th>Field</th><th>Jawaban</th></tr></thead><tbody>'+
         (Object.keys(ans).length?Object.keys(ans).map(function(k){var v=ans[k];return '<tr><td><code>'+esc(k)+'</code></td><td>'+esc(v===undefined||v===null||v===''?'Belum diisi':(typeof v==='object'?JSON.stringify(v):v))+'</td></tr>'}).join(''):'<tr><td colspan="2">Belum ada jawaban kuesioner.</td></tr>')+
@@ -4459,6 +4459,20 @@ try{installBrandingV67();}catch(e){}
     document.getElementById('ed116_save').onclick=function(){window.saveCaseSource(index,food)};
     document.getElementById('ed116_cancel').onclick=function(){modalEl.classList.remove('show')};
   };
+  /* v118: pilih rekaman dengan ID server unik; indeks hanya fallback untuk rekaman lokal. */
+  window.editCaseSourceByServerId=function(serverId,fallbackIndex){
+    var a=window.db&&Array.isArray(window.db.cases)?window.db.cases:[];
+    var sid=String(serverId||'').trim();
+    if(sid){
+      var found=[];
+      a.forEach(function(c,i){if(String(c&&c.serverId||'').trim()===sid)found.push(i)});
+      if(found.length===1){window.editCaseSource(found[0]);return}
+      if(found.length>1){alert('ID server tidak unik. Demi keamanan, form edit tidak dibuka dan tidak ada data yang diubah.');return}
+    }
+    var ix=Number(fallbackIndex);
+    if(Number.isInteger(ix)&&ix>=0&&ix<a.length){window.editCaseSource(ix);return}
+    alert('Rekaman sumber tidak dapat dipastikan. Form edit tidak dibuka dan tidak ada data yang diubah.');
+  };
   window.saveCaseSource=async function(index,food){
     var c=getCase(index);if(!c){alert('Rekaman sumber tidak ditemukan. Tidak ada perubahan yang disimpan.');return}
     var v=function(id){var el=document.getElementById(id);return el?el.value:''};
@@ -4476,5 +4490,5 @@ try{installBrandingV67();}catch(e){}
     try{if(typeof window.renderCaseListRecovery106==='function')window.renderCaseListRecovery106();else if(typeof window.cases==='function')window.cases()}catch(e){console.warn('Refresh daftar kasus:',e)}
     alert('Perubahan disimpan pada rekaman sumber yang dipilih. Jawaban kuesioner lain tetap dipertahankan. Jalankan Sinkronisasi Supabase untuk mengirim perubahan ke server.');
   };
-  window.GORUT_V116={version:'v116',features:['edit selected source record independently','duplicate-group Edit opens source selection','preserve questionnaire answers and server identifiers']};
+  window.GORUT_V116={version:'v118',features:['edit selected source record by unique server ID','duplicate-group Edit opens source selection','preserve questionnaire answers and server identifiers']};
 })();
