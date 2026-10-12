@@ -4473,11 +4473,44 @@ try{installBrandingV67();}catch(e){}
     html+=f('Nama','ed116_name','text',c.name||'')+f('Umur (tahun)','ed116_age','number',c.age==null?'':c.age)+f('Jenis kelamin','ed116_sex','select','Laki-laki|Perempuan|Tidak diketahui')+f('Tanggal/waktu onset','ed116_onset',onsetType,dateValue116(c.onset,onsetType))+f('Status kasus','ed116_status','select','Suspek|Probable|Konfirmasi|Bukan kasus|Belum diklasifikasi')+f('Outcome','ed116_outcome','select','Rawat jalan|Dirawat|Sembuh|Meninggal|Masih sakit/dirawat|Tidak diketahui');
     html+='<div class="field"><label>Gejala utama</label><textarea id="ed116_symptoms" rows="3">'+esc116(c.symptoms||(c.answers&&(c.answers.symptoms||c.answers.symptom||c.answers.gejala))||'')+'</textarea></div>';
     var answersForEdit=c.answers&&typeof c.answers==='object'?c.answers:{};
-    html+='<details open style="margin:12px 0"><summary><b>Seluruh item kuesioner ('+Object.keys(answersForEdit).length+')</b></summary><div class="notice">Setiap field jawaban yang tersimpan pada rekaman sumber ini ditampilkan di bawah. Jawaban sumber lain tidak digunakan. Field yang tidak diubah akan dipertahankan.</div><div style="max-height:45vh;overflow:auto">';
-    Object.keys(answersForEdit).forEach(function(k,i){
-      var av=answersForEdit[k],shown=(av===null||av===undefined)?'':(typeof av==='object'?JSON.stringify(av,null,2):String(av));
-      html+='<div class="field" style="margin:8px 0"><label for="ed116_answer_'+i+'">'+esc116(k)+'</label><textarea class="answer-edit-v116" id="ed116_answer_'+i+'" data-answer-key="'+esc116(k)+'" rows="2">'+esc116(shown)+'</textarea></div>';
+    // v120: build the complete questionnaire for the selected record's investigation disease,
+    // rather than rendering only keys that happened to exist in this record's saved answers.
+    var qDiseaseId=String((inv&&inv.disease)||c.disease||'');
+    var qDef=(typeof diseases!=='undefined'&&diseases)?diseases[qDiseaseId]:null;
+    var questionList=[];
+    if(Array.isArray(window.db&&window.db.questions)&&window.db.questionMeta&&String(window.db.questionMeta.disease||'')===qDiseaseId){
+      questionList=window.db.questions.slice();
+    }else if(typeof baseQ!=='undefined'&&Array.isArray(baseQ)){
+      questionList=baseQ.map(function(q){return buildQuestion(q[1],q[0])});
+      if(qDef&&Array.isArray(qDef.q))questionList=questionList.concat(qDef.q.map(function(label){return buildQuestion(label,'Spesifik — '+(qDef.name||qDiseaseId))}));
+    }else if(Array.isArray(window.db&&window.db.questions)){
+      questionList=window.db.questions.slice();
+    }
+    var usedAnswerKeys={};
+    function normAnswerKey120(x){return String(x==null?'':x).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
+    function findAnswerKey120(q){
+      if(Object.prototype.hasOwnProperty.call(answersForEdit,q.id))return q.id;
+      if(Object.prototype.hasOwnProperty.call(answersForEdit,q.label))return q.label;
+      var wanted=[normAnswerKey120(q.id),normAnswerKey120(q.label)];
+      return Object.keys(answersForEdit).find(function(k){return wanted.indexOf(normAnswerKey120(k))>=0})||'';
+    }
+    html+='<details open style="margin:12px 0"><summary><b>Kuesioner lengkap — '+questionList.length+' pertanyaan instrumen</b></summary><div class="notice">Pertanyaan dibangun dari instrumen penyakit pada investigasi ini. Jawaban yang tersedia di rekaman terpilih dimunculkan; pertanyaan tanpa jawaban tetap terlihat. Jawaban/field lama yang tidak cocok dengan skema tetap ditampilkan di bagian tambahan.</div><div style="max-height:55vh;overflow:auto">';
+    questionList.forEach(function(q,i){
+      var key=findAnswerKey120(q),av=key?answersForEdit[key]:'';
+      if(key)usedAnswerKeys[key]=true;
+      var shown=(av===null||av===undefined)?'':(typeof av==='object'?JSON.stringify(av,null,2):String(av));
+      var targetKey=key||q.id||('pertanyaan_'+(i+1));
+      html+='<div class="field" style="margin:8px 0"><label for="ed116_answer_'+i+'">'+(i+1)+'. '+esc116(q.label||targetKey)+'</label><small style="display:block;opacity:.65">'+esc116(q.cat||'Kuesioner')+(q.required?' · Wajib':'')+'</small><textarea class="answer-edit-v116" id="ed116_answer_'+i+'" data-answer-key="'+esc116(targetKey)+'" rows="2">'+esc116(shown)+'</textarea></div>';
     });
+    var extraKeys=Object.keys(answersForEdit).filter(function(k){return !usedAnswerKeys[k]});
+    if(extraKeys.length){
+      html+='<h4>Jawaban/field tambahan dari rekaman ini</h4><p class="muted">Field berikut tidak cocok dengan ID/label pertanyaan pada instrumen aktif. Isinya tetap dipertahankan.</p>';
+      extraKeys.forEach(function(k,j){
+        var av=answersForEdit[k],shown=(av===null||av===undefined)?'':(typeof av==='object'?JSON.stringify(av,null,2):String(av));
+        var n=questionList.length+j;
+        html+='<div class="field" style="margin:8px 0"><label for="ed116_answer_'+n+'">'+esc116(k)+'</label><textarea class="answer-edit-v116" id="ed116_answer_'+n+'" data-answer-key="'+esc116(k)+'" rows="2">'+esc116(shown)+'</textarea></div>';
+      });
+    }
     html+='</div></details>';
     html+=f('Alamat lengkap','ed116_address','text',c.address||'')+f('Provinsi','ed116_prov','text',c.prov||(c.admin&&c.admin.prov)||'')+f('Kabupaten/Kota','ed116_kab','text',c.kab||(c.admin&&c.admin.kab)||'')+f('Kecamatan','ed116_kec','text',c.kec||(c.admin&&c.admin.kec)||'')+f('Desa/Kelurahan','ed116_desa','text',c.desa||(c.admin&&c.admin.desa)||'')+f('Latitude','ed116_lat','number',c.lat==null?'':c.lat)+f('Longitude','ed116_lng','number',c.lng==null?'':c.lng);
     if(food){html+='<details open style="margin-top:12px"><summary><b>Detail keracunan pangan</b></summary>'+f('Makanan/minuman dikonsumsi','ed116_food','text',fc.food||fc.exposureFood||'')+f('Waktu konsumsi','ed116_consumed','datetime-local',dateValue116(fc.consumedAt,'datetime-local'))+f('Waktu onset','ed116_foodonset','datetime-local',dateValue116(fc.onsetAt||fc.onsetTime,'datetime-local'))+f('Masa inkubasi (jam)','ed116_incubation','number',fc.incubationHours==null?'':fc.incubationHours)+f('Sumber pangan','ed116_foodsource','text',fc.foodSource||fc.source||'')+f('Dirawat inap?','ed116_hospitalized','select','Tidak|Ya')+f('Spesimen klinis','ed116_specimen','text',fc.clinicalSpecimen||fc.specimenClinical||'')+'</details>'}
