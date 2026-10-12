@@ -463,9 +463,19 @@ const loginEl=document.getElementById('login'),app=document.getElementById('app'
 let GORUT_USER=null;
 function demoLogin(){loginEl.style.display='none';app.style.display='block';GORUT_USER={id:'offline',email:val('email')||'offline',role:'admin_kabupaten'};document.getElementById('roleBadge').textContent='Mode lokal/demo — akses tidak terautentikasi';const d=document.getElementById('backendDetail');if(d)d.textContent='Mode lokal: tidak ada autentikasi server atau pembatasan akses yang aman. Data hanya tersimpan di perangkat ini; jangan masukkan identitas pasien nyata.';setRoleUI();render();}
 async function login(){
+  const cfg=window.GORUT_BACKEND||{};
   const sb=await backendClient();
-  if(!sb){demoLogin();return;}
+  if(!sb){
+    const m=document.getElementById('loginMsg');
+    if(cfg.enabled){
+      if(m){m.style.display='block';m.textContent='Login aman tidak dapat dilanjutkan: konfigurasi Supabase aktif tetapi client/koneksi tidak tersedia. Periksa pemuatan supabase-js, backend-config.js, dan koneksi internet. Mode demo tidak dibuka otomatis.'}
+      const badge=document.getElementById('backendBadge');if(badge)badge.textContent='Backend: gagal — login diblokir';
+      return;
+    }
+    demoLogin();return;
+  }
   const email=val('email'),password=val('password');
+  if(!email||!password){const m=document.getElementById('loginMsg');if(m){m.style.display='block';m.textContent='Masukkan email dan kata sandi.'}return;}
   const r=await sb.auth.signInWithPassword({email,password});
   if(r.error){const m=document.getElementById('loginMsg');m.style.display='block';m.textContent='Login gagal: '+r.error.message;return;}
   GORUT_USER=r.data.user; loginEl.style.display='none';app.style.display='block';
