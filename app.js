@@ -2279,7 +2279,7 @@ function installLogin(){
     const s=E('researchDataSource');
     if(s){
       const cur=s.value||researchState?.dataSource;
-      s.innerHTML='<option value="cases">Data kasus dari aplikasi (utama)</option><option value="dataset">Dataset eksternal (opsional)</option>';
+      s.innerHTML='<option value="cases">Data kasus dari aplikasi (utama)</option><option value="dataset">Dataset penelitian dari investigasi / berkas</option>';
       s.value=cur==='dataset'?'dataset':'cases';
     }
     if(researchState) researchState.dataSource=s?.value||'cases';
@@ -4910,6 +4910,8 @@ try{installBrandingV67();}catch(e){}
       var columns=[];rows.forEach(function(row){Object.keys(row).forEach(function(k){if(!columns.includes(k))columns.push(k)})});
       rows=rows.map(function(row){var out={};columns.forEach(function(k){out[k]=row[k]===undefined?'':row[k]});return out});
       researchState=researchState||{};researchState.dataset={name:'Investigasi - '+activeInv.name,source:'GORUT-OUTBREAK AI / Investigasi KLB',importedAt:new Date().toISOString(),rows:rows};researchState.dataSource='dataset';
+      /* Keep the visible source selector aligned: the research-source guard reads this control before running analysis. */
+      var sourceSelect=E('researchDataSource');if(sourceSelect){if(!Array.from(sourceSelect.options).some(function(o){return o.value==='dataset'})){var opt=document.createElement('option');opt.value='dataset';opt.textContent='Dataset penelitian dari investigasi';sourceSelect.appendChild(opt)}sourceSelect.value='dataset'}
       localStorage.setItem('gorut-research-plan',JSON.stringify(researchState));
       var st=E('researchDataStatus');if(st)st.innerHTML='<b>Dataset dari investigasi berhasil dibuat.</b> '+rows.length+' kasus · '+columns.length+' variabel. Data operasional tidak diubah.';
       var nm=E('researchDatasetName');if(nm)nm.value=researchState.dataset.name;
