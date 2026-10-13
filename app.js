@@ -4902,7 +4902,14 @@ try{installBrandingV67();}catch(e){}
     var host=E('v126ResearchLink');
     if(!host){host=document.createElement('div');host.id='v126ResearchLink';host.className='card';sec.insertBefore(host,sec.firstChild)}
     var inv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)}),cs=inv?caseRows126(inv.id):[];
-    host.innerHTML='<div class="v126-registry-head"><div><h3 style="margin:0">Integrasi Data Penelitian</h3><div class="small">Sumber: '+esc126(inv?inv.name:'investigasi aktif belum dipilih')+' · '+cs.length+' kasus · data kasus dan seluruh jawaban yang tersimpan</div></div><button class="primary" type="button" id="v126UseCases">Gunakan data investigasi ini untuk penelitian</button></div><div class="notice">Tindakan ini membuat dataset penelitian lokal dari investigasi aktif. Dataset penelitian tersimpan terpisah dan tidak mengubah atau menghapus rekaman kasus operasional. Pilih kembali sumber investigasi untuk memperbarui dataset.</div><div id="v126ResearchLinkStatus" class="small"></div>';
+    var ds=researchState&&researchState.dataset?researchState.dataset:null,sourceStatus='Belum ada snapshot dari investigasi. Analisis dengan sumber “Kasus operasional” tetap membaca kasus investigasi aktif.';
+    if(ds&&ds.sourceInvestigationId!==undefined){
+      if(!inv)sourceStatus='Peringatan: tidak ada investigasi aktif; snapshot yang tersimpan berasal dari '+esc126(ds.sourceInvestigationName||ds.sourceInvestigationId)+'.';
+      else if(String(ds.sourceInvestigationId)!==String(inv.id))sourceStatus='PERLU DIPERBARUI: snapshot berasal dari investigasi '+esc126(ds.sourceInvestigationName||ds.sourceInvestigationId)+', sedangkan investigasi aktif adalah '+esc126(inv.name||inv.id)+'. Klik tombol untuk membuat snapshot baru. Dataset lama tidak dihapus otomatis.';
+      else if(ds.sourceCaseSignature!==JSON.stringify(cs))sourceStatus='PERLU DIPERBARUI: data kasus investigasi aktif berubah sejak snapshot dibuat. Klik tombol untuk menyegarkan dataset penelitian.';
+      else sourceStatus='Snapshot sesuai dengan data kasus investigasi aktif: '+cs.length+' kasus. Waktu snapshot: '+esc126(ds.importedAt||'-')+'.';
+    } else if(ds&&Array.isArray(ds.rows)&&ds.rows.length){sourceStatus='Dataset impor/manual aktif ('+ds.rows.length+' baris), bukan snapshot terhubung ke investigasi. Dataset ini tidak diubah otomatis.'}
+    host.innerHTML='<div class="v126-registry-head"><div><h3 style="margin:0">Integrasi Data Penelitian</h3><div class="small">Sumber aktif: '+esc126(inv?inv.name:'investigasi aktif belum dipilih')+' · '+cs.length+' kasus operasional</div></div><button class="primary" type="button" id="v126UseCases">Buat / perbarui snapshot dataset</button></div><div class="notice">Dataset penelitian adalah snapshot terpisah. Pembaruan kasus, jawaban kuesioner, atau pergantian investigasi tidak mengubah snapshot secara otomatis. Gunakan tombol ini untuk memperbarui snapshot dari investigasi aktif. Rekaman operasional tidak dihapus, digabung, atau ditimpa.</div><div id="v126ResearchLinkStatus" class="small">'+sourceStatus+'</div>';
     var btn=E('v126UseCases');if(btn)btn.onclick=function(){
       var activeInv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)});if(!activeInv){alert('Pilih investigasi terlebih dahulu.');return}
       var records=caseRows126(activeInv.id);
@@ -4919,7 +4926,7 @@ try{installBrandingV67();}catch(e){}
       if(!rows.length){E('v126ResearchLinkStatus').textContent='Belum ada kasus pada investigasi ini. Dataset belum dibuat.';return}
       var columns=[];rows.forEach(function(row){Object.keys(row).forEach(function(k){if(!columns.includes(k))columns.push(k)})});
       rows=rows.map(function(row){var out={};columns.forEach(function(k){out[k]=row[k]===undefined?'':row[k]});return out});
-      researchState=researchState||{};researchState.dataset={name:'Investigasi - '+activeInv.name,source:'GORUT-OUTBREAK AI / Investigasi KLB',importedAt:new Date().toISOString(),rows:rows};researchState.dataSource='dataset';
+      researchState=researchState||{};researchState.dataset={name:'Investigasi - '+activeInv.name,source:'GORUT-OUTBREAK AI / Investigasi KLB',importedAt:new Date().toISOString(),sourceInvestigationId:activeInv.id,sourceInvestigationName:activeInv.name||'',sourceCaseCount:records.length,sourceCaseSignature:JSON.stringify(records),rows:rows};researchState.dataSource='dataset';
       /* Keep the visible source selector aligned: the research-source guard reads this control before running analysis. */
       var sourceSelect=E('researchDataSource');if(sourceSelect){if(!Array.from(sourceSelect.options).some(function(o){return o.value==='dataset'})){var opt=document.createElement('option');opt.value='dataset';opt.textContent='Dataset penelitian dari investigasi';sourceSelect.appendChild(opt)}sourceSelect.value='dataset'}
       localStorage.setItem('gorut-research-plan',JSON.stringify(researchState));
@@ -4928,7 +4935,7 @@ try{installBrandingV67();}catch(e){}
       if(typeof window.previewResearchDataset==='function')window.previewResearchDataset();
       if(typeof window.generateAutoDictionary==='function')window.generateAutoDictionary();
       if(typeof window.generateAnalysisPipeline==='function')window.generateAnalysisPipeline();
-      var msg=E('v126ResearchLinkStatus');if(msg)msg.textContent='Dataset penelitian lokal berhasil dibuat dari '+rows.length+' rekaman kasus dan seluruh jawaban yang tersimpan.';
+      var msg=E('v126ResearchLinkStatus');if(msg)msg.textContent='Snapshot diperbarui: '+rows.length+' kasus dan '+columns.length+' variabel dari investigasi '+(activeInv.name||activeInv.id)+'. Snapshot tersimpan lokal; sumber operasional tetap utuh.';
       if(typeof window.runResearchAnalysis==='function')window.runResearchAnalysis();
     };
   }
