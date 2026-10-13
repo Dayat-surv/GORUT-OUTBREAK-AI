@@ -4391,7 +4391,7 @@ try{installBrandingV67();}catch(e){}
       '<div class="notice">Terdapat <b>'+g.rows.length+' rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Detail/edit aktif diarahkan ke rekaman terakhir dalam kelompok (diasumsikan Sumber 2); rekaman lain tetap tersimpan dan tidak dihapus.</div>';
     // Only source 2 is active in the detail/edit workflow. Earlier source records remain
     // preserved in storage and are not deleted; they are simply not used as the active form.
-    var activeRows=g.rows.length? [g.rows[g.rows.length-1]] : [];
+    var activeRows=g.rows.slice(); // v130: show each original source record separately; never merge or overwrite.
     activeRows.forEach(function(c,i){
       var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
       var sourceIndex=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(c):-1;
@@ -4437,7 +4437,7 @@ try{installBrandingV67();}catch(e){}
         if(v!==undefined&&v!==null&&String(v).trim()!=='')answered++;
         return '<tr><td>'+(qi+1)+'. '+esc(q.label)+'</td><td>'+esc(v===undefined||v===null||v===''?'Belum diisi':(typeof v==='object'?JSON.stringify(v):v))+'</td></tr>';
       }).join('');
-      html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Kuesioner lengkap — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+answered+'/'+qs.length+' pertanyaan terisi)</small> <button type="button" onclick="event.preventDefault();event.stopPropagation();window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')" style="margin-left:8px">Edit kuesioner</button></summary>'+
+      html+='<details '+(i===0?'open':'')+' style="margin:12px 0"><summary><b>Rekaman Sumber '+(i+1)+' — Kuesioner lengkap — '+esc(c.name||'Nama belum diisi')+'</b> <small>('+answered+'/'+qs.length+' pertanyaan terisi · ID server: '+esc(c.serverId||'lokal/tidak tersedia')+')</small> <button type="button" onclick="event.preventDefault();event.stopPropagation();window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')" style="margin-left:8px">Edit Sumber '+(i+1)+'</button></summary>'+
         '<div class="toolbar" style="margin:8px 0"><button type="button" onclick="window.editCaseSourceByServerId(\''+esc(c.serverId||'')+'\','+sourceIndex+')">Edit rekaman ini</button></div>'+
         '<p class="muted">Ditampilkan hanya pertanyaan instrumen kuesioner untuk rekaman aktif. Field lama dari sumber lain tidak ditampilkan di sini dan tidak dihapus dari penyimpanan.</p>'+
         '<div style="overflow:auto;max-height:60vh"><table class="report-table"><thead><tr><th>Pertanyaan kuesioner</th><th>Jawaban</th></tr></thead><tbody>'+
@@ -4489,7 +4489,7 @@ try{installBrandingV67();}catch(e){}
     body.querySelectorAll('[data-v115-detail]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.openCaseDetailRecovery118(btn)}});
     body.querySelectorAll('[data-v116-edit-group]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.openCaseEditRecovery118(btn)}});
     var note=document.getElementById('caseListRecoveryNote106');
-    if(note)note.textContent='Menampilkan '+gs.length+' kasus aktif menggunakan Rekaman Sumber 2. Rekaman lama tetap tersimpan dan tidak dihapus.';
+    if(note)note.textContent='Menampilkan '+gs.length+' kelompok kasus aktif. Detail menampilkan setiap rekaman sumber secara terpisah; Edit pada tabel utama membuka rekaman terakhir (Sumber 2 bila ada dua). Tidak ada rekaman yang digabung atau dihapus.';
   }
   var busy=false;
   function schedule(){if(busy)return;busy=true;setTimeout(function(){busy=false;try{render()}catch(e){console.error('GORUT v115 render',e)}},30)}
