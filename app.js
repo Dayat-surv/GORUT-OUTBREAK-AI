@@ -180,6 +180,52 @@ function saveQ(){save();alert('Kuesioner tersimpan.')}
 function publicQ(){let id=act()?.id||'demo';let slug='survey-'+id+'-'+(db.selectedDisease||'campak');modal(`<h2>Kuesioner Publik</h2><div class="notice"><b>Mode prototype:</b> tautan publik belum tersambung ke server. Slug investigasi: <code>${slug}</code><br><br>Pada versi produksi slug ini menjadi URL publik + QR, tanpa login responden, dan setiap kiriman masuk otomatis ke line listing.</div><button onclick="closeAppModal()">Tutup</button>`)}
 function analysis(x){['epi','demo','biv','ai'].forEach(i=>document.getElementById(i).style.display=i===x?'block':'none');if(x==='epi')chart();if(x==='demo')demo();if(x==='biv')renderBivControls();}
 function renderBivControls(){const r=document.getElementById('statResult');if(r)r.innerHTML='Siap menghitung tabel 2×2 dari data kasus investigasi aktif. Pilih outcome dan paparan, lalu tekan <b>Hitung</b>.'}
+/* v137: non-destructive case-level analysis view; original records remain unchanged. */
+function uniqueCaseRowsForAnalysis(rows) {
+  var groups = new Map();
+  (rows || []).forEach(function(c, i) {
+    var id = String(c && c.id != null ? c.id : '').trim();
+    var inv = String(c && c.investigationId != null ? c.investigationId : '');
+    var key = inv + '::' + (id || '__record_' + i);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(c);
+  });
+  var result = [];
+  groups.forEach(function(sourceRows) {
+    var primary = sourceRows[sourceRows.length - 1] || {};
+    var view = Object.assign({}, primary);
+    var fields = ['name','address','desa','kec','kab','prov','age','sex','onset','status','outcome','symptoms','lat','lng','disease','puskesmas','pkm','village','admin'];
+    function blank(v) { return v === undefined || v === null || String(v).trim() === ''; }
+    fields.forEach(function(k) {
+      if (blank(view[k])) {
+        for (var i = sourceRows.length - 2; i >= 0; i--) {
+          if (!blank(sourceRows[i] && sourceRows[i][k])) { view[k] = sourceRows[i][k]; break; }
+        }
+      }
+    });
+    var answerMaps = sourceRows.map(function(r) { return r && r.answers && typeof r.answers === 'object' ? r.answers : {}; });
+    var allKeys = [];
+    answerMaps.forEach(function(a) { Object.keys(a).forEach(function(k) { if (allKeys.indexOf(k) < 0) allKeys.push(k); }); });
+    var mergedAnswers = {}, conflicts = {};
+    allKeys.forEach(function(k) {
+      var vals = answerMaps.map(function(a) { return a[k]; }).filter(function(v) { return v !== undefined && v !== null && String(v).trim() !== ''; });
+      if (!vals.length) return;
+      mergedAnswers[k] = vals[vals.length - 1];
+      var distinct = [];
+      vals.forEach(function(v) { var encoded; try { encoded = JSON.stringify(v); } catch (e) { encoded = String(v); } if (distinct.indexOf(encoded) < 0) distinct.push(encoded); });
+      if (distinct.length > 1) conflicts[k] = vals;
+    });
+    view.answers = mergedAnswers;
+    view._sourceRecordCount = sourceRows.length;
+    view._sourceAnswersByRecord = sourceRows.map(function(r, i) {
+      var a = r && r.answers && typeof r.answers === 'object' ? Object.assign({}, r.answers) : {};
+      return { record: i + 1, id: r && r.id, answers: a };
+    });
+    view._sourceAnswerConflicts = conflicts;
+    result.push(view);
+  });
+  return result;
+}
 function currentCases(){return uniqueCaseRowsForAnalysis(db.cases.filter(c=>String(c.investigationId)===String(db.active)));}
 function exposureValue(c,key){if(key==='contact')return (db.contacts||[]).some(x=>String(x.investigationId)===String(db.active)&&String(x.caseId)===String(c.id));if(key==='male')return String(c.sex||'').toLowerCase().startsWith('l');return Boolean(c[key]);}
 function outcomeValue(c,key){if(key==='status')return c.status==='Konfirmasi';if(key==='outcome')return c.outcome==='Meninggal';return Boolean(c[key]);}
