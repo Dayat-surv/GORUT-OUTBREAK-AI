@@ -4995,21 +4995,37 @@ try{installBrandingV67();}catch(e){}
       html+='</tbody></table></div><div class="toolbar" style="margin-top:12px"><button class="primary" type="button" id="v126ConfirmSelection">Buat snapshot dari pilihan</button><button type="button" id="v126CancelSelection">Batal</button></div><div id="v126SelectionFeedback" class="small"></div>';
       html+='<div id="v126RecordAnswerPreview" class="notice" style="display:none;margin-top:12px"></div>';
       panel.innerHTML=html;panel.style.display='block';
-      panel.querySelectorAll('[data-v126-detail-index]').forEach(function(detailBtn){
-        detailBtn.onclick=function(){
-          var idx=Number(detailBtn.getAttribute('data-v126-detail-index')),c=records[idx],box=E('v126RecordAnswerPreview');
-          if(!c||!box)return;
+      /* Gunakan event delegation agar tombol detail tetap aktif setelah panel dirender ulang. */
+      panel.onclick=function(event){
+        var closeBtn=event.target.closest('#v126CloseAnswerPreview');
+        if(closeBtn){var preview=E('v126RecordAnswerPreview');if(preview)preview.style.display='none';return;}
+        var detailBtn=event.target.closest('[data-v126-detail-index]');
+        if(!detailBtn||!panel.contains(detailBtn))return;
+        event.preventDefault();
+        var idx=Number(detailBtn.getAttribute('data-v126-detail-index'));
+        var c=records[idx];
+        var box=E('v126RecordAnswerPreview');
+        if(!box){alert('Panel detail belum tersedia. Silakan muat ulang halaman dan coba kembali.');return;}
+        if(!c){box.style.display='block';box.textContent='Rekaman tidak ditemukan pada daftar aktif. Silakan tutup panel dan buat ulang daftar rekaman.';return;}
+        try{
           var pairs=[],baseFields=['id','recordId','uuid','sourceRecordId','name','fullName','patientName','age','sex','onset','status','outcome','address','desa','kec','investigationId','createdAt','updatedAt','sourceName','source','sourceType','questionnaireSource','formName','origin','recordSource'];
           baseFields.forEach(function(k){if(c[k]!==undefined&&c[k]!==null&&String(c[k])!=='')pairs.push([k,c[k]])});
-          var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
+          var ans=c.answers;
+          if(typeof ans==='string'){try{ans=JSON.parse(ans)}catch(parseErr){pairs.push(['Jawaban tersimpan',ans])}}
+          if(!ans||typeof ans!=='object')ans={};
           Object.keys(ans).forEach(function(k){pairs.push(['Jawaban: '+k,ans[k]])});
-          ['foodCase','priority'].forEach(function(k){if(c[k]&&typeof c[k]==='object')Object.keys(c[k]).forEach(function(sub){pairs.push([k+': '+sub,c[k][sub]])})});
-          var body=pairs.length?pairs.map(function(p){var v=p[1];if(Array.isArray(v))v=v.join(', ');else if(v&&typeof v==='object')v=JSON.stringify(v);return '<tr><th style="text-align:left;vertical-align:top">'+esc126(p[0])+'</th><td>'+esc126(v===undefined||v===null?'':String(v))+'</td></tr>'}).join(''):'<tr><td>Tidak ada field jawaban yang dapat ditampilkan pada rekaman ini.</td></tr>';
-          box.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b>Detail rekaman '+(idx+1)+' — '+esc126(c.name||c.fullName||c.patientName||c.id||'Tanpa nama')+'</b><button type="button" id="v126CloseAnswerPreview">Tutup detail</button></div><div class="v126-table-scroll" style="margin-top:8px"><table class="v126-table" style="min-width:500px"><tbody>'+body+'</tbody></table></div>';
+          ['foodCase','priority'].forEach(function(k){var obj=c[k];if(typeof obj==='string'){try{obj=JSON.parse(obj)}catch(parseErr){}}if(obj&&typeof obj==='object')Object.keys(obj).forEach(function(sub){pairs.push([k+': '+sub,obj[sub]])})});
+          function showValue(v){if(Array.isArray(v))return v.map(showValue).join(', ');if(v&&typeof v==='object'){try{return JSON.stringify(v,null,2)}catch(e){return String(v)}}return v===undefined||v===null?'':String(v)}
+          var body=pairs.length?pairs.map(function(p){return '<tr><th style="text-align:left;vertical-align:top">'+esc126(p[0])+'</th><td style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc126(showValue(p[1]))+'</td></tr>'}).join(''):'<tr><td colspan="2">Tidak ada field jawaban yang dapat ditampilkan pada rekaman ini.</td></tr>';
+          box.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Detail rekaman '+(idx+1)+' — '+esc126(c.name||c.fullName||c.patientName||c.id||'Tanpa nama')+'</b><button type="button" id="v126CloseAnswerPreview">Tutup detail</button></div><div class="v126-table-scroll" style="margin-top:8px"><table class="v126-table" style="min-width:500px"><tbody>'+body+'</tbody></table></div>';
           box.style.display='block';
-          var close=E('v126CloseAnswerPreview');if(close)close.onclick=function(){box.style.display='none'};
-        };
-      });
+          box.scrollIntoView({behavior:'auto',block:'nearest'});
+        }catch(err){
+          console.error('Gagal menampilkan jawaban lengkap:',err);
+          box.style.display='block';
+          box.textContent='Detail belum dapat ditampilkan: '+(err&&err.message?err.message:String(err));
+        }
+      };
       var cancel=E('v126CancelSelection');if(cancel)cancel.onclick=function(){panel.style.display='none'};
       var confirm=E('v126ConfirmSelection');if(confirm)confirm.onclick=function(){
         var selected=[],missing=[];
