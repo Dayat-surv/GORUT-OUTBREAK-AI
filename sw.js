@@ -1,8 +1,8 @@
-const CACHE='gorut-outbreak-ai-final-v136';
+const CACHE='gorut-outbreak-ai-final-v137';
 const ASSETS=[
   './',
   './index.html',
-  './app.js?v=136',
+  './app.js?v=137',
   './backend-config.js',
   './manifest.webmanifest',
   './mobile.html',
