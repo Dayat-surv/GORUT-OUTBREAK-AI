@@ -215,7 +215,8 @@ function uniqueCaseRowsForAnalysis(rows) {
       vals.forEach(function(v) { var encoded; try { encoded = JSON.stringify(v); } catch (e) { encoded = String(v); } if (distinct.indexOf(encoded) < 0) distinct.push(encoded); });
       if (distinct.length > 1) conflicts[k] = vals;
     });
-    view.answers = mergedAnswers;
+    /* Jangan gabungkan jawaban dari beberapa rekaman sumber: itu dapat membentuk kuesioner sintetis. Untuk tampilan operasional, gunakan jawaban rekaman utama; pilihan eksplisit untuk penelitian tetap dilakukan melalui snapshot. Konflik tetap dicatat pada _sourceAnswerConflicts. */
+    view.answers = Object.assign({}, answerMaps[answerMaps.length - 1] || {});
     view._sourceRecordCount = sourceRows.length;
     view._sourceAnswersByRecord = sourceRows.map(function(r, i) {
       var a = r && r.answers && typeof r.answers === 'object' ? Object.assign({}, r.answers) : {};
