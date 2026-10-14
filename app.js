@@ -3677,7 +3677,7 @@ try{installBrandingV67();}catch(e){}
   function year(){return Number(E('demoYearV49')?.value)||new Date().getFullYear()}
   function demoRows(y){const d=loadDemo(),saved=d.years?.[String(y)]||{};return villages.map(r=>{const k=`${r.puskesmas}||${r.desa}`;return {...r,...(saved[k]||{}),puskesmas:r.puskesmas,kec:r.kec,desa:r.desa}})}
   function valid(r){const p=Number(r.population),m=Number(r.male),f=Number(r.female);return p>0&&m>=0&&f>=0&&Math.abs(m+f-p)<0.001}
-  function activeCases(){return (window.db?.cases||[]).filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active))}
+  function activeCases(){return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active)))}
   function mappingForCase(c){
     const desa=norm(c.desa||c.admin?.desa||c.village||c.answers?.desa||c.answers?.desa_kelurahan||'');
     let m=villages.find(x=>norm(x.desa)===desa);
@@ -3715,7 +3715,7 @@ try{installBrandingV67();}catch(e){}
   function loadDemo(){try{return JSON.parse(localStorage.getItem(DEMO_KEY)||'null')||{years:{},meta:{}}}catch(e){return {years:{},meta:{}}}}
   function demoRows(y){const d=loadDemo(),saved=d.years?.[String(y)]||{};return villages.map(r=>{const k=`${r.puskesmas}||${r.desa}`;return {...r,...(saved[k]||{}),puskesmas:r.puskesmas,kec:r.kec,desa:r.desa}})}
   function valid(r){const p=Number(r.population),m=Number(r.male),f=Number(r.female);return p>0&&m>=0&&f>=0&&Math.abs(m+f-p)<0.001}
-  function activeCases(){return (window.db?.cases||[]).filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active))}
+  function activeCases(){return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active)))}
   function dateOf(c){const a=c.onset||c.onsetAt||c.tanggalOnset||c.answers?.['Tanggal onset']||c.answers?.['Tanggal onset demam']||c.answers?.['Tanggal onset demam']||'';const d=new Date(a);return isNaN(d)?null:d}
   function mapCase(c){const desa=norm(c.desa||c.admin?.desa||c.village||c.answers?.desa||c.answers?.desa_kelurahan||c.answers?.['Desa/Kelurahan']||'');if(!desa)return null;const p=String(c.puskesmas||c.pkm||c.answers?.puskesmas||c.answers?.Puskesmas||'').trim().toLowerCase();const k=String(c.kec||c.answers?.kec||c.answers?.Kecamatan||'').trim().toLowerCase();let candidates=villages.filter(x=>norm(x.desa)===desa);if(p)candidates=candidates.filter(x=>x.puskesmas.toLowerCase()===p);if(k)candidates=candidates.filter(x=>x.kec.toLowerCase()===k);return candidates[0]||null}
   function diseaseName(c){return String(c.disease||window.db?.investigations?.find(i=>String(i.id)===String(c.investigationId))?.disease||'Tidak diketahui')}
