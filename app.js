@@ -4887,15 +4887,23 @@ try{installBrandingV67();}catch(e){}
   function renderContext126(){
     var inv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)});
     var label=inv?esc126(inv.name)+' — '+esc126(diseaseName126(inv.disease)):'Belum ada investigasi aktif';
+    var invId=inv?String(inv.id):'';
+    var cases=inv?caseRows126(inv.id):[];
+    var contacts=inv?(db.contacts||[]).filter(function(x){return String(x.investigationId)===invId}):[];
+    var specimens=inv?(db.specimens||[]).filter(function(x){return String(x.investigationId)===invId}):[];
+    var visits=inv?(db.fieldVisits||[]).filter(function(x){return String(x.investigationId)===invId}):[];
+    var reportInfo='<b>Sumber laporan PE/KLB:</b> '+label+' <span class="small">· '+cases.length+' rekaman kasus; '+contacts.length+' kontak; '+specimens.length+' spesimen; '+visits.length+' kunjungan lapangan. Rekaman sumber tetap dihitung terpisah.</span>';
+    var researchInfo='<b>Sumber investigasi aktif:</b> '+label+' <span class="small">· '+cases.length+' rekaman kasus operasional. Analisis dapat memakai snapshot/dataset yang dipilih; periksa status kesesuaiannya sebelum menyimpulkan hasil.</span>';
     ['report','researchResults','researchDataStatus','researchDataPreview'].forEach(function(id){
       var el=E(id);if(!el)return;
       var target=id==='report'?el.parentElement:el;
-      if(!target||target.querySelector('.v126-context'))return;
-      var bar=document.createElement('div');bar.className='v126-context notice';bar.innerHTML='<b>Sumber investigasi aktif:</b> '+label+' <span class="small">· dashboard memakai filter investigasi aktif</span>';
-      target.insertBefore(bar,target.firstChild);
+      if(!target)return;
+      var bar=target.querySelector('.v126-context');
+      if(!bar){bar=document.createElement('div');bar.className='v126-context notice';target.insertBefore(bar,target.firstChild)}
+      bar.innerHTML=id==='report'?reportInfo:researchInfo;
     });
-    var rep=E('report');if(rep){var old=rep.querySelector('.v126-context');if(old){old.innerHTML='<b>Sumber investigasi aktif:</b> '+label+' <span class="small">· kasus, kontak, spesimen, dan kunjungan ditarik dari investigasi ini</span>'}}
-    var res=E('researchResults');if(res){var oldr=res.querySelector('.v126-context');if(oldr)oldr.innerHTML='<b>Sumber investigasi aktif:</b> '+label+' <span class="small">· analisis langsung mengikuti kasus investigasi kecuali dataset impor dipilih</span>'}
+    var rep=E('report');if(rep){var old=rep.querySelector('.v126-context');if(old)old.innerHTML=reportInfo}
+    var res=E('researchResults');if(res){var oldr=res.querySelector('.v126-context');if(oldr)oldr.innerHTML=researchInfo}
   }
   function showResearchLink126(){
     var sec=E('penelitian');if(!sec)return;
