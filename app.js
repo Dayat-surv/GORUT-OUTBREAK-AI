@@ -540,7 +540,11 @@ function renderMasterGroups(){const s=document.getElementById('masterGroup');if(
 function loadMasterToQuestionnaire(){page('kuesioner');const q=val('qDisease')||db.selectedDisease||'campak';document.getElementById('qDisease').value=q;loadDiseaseQuestions();}
 
 // v13 Chain of Transmission + spatial investigation layer
-function chainCases(){return (db.cases||[]).filter(c=>String(c.investigationId)===String(db.active))}
+function chainCases(){
+ const source=(db.cases||[]).filter(c=>String(c.investigationId)===String(db.active));
+ const seen=new Set();
+ return source.filter((c,i)=>{const id=String(c.id??'').trim();const key=id||'__chain_record_'+i;if(seen.has(key))return false;seen.add(key);return true});
+}
 function chainContacts(){return (db.contacts||[]).filter(c=>String(c.investigationId)===String(db.active))}
 function renderChain(){
  const canvas=document.getElementById('chainCanvas'); if(!canvas)return;
@@ -549,7 +553,7 @@ function renderChain(){
  const linkedCases=new Set(links.map(x=>String(x.caseId)));
  const confirmed=cs.filter(c=>c.status==='Konfirmasi').length;
  const symptomaticContacts=ct.filter(c=>['Sakit','Konfirmasi'].includes(c.status)).length;
- document.getElementById('chainSummary').innerHTML=[['Kasus',cs.length],['Kontak',ct.length],['Kasus dengan kontak',linkedCases.size],['Kontak sakit/terkonfirmasi',symptomaticContacts]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('');
+ document.getElementById('chainSummary').innerHTML=[['Kasus unik',cs.length],['Kontak',ct.length],['Kasus dengan kontak',linkedCases.size],['Kontak sakit/terkonfirmasi',symptomaticContacts]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('');
  const width=Math.max(760,Math.min(1400,220*(Math.max(cs.length,1))));
  const h=Math.max(300,120*(Math.max(cs.length,1)));
  let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}" viewBox="0 0 ${width} ${h}"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#777"/></marker></defs>`;
