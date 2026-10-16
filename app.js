@@ -1535,7 +1535,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
 /* v38 — Person-Place-Time Epidemiology Intelligence */
 (function(){
   function active(){return typeof act==='function'?act():null}
-  function cases(){const a=active();return (typeof db!=='undefined'&&db?.cases||[]).filter(c=>String(c.investigationId)===String(a?.id||db?.active))}
+  function cases(){const a=active();return (typeof db!=='undefined'&&db?.cases||[]).filter(c=>String(c.investigationId)===String(a?.id||db?.active)&&!isInvalidTestCaseForDashboard128(c))}
   function dateKey(v){if(!v)return null;const d=new Date(v);if(Number.isNaN(d.getTime()))return String(v).slice(0,10);return d.toISOString().slice(0,10)}
   function ageBand(a){const n=Number(a);if(!Number.isFinite(n))return 'Tidak diketahui';if(n<1)return '<1 tahun';if(n<5)return '1–4 tahun';if(n<15)return '5–14 tahun';if(n<25)return '15–24 tahun';if(n<45)return '25–44 tahun';if(n<65)return '45–64 tahun';return '≥65 tahun'}
   function aggregate(){const cs=cases(), o=active()||{};const time={};const sex={},age={},place={};cs.forEach(c=>{const d=dateKey(c.onset);if(d)time[d]=(time[d]||0)+1;const sx=c.sex||'Tidak diketahui';sex[sx]=(sex[sx]||0)+1;const ab=ageBand(c.age);age[ab]=(age[ab]||0)+1;const pl=[o.desa,o.kec,o.kab].filter(Boolean).join(' / ')||'Lokasi investigasi';place[pl]=(place[pl]||0)+1});return {cs,o,time,sex,age,place}}
@@ -1593,7 +1593,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
 (function(){
   const R=6371;
   function active(){return typeof act==='function'?act():null}
-  function cases(){const a=active();return (typeof db!=='undefined'&&db?.cases||[]).filter(c=>String(c.investigationId)===String(a?.id||db?.active))}
+  function cases(){const a=active();return (typeof db!=='undefined'&&db?.cases||[]).filter(c=>String(c.investigationId)===String(a?.id||db?.active)&&!isInvalidTestCaseForDashboard128(c))}
   function num(v){const n=Number(v);return Number.isFinite(n)?n:null}
   function hav(a,b){const la=num(a.lat),lo=num(a.lng),lb=num(b.lat),lob=num(b.lng);if([la,lo,lb,lob].some(x=>x===null))return null;const p=Math.PI/180,dlat=(lb-la)*p,dlon=(lob-lo)*p;const x=Math.sin(dlat/2)**2+Math.cos(la*p)*Math.cos(lb*p)*Math.sin(dlon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
   function geoCases(){return cases().filter(c=>num(c.lat)!==null&&num(c.lng)!==null)}
@@ -2822,7 +2822,7 @@ window.renderDemographyV49=function(){
 (function(){
   const E55=id=>document.getElementById(id), esc55=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const inv55=()=>((db&&db.investigations)||[]).find(x=>String(x.id)===String(db.active));
-  const cases55=()=>((db&&db.cases)||[]).filter(c=>String(c.investigationId)===String(db.active));
+  const cases55=()=>((db&&db.cases)||[]).filter(c=>String(c.investigationId)===String(db.active)&&!isInvalidTestCaseForDashboard128(c));
   const contacts55=()=>((db&&db.contacts)||[]).filter(c=>String(c.investigationId)===String(db.active));
   const specs55=()=>((db&&db.specimens)||[]).filter(c=>String(c.investigationId)===String(db.active));
   const visits55=()=>((db&&db.fieldVisits)||[]).filter(c=>String(c.investigationId)===String(db.active));
@@ -2903,7 +2903,7 @@ window.renderDemographyV49=function(){
   const esc56=v=>String(v??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
   const E56=id=>document.getElementById(id);
   function active56(){return typeof act==='function'?act():null}
-  function cases56(){const a=active56();return a?db.cases.filter(c=>c.investigationId===a.id):[]}
+  function cases56(){const a=active56();return a?db.cases.filter(c=>c.investigationId===a.id&&!isInvalidTestCaseForDashboard128(c)):[]}
   function contacts56(){const a=active56();return a?db.contacts.filter(c=>c.investigationId===a.id):[]}
   function inv56(){const a=active56();return a?db.investigations.find(i=>i.id===a.id):null}
   function outcome56(c){return c.status==='Konfirmasi'||c.status==='Probable'||c.outcome==='Meninggal'||c.healthStatus==='Sakit'||c.sick===true}
@@ -3051,7 +3051,7 @@ window.renderDemographyV49=function(){
   function activeCases62(){
     const activeId=window.db?.active;
     const disease=document.getElementById('demoDiseaseV49')?.value||'';
-    return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>String(c.investigationId)===String(activeId)).filter(c=>!disease||String(c.disease||'')===String(disease)));
+    return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>String(c.investigationId)===String(activeId)).filter(c=>!isInvalidTestCaseForDashboard128(c)).filter(c=>!disease||String(c.disease||'')===String(disease)));
   }
   function pkm62(c){const a=c.answers||{};return String(c.pkm||c.puskesmas||a.pkm||a.Puskesmas||a.puskesmas||'').trim();}
   function kec62(c){const a=c.answers||{};return String(c.kec||c.kecamatan||c.admin?.kec||a.kec||a.kecamatan||'').trim();}
@@ -3107,7 +3107,7 @@ window.renderDemographyV49=function(){
   const num63=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
   function cases63(){
     const activeId=window.db?.active, disease=document.getElementById('demoDiseaseV49')?.value||'';
-    return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>String(c.investigationId)===String(activeId)).filter(c=>!disease||String(c.disease||'')===String(disease)));
+    return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>String(c.investigationId)===String(activeId)).filter(c=>!isInvalidTestCaseForDashboard128(c)).filter(c=>!disease||String(c.disease||'')===String(disease)));
   }
   function pkm63(c){const a=c.answers||{};return String(c.pkm||c.puskesmas||a.pkm||a.Puskesmas||a.puskesmas||'').trim()}
   function kec63(c){const a=c.answers||{};return String(c.kec||c.kecamatan||c.admin?.kec||a.kec||a.kecamatan||'').trim()}
@@ -3211,7 +3211,7 @@ window.renderDemographyV49=function(){
  const oldRender64=window.renderDemographyV49;
  window.renderDemographyV49=function(){if(typeof oldRender64==='function')oldRender64.apply(this,arguments);setTimeout(renderInput64,30)};
 
- function cases64(){const active=window.db?.active,disease=document.getElementById('demoDiseaseV49')?.value||'';return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>String(c.investigationId)===String(active)).filter(c=>!disease||String(c.disease||'')===String(disease)));}
+ function cases64(){const active=window.db?.active,disease=document.getElementById('demoDiseaseV49')?.value||'';return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>String(c.investigationId)===String(active)).filter(c=>!isInvalidTestCaseForDashboard128(c)).filter(c=>!disease||String(c.disease||'')===String(disease)));}
  function pkm64(c){const a=c.answers||{};return String(c.pkm||c.puskesmas||a.pkm||a.Puskesmas||a.puskesmas||'').trim().toLowerCase().replace(/^puskesmas\s+/,'')}
  function onset64(c){const a=c.answers||{};const v=c.onset||c.dateOnset||c.tanggalOnset||a.onset||a.dateOnset||a.tanggalOnset||a['Tanggal Pertama Kali mengalami Gejala'];const d=v?new Date(v):null;return d&&Number.isFinite(d.getTime())?d:null}
  function renderEW64(){const host=document.getElementById('demoTableV49');if(!host)return;document.getElementById('v64EWCard')?.remove();const rows=rows64(selected64()),cs=cases64(),map={};rows.forEach(r=>map[String(r.puskesmas).toLowerCase().replace(/^puskesmas\s+/,'')]={...r,cases:0});cs.forEach(c=>{const k=pkm64(c);if(map[k])map[k].cases++});const dates=cs.map(onset64).filter(Boolean).sort((a,b)=>a-b),end=dates[dates.length-1]||new Date(),w7=7*86400000,w28=28*86400000;const out=Object.values(map).map(r=>{let a=0,b=0;cs.forEach(c=>{if(pkm64(c)!==String(r.puskesmas).toLowerCase().replace(/^puskesmas\s+/,''))return;const d=onset64(c);if(!d)return;const age=end-d;if(age>=0&&age<w7)a++;else if(age>=w7&&age<w28)b++});const prevDaily=b/21,latestDaily=a/7,change=prevDaily>0?(latestDaily-prevDaily)/prevDaily*100:(a>0?100:0);let level='Monitor';if(a>=5&&change>=100)level='Prioritas Tinggi';else if(a>=3&&change>=50)level='Waspada';return {...r,last7:a,prev21:b,change,level}}).sort((a,b)=>b.change-a.change||b.last7-a.last7);let html='<div class="card" id="v64EWCard" style="margin-top:16px"><div class="toolbar" style="justify-content:space-between"><div><h3 style="margin:0">📈 v64 — Epidemiological Trend & Early Warning</h3><div class="small">Perbandingan laju kasus 7 hari terakhir dengan 21 hari sebelumnya berdasarkan tanggal onset. Ini adalah <b>sinyal early warning operasional</b>, bukan penetapan KLB.</div></div><span class="badge">Early warning</span></div><div class="notice"><b>Parameter default dapat dianggap sebagai ambang operasional awal:</b> Prioritas Tinggi bila ≥5 kasus dalam 7 hari dan kenaikan laju ≥100%; Waspada bila ≥3 kasus dan kenaikan ≥50%. Ambang ini bukan kriteria KLB dan perlu disesuaikan dengan penyakit/setting.</div><div style="overflow:auto"><table><thead><tr><th>Rank</th><th>Puskesmas</th><th>Kecamatan</th><th>7 Hari</th><th>21 Hari Sebelumnya</th><th>Perubahan Laju</th><th>Denominator</th><th>Sinyal</th></tr></thead><tbody>';out.forEach((r,i)=>{html+='<tr><td><b>'+(i+1)+'</b></td><td><b>'+esc64(r.puskesmas)+'</b></td><td>'+esc64(r.kec)+'</td><td>'+r.last7+'</td><td>'+r.prev21+'</td><td>'+(r.change===100&&r.prev21===0?'Baru / +100%':(r.change>=0?'+':'')+r.change.toFixed(1)+'%')+'</td><td>'+(valid64(r)?'✓ Valid':'⚠ Belum valid')+'</td><td><span class="badge">'+r.level+'</span></td></tr>'});html+='</tbody></table></div><div class="small" style="margin-top:10px">Jika tanggal onset belum tersedia pada sebagian kasus, kasus tersebut tidak digunakan dalam analisis tren.</div></div>';host.insertAdjacentHTML('beforeend',html);window.__GORUT_V64_EW=out}
@@ -3237,7 +3237,7 @@ window.renderDemographyV49=function(){
  const rows=()=>{const d=demo(year());return master.flatMap(g=>g.pkm.map(p=>Object.assign({puskesmas:p,kec:g.kec,population:'',male:'',female:''},d[p]||{})));};
  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
  const validDen=r=>{const p=num(r.population),m=num(r.male),f=num(r.female);return p!==null&&p>0&&m!==null&&f!==null&&m>=0&&f>=0&&Math.abs(m+f-p)<.001};
- function cases(){const active=window.db?.active,disease=E('demoDiseaseV49')?.value||'';return (window.db?.cases||[]).filter(c=>String(c.investigationId)===String(active)).filter(c=>!disease||String(c.disease||'')===String(disease));}
+ function cases(){const active=window.db?.active,disease=E('demoDiseaseV49')?.value||'';return (window.db?.cases||[]).filter(c=>String(c.investigationId)===String(active)).filter(c=>!isInvalidTestCaseForDashboard128(c)).filter(c=>!disease||String(c.disease||'')===String(disease));}
  function pkm(c){const a=c.answers||{};return norm(c.pkm||c.puskesmas||a.pkm||a.Puskesmas||a.puskesmas||a['Puskesmas']||'');}
  function kec(c){const a=c.answers||{};return String(c.kec||c.kecamatan||a.kec||a.kecamatan||a['Kecamatan']||'').trim().toLowerCase().replace(/\s+/g,' ');}
  function onset(c){const a=c.answers||{};const v=c.onset||c.dateOnset||c.tanggalOnset||a.onset||a.dateOnset||a.tanggalOnset||a['Tanggal Pertama Kali mengalami Gejala'];const d=v?new Date(v):null;return d&&Number.isFinite(d.getTime())?d:null;}
@@ -3703,7 +3703,7 @@ try{installBrandingV67();}catch(e){}
   function year(){return Number(E('demoYearV49')?.value)||new Date().getFullYear()}
   function demoRows(y){const d=loadDemo(),saved=d.years?.[String(y)]||{};return villages.map(r=>{const k=`${r.puskesmas}||${r.desa}`;return {...r,...(saved[k]||{}),puskesmas:r.puskesmas,kec:r.kec,desa:r.desa}})}
   function valid(r){const p=Number(r.population),m=Number(r.male),f=Number(r.female);return p>0&&m>=0&&f>=0&&Math.abs(m+f-p)<0.001}
-  function activeCases(){return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active)))}
+  function activeCases(){return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active)).filter(c=>!isInvalidTestCaseForDashboard128(c)))}
   function mappingForCase(c){
     const desa=norm(c.desa||c.admin?.desa||c.village||c.answers?.desa||c.answers?.desa_kelurahan||'');
     let m=villages.find(x=>norm(x.desa)===desa);
@@ -3741,7 +3741,7 @@ try{installBrandingV67();}catch(e){}
   function loadDemo(){try{return JSON.parse(localStorage.getItem(DEMO_KEY)||'null')||{years:{},meta:{}}}catch(e){return {years:{},meta:{}}}}
   function demoRows(y){const d=loadDemo(),saved=d.years?.[String(y)]||{};return villages.map(r=>{const k=`${r.puskesmas}||${r.desa}`;return {...r,...(saved[k]||{}),puskesmas:r.puskesmas,kec:r.kec,desa:r.desa}})}
   function valid(r){const p=Number(r.population),m=Number(r.male),f=Number(r.female);return p>0&&m>=0&&f>=0&&Math.abs(m+f-p)<0.001}
-  function activeCases(){return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active)))}
+  function activeCases(){return uniqueCaseRowsForAnalysis((window.db?.cases||[]).filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active)).filter(c=>!isInvalidTestCaseForDashboard128(c)))}
   function dateOf(c){const a=c.onset||c.onsetAt||c.tanggalOnset||c.answers?.['Tanggal onset']||c.answers?.['Tanggal onset demam']||c.answers?.['Tanggal onset demam']||'';const d=new Date(a);return isNaN(d)?null:d}
   function mapCase(c){const desa=norm(c.desa||c.admin?.desa||c.village||c.answers?.desa||c.answers?.desa_kelurahan||c.answers?.['Desa/Kelurahan']||'');if(!desa)return null;const p=String(c.puskesmas||c.pkm||c.answers?.puskesmas||c.answers?.Puskesmas||'').trim().toLowerCase();const k=String(c.kec||c.answers?.kec||c.answers?.Kecamatan||'').trim().toLowerCase();let candidates=villages.filter(x=>norm(x.desa)===desa);if(p)candidates=candidates.filter(x=>x.puskesmas.toLowerCase()===p);if(k)candidates=candidates.filter(x=>x.kec.toLowerCase()===k);return candidates[0]||null}
   function diseaseName(c){return String(c.disease||window.db?.investigations?.find(i=>String(i.id)===String(c.investigationId))?.disease||'Tidak diketahui')}
@@ -3778,7 +3778,7 @@ try{installBrandingV67();}catch(e){}
   const master=window.GORUT_VILLAGE_MASTER_V69?.data||[];
   const villages=master.flatMap(g=>(g.desa||[]).map(d=>({puskesmas:g.puskesmas,kec:g.kec,desa:d})));
   function norm(v){return String(v??'').trim().toLowerCase().replace(/\s+/g,' ')}
-  function activeCases(){return uniqueCaseRowsForAnalysis(Array.isArray(window.db?.cases)?window.db.cases.filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active)):[])}
+  function activeCases(){return uniqueCaseRowsForAnalysis(Array.isArray(window.db?.cases)?window.db.cases.filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active)).filter(c=>!isInvalidTestCaseForDashboard128(c)):[])}
   function demoRows(){
     try{
       const raw=JSON.parse(localStorage.getItem('gorut-demography-v72-village')||'null')||{};
@@ -3990,7 +3990,7 @@ try{installBrandingV67();}catch(e){}
   function esc85(s){return typeof esc==='function'?esc(s):String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
   function active85(){return typeof act==='function'?(act()||{}):((db.investigations||[]).find(x=>String(x.id)===String(db.active))||{})}
   function qa85(){
-    const a=active85(), inv=!!a?.id, cs=(db.cases||[]).filter(x=>String(x.investigationId)===String(a.id||db.active)), ct=(db.contacts||[]).filter(x=>String(x.investigationId)===String(a.id||db.active)), sp=(db.specimens||[]).filter(x=>String(x.investigationId)===String(a.id||db.active)), fv=(db.fieldVisits||[]).filter(x=>String(x.investigationId)===String(a.id||db.active));
+    const a=active85(), inv=!!a?.id, cs=(db.cases||[]).filter(x=>String(x.investigationId)===String(a.id||db.active)&&!isInvalidTestCaseForDashboard128(x)), ct=(db.contacts||[]).filter(x=>String(x.investigationId)===String(a.id||db.active)), sp=(db.specimens||[]).filter(x=>String(x.investigationId)===String(a.id||db.active)), fv=(db.fieldVisits||[]).filter(x=>String(x.investigationId)===String(a.id||db.active));
     const isFood=/keracunan/i.test(String(a.type||''))||String(a.disease||'')==='keracunan-pangan';
     const checks=[];
     const add=(id,label,ok,detail,level)=>checks.push({id,label,status:ok?'PASS':(level||'WARN'),detail});
