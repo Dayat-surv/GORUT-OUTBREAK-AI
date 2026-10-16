@@ -4983,7 +4983,7 @@ try{installBrandingV67();}catch(e){}
       });
       var panel=E('v126SelectionPanel');
       if(!panel){panel=document.createElement('div');panel.id='v126SelectionPanel';panel.className='card';var link=E('v126ResearchLink');if(link)link.appendChild(panel)}
-      var html='<h4 style="margin-top:0">Pilih rekaman/kuesioner untuk dataset penelitian</h4><div class="notice">Pilih tepat satu rekaman untuk setiap ID kasus agar analisis tingkat kasus tidak menghitung orang yang sama berulang. Rekaman sumber asli tidak dihapus atau diubah. Untuk ID yang memiliki beberapa rekaman, pilihan sengaja dikosongkan sampai Anda menentukan rekaman yang sesuai.</div>';
+      var html='<h4 style="margin-top:0">Pilih rekaman/kuesioner untuk dataset penelitian</h4><div class="notice">Pilih tepat satu rekaman valid untuk setiap ID kasus agar analisis tingkat kasus tidak menghitung orang yang sama berulang. Rekaman sumber asli tidak dihapus atau diubah. Rekaman dengan ID 1468d9f8-e408-4fee-9da2-760e6a0bfcc6 ditandai sebagai data uji yang tidak valid sesuai konfirmasi pengguna dan tidak dapat dimasukkan ke snapshot penelitian. Jika hanya rekaman itu yang tersedia, proses akan meminta rekaman valid lain dan tidak membuat snapshot.</div>';
       html+='<div class="v126-table-scroll"><table class="v126-table"><thead><tr><th>Pilih</th><th>ID Kasus</th><th>ID Rekaman Sumber</th><th>Rekaman / sumber</th><th>Nama</th><th>Jumlah jawaban tersimpan</th><th>Indikasi sumber</th></tr></thead><tbody>';
       groups.forEach(function(g,gi){
         g.items.forEach(function(item){
@@ -4991,7 +4991,12 @@ try{installBrandingV67();}catch(e){}
           var source=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(item.index+1));
           var checked=g.items.length===1?' checked':'';
           var sourceId=c.serverId||c.recordId||c.uuid||c.sourceRecordId||'';
-          html+='<tr><td><input style="width:auto" type="radio" name="v126-case-group-'+gi+'" value="'+item.index+'" data-v126-group="'+gi+'"'+checked+'></td><td>'+esc126(g.caseId)+'</td><td><code style="overflow-wrap:anywhere">'+esc126(sourceId||'Belum tersedia')+'</code><div class="small">'+(sourceId?'ID sumber/server':'ID sumber belum tersedia')+'</div></td><td>'+esc126(source)+'<div class="small">Urutan rekaman '+(item.index+1)+'</div><button type="button" data-v126-detail-index="'+item.index+'">Lihat jawaban lengkap</button></td><td>'+esc126(c.name||c.fullName||c.patientName||'-')+'</td><td>'+Object.keys(ans).length+'</td><td>'+(g.items.length>1?'<span class="badge">Perlu dipilih</span>':'<span class="badge">Satu rekaman</span>')+'</td></tr>';
+          /* v127: ID ini telah dikonfirmasi pengguna sebagai rekaman uji yang isinya tidak valid untuk penelitian.
+             Rekaman operasional tetap dipertahankan, tetapi tidak boleh dipilih ke snapshot penelitian. */
+          var excludedResearchSourceId='1468d9f8-e408-4fee-9da2-760e6a0bfcc6';
+          var excludedResearchRecord=String(sourceId).toLowerCase()===excludedResearchSourceId;
+          if(excludedResearchRecord)checked='';
+          html+='<tr'+(excludedResearchRecord?' style="background:#fff4e5"':'')+'><td><input style="width:auto" type="radio" name="v126-case-group-'+gi+'" value="'+item.index+'" data-v126-group="'+gi+'"'+checked+(excludedResearchRecord?' disabled':'')+'></td><td>'+esc126(g.caseId)+'</td><td><code style="overflow-wrap:anywhere">'+esc126(sourceId||'Belum tersedia')+'</code><div class="small">'+(excludedResearchRecord?'Dikecualikan dari snapshot penelitian (data uji tidak valid)':(sourceId?'ID sumber/server':'ID sumber belum tersedia'))+'</div></td><td>'+esc126(source)+'<div class="small">Urutan rekaman '+(item.index+1)+'</div><button type="button" data-v126-detail-index="'+item.index+'">Lihat jawaban lengkap</button></td><td>'+esc126(c.name||c.fullName||c.patientName||'-')+'</td><td>'+Object.keys(ans).length+'</td><td>'+(excludedResearchRecord?'<span class="badge">Dikecualikan</span>':(g.items.length>1?'<span class="badge">Pilih rekaman</span>':'<span class="badge">Satu rekaman</span>'))+'</td></tr>';
         });
       });
       html+='</tbody></table></div><div class="toolbar" style="margin-top:12px"><button class="primary" type="button" id="v126ConfirmSelection">Buat snapshot dari pilihan</button><button type="button" id="v126CancelSelection">Batal</button></div><div id="v126SelectionFeedback" class="small"></div>';
