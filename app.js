@@ -227,7 +227,7 @@ function uniqueCaseRowsForAnalysis(rows) {
   });
   return result;
 }
-function currentCases(){return uniqueCaseRowsForAnalysis(db.cases.filter(c=>String(c.investigationId)===String(db.active)));}
+function currentCases(){return uniqueCaseRowsForAnalysis(db.cases.filter(c=>String(c.investigationId)===String(db.active)&&!isInvalidTestCaseForDashboard128(c)));}
 function exposureValue(c,key){if(key==='contact')return (db.contacts||[]).some(x=>String(x.investigationId)===String(db.active)&&String(x.caseId)===String(c.id));if(key==='male')return String(c.sex||'').toLowerCase().startsWith('l');return Boolean(c[key]);}
 function outcomeValue(c,key){if(key==='status')return c.status==='Konfirmasi';if(key==='outcome')return c.outcome==='Meninggal';return Boolean(c[key]);}
 function ln(x){return Math.log(x)}
@@ -504,7 +504,7 @@ async function loadServerOperationalData(){
 window.loadServerOperationalData=loadServerOperationalData;
 
 
-function render(){db.fieldVisits=db.fieldVisits||[]; disease.innerHTML=diseaseOptions();qDisease.innerHTML=diseaseOptions();if(act()){disease.value=act().disease||db.selectedDisease||'campak';qDisease.value=act().disease||db.selectedDisease||'campak'}else{disease.value=db.selectedDisease||'campak';qDisease.value=db.selectedDisease||'campak'}dash();if(typeof window.cases==='function')window.cases();contacts();specimens();alerts();renderQ();report();populateFieldInvestigations();fieldVisits();if(document.getElementById('chain'))document.getElementById('chain').innerHTML=act()?.type==='Penyakit Menular'?'<h2>Rantai Penularan</h2><p>Gunakan menu 🧬 Rantai Penularan untuk visualisasi hubungan kasus dan kontak.</p>':'';renderChain();populateRiskInvestigations();if(document.getElementById('risiko')?.classList.contains('show'))runRiskAssessment()}
+function render(){ensureInvalidTestRecordNotice128();db.fieldVisits=db.fieldVisits||[]; disease.innerHTML=diseaseOptions();qDisease.innerHTML=diseaseOptions();if(act()){disease.value=act().disease||db.selectedDisease||'campak';qDisease.value=act().disease||db.selectedDisease||'campak'}else{disease.value=db.selectedDisease||'campak';qDisease.value=db.selectedDisease||'campak'}dash();if(typeof window.cases==='function')window.cases();contacts();specimens();alerts();renderQ();report();populateFieldInvestigations();fieldVisits();if(document.getElementById('chain'))document.getElementById('chain').innerHTML=act()?.type==='Penyakit Menular'?'<h2>Rantai Penularan</h2><p>Gunakan menu 🧬 Rantai Penularan untuk visualisasi hubungan kasus dan kontak.</p>':'';renderChain();populateRiskInvestigations();if(document.getElementById('risiko')?.classList.contains('show'))runRiskAssessment()}
 const loginEl=document.getElementById('login'),app=document.getElementById('app'),title=document.getElementById('title'),klbRows=document.getElementById('klbRows'),stats=document.getElementById('stats'),bankEl=document.getElementById('bank'),preview=document.getElementById('preview'),caseRows=document.getElementById('caseRows'),modalEl=document.getElementById('modal');
 
 /* ===== v9 operational layer ===== */
@@ -587,7 +587,7 @@ function loadMasterToQuestionnaire(){page('kuesioner');const q=val('qDisease')||
 
 // v13 Chain of Transmission + spatial investigation layer
 function chainCases(){
- const source=(db.cases||[]).filter(c=>String(c.investigationId)===String(db.active));
+ const source=(db.cases||[]).filter(c=>String(c.investigationId)===String(db.active)&&!isInvalidTestCaseForDashboard128(c));
  const seen=new Set();
  return source.filter((c,i)=>{const id=String(c.id??'').trim();const key=id||'__chain_record_'+i;if(seen.has(key))return false;seen.add(key);return true});
 }
@@ -643,7 +643,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
 let lastRiskAssessment=null;
 function populateRiskInvestigations(){const s=document.getElementById('riskInv');if(!s)return;const arr=db.investigations||[];s.innerHTML=arr.map(i=>`<option value="${esc(i.id)}">${esc(i.name||i.id)}</option>`).join('')||'<option value="">Belum ada investigasi</option>';if(db.active)s.value=String(db.active);}
 function riskInv(){const id=document.getElementById('riskInv')?.value||db.active;return (db.investigations||[]).find(i=>String(i.id)===String(id))||act();}
-function riskCases(){const id=riskInv()?.id||db.active;return (db.cases||[]).filter(c=>String(c.investigationId)===String(id));}
+function riskCases(){const id=riskInv()?.id||db.active;return (db.cases||[]).filter(c=>String(c.investigationId)===String(id)&&!isInvalidTestCaseForDashboard128(c));}
 function dateObj(x){const d=new Date(x);return isNaN(d.getTime())?null:d;}
 function riskDateRange(cs){const ds=cs.map(c=>dateObj(c.onset)).filter(Boolean).sort((a,b)=>a-b);if(!ds.length)return null;return {min:ds[0],max:ds[ds.length-1]};}
 function pct(a,b){return b?Math.round(a/b*1000)/10:0;}
@@ -857,14 +857,22 @@ const _exportResearchJSONV23=exportResearchJSON;exportResearchJSON=function(){co
 /* v128: preserve the stored snapshot, but never expose the confirmed invalid test record to preview or analysis. */
 const INVALID_RESEARCH_SOURCE_IDS_128=new Set(['1468d9f8-e408-4fee-9da2-760e6a0bfcc6']);
 /* Pengguna mengonfirmasi Rekaman 1 dan Rekaman 2 untuk kasus uji ini sama-sama diisi asal-asalan.
-   Karena ID sumber Rekaman 2 belum dikonfirmasi, kecualikan kasus uji bersama dari analisis melalui ID kasusnya juga. */
+   Kedua rekaman sumber dipertahankan, tetapi kasus induknya dikecualikan dari seluruh analitik/dashboard. */
 const INVALID_RESEARCH_CASE_IDS_128=new Set(['pub-1468d9f8-e40']);
-function isInvalidResearchRow128(row){
+function isInvalidTestCaseForDashboard128(row){
   if(!row||typeof row!=='object')return false;
   const sourceKeys=['ID Rekaman Sumber','sourceRecordId','source_record_id','serverId','recordId','uuid','__sourceRecordId'];
   if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&INVALID_RESEARCH_SOURCE_IDS_128.has(String(row[k]).trim().toLowerCase())))return true;
   const caseKeys=['ID Kasus','caseId','case_id','__caseId','id'];
   return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&INVALID_RESEARCH_CASE_IDS_128.has(String(row[k]).trim().toLowerCase()));
+}
+function isInvalidResearchRow128(row){return isInvalidTestCaseForDashboard128(row)}
+function ensureInvalidTestRecordNotice128(){
+  const app=document.getElementById('app'),title=document.getElementById('title');
+  if(!app||!title)return;
+  let note=document.getElementById('invalidTestRecordNotice128');
+  if(!note){note=document.createElement('div');note.id='invalidTestRecordNotice128';note.className='notice';note.style.cssText='margin:10px 0;border-left:4px solid #b45309;background:#fff7ed;color:#7c2d12;padding:10px 12px';title.insertAdjacentElement('afterend',note);}
+  note.innerHTML='<b>Pemberitahuan kualitas data:</b> Rekaman 1 dan Rekaman 2 pada kasus uji <code>PUB-1468D9F8-E40</code> diisi asal-asalan dan tidak valid untuk analisis. Keduanya dikecualikan dari perhitungan dashboard epidemiologi, peta, rantai penularan, penilaian risiko, ringkasan statistik, dan penelitian. Rekaman operasional asli tetap dipertahankan dan masih dapat dilihat pada daftar kasus.';
 }
 function researchDatasetExcludedCount128(){
   const rows=Array.isArray(researchState.dataset?.rows)?researchState.dataset.rows:[];
@@ -1792,7 +1800,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
 
   function renderCommandCenter(){
     const grid=document.getElementById('v43PriorityGrid'), list=document.getElementById('v43PriorityList'); if(!grid||!list)return;
-    const cases=Array.isArray(db.cases)?db.cases:[], inv=Array.isArray(db.investigations)?db.investigations:[], alerts=Array.isArray(db.alerts)?db.alerts:[], specs=Array.isArray(db.specimens)?db.specimens:[];
+    const cases=(Array.isArray(db.cases)?db.cases:[]).filter(c=>!isInvalidTestCaseForDashboard128(c)), inv=Array.isArray(db.investigations)?db.investigations:[], alerts=Array.isArray(db.alerts)?db.alerts:[], specs=Array.isArray(db.specimens)?db.specimens:[];
     const deaths=cases.filter(c=>String(c.outcome||'').toLowerCase().includes('meninggal')).length;
     const pendingSpecs=specs.filter(s=>/pending|menunggu|belum/i.test(String(s.status||''))).length;
     const geo=cases.filter(c=>Number.isFinite(Number(c.lat))&&Number.isFinite(Number(c.lng))).length;
@@ -2060,7 +2068,7 @@ function installLogin(){
   function days44(n){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-n);return d}
   function validDate44(v){const d=new Date(v);return Number.isNaN(d.getTime())?null:d}
   function calc44(){
-    const cases=Array.isArray(db.cases)?db.cases:[], inv=Array.isArray(db.investigations)?db.investigations:[], alerts=Array.isArray(db.alerts)?db.alerts:[], specs=Array.isArray(db.specimens)?db.specimens:[], contacts=Array.isArray(db.contacts)?db.contacts:[], visits=Array.isArray(db.fieldVisits)?db.fieldVisits:[];
+    const cases=(Array.isArray(db.cases)?db.cases:[]).filter(c=>!isInvalidTestCaseForDashboard128(c)), inv=Array.isArray(db.investigations)?db.investigations:[], alerts=Array.isArray(db.alerts)?db.alerts:[], specs=Array.isArray(db.specimens)?db.specimens:[], contacts=Array.isArray(db.contacts)?db.contacts:[], visits=Array.isArray(db.fieldVisits)?db.fieldVisits:[];
     const onset=cases.map(c=>validDate44(c.onset)).filter(Boolean);
     const recentStart=days44(6), prevStart=days44(13), recent=onset.filter(d=>d>=recentStart).length, prev=onset.filter(d=>d>=prevStart&&d<recentStart).length;
     const trend=prev?Math.round((recent-prev)/prev*100):recent?100:0;
@@ -2543,7 +2551,7 @@ window.renderDemographyV49=function(){
  window.saveDemographyV49=function(){const y=selectedYear(),d=loadDemo(),rows=rowsFor(y);document.querySelectorAll('[data-demo]').forEach(inp=>{const i=Number(inp.dataset.i);if(rows[i])rows[i][inp.dataset.demo]=inp.value});d.years[String(y)]={};rows.forEach(r=>d.years[String(y)][r.puskesmas]=r);d.meta[String(y)]={source:E('demoSourceV49')?.value||'',updated:E('demoUpdatedV49')?.value||'',note:E('demoNoteV49')?.value||''};saveDemo(d);renderDemographyV49();alert(`Master demografi ${y} tersimpan.`);}
  window.exportDemographyV49=function(){const y=selectedYear(),rows=rowsFor(y),m=metaFor(y),head=['tahun','puskesmas','kecamatan','desa_acuan','penduduk','laki_laki','perempuan','kk','luas_km2','latitude','longitude','sumber','tanggal_update','catatan'];const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv=[head.join(',')].concat(rows.map(r=>[y,r.puskesmas,r.kec,r.desa,r.population,r.male,r.female,r.households,r.areaKm2,r.lat,r.lng,m.source,m.updated,r.note].map(q).join(','))).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=`GORUT-demografi-${y}.csv`;a.click();}
  window.importDemographyV49=function(){const inp=document.createElement('input');inp.type='file';inp.accept='.csv,text/csv';inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const lines=String(r.result).split(/\r?\n/).filter(Boolean);if(lines.length<2)return alert('CSV kosong.');const split=x=>x.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/).map(v=>v.replace(/^\"|\"$/g,'').replace(/\"\"/g,'\"'));const h=split(lines[0]).map(x=>x.toLowerCase().trim()),idx=k=>h.indexOf(k),d=loadDemo();lines.slice(1).forEach(line=>{const a=split(line),y=Number(a[idx('tahun')]||new Date().getFullYear()),name=a[idx('puskesmas')];if(!name)return;d.years[String(y)] ||= {};d.years[String(y)][name]={puskesmas:name,kec:a[idx('kecamatan')]||'',desa:a[idx('desa_acuan')]||'',population:a[idx('penduduk')]||'',male:a[idx('laki_laki')]||'',female:a[idx('perempuan')]||'',households:a[idx('kk')]||'',areaKm2:a[idx('luas_km2')]||'',lat:a[idx('latitude')]||'',lng:a[idx('longitude')]||'',note:a[idx('catatan')]||'',source:a[idx('sumber')]||''};d.meta[String(y)]={source:a[idx('sumber')]||'',updated:a[idx('tanggal_update')]||'',note:''}});saveDemo(d);renderDemographyV49();alert('CSV demografi berhasil diimpor.');};r.readAsText(f)};inp.click();}
- function activeCases(){const a=typeof act==='function'?act():{};const sel=E('demoDiseaseV49')?.value;return uniqueCaseRowsForAnalysis((db.cases||[]).filter(c=>String(c.investigationId)===String(db.active)).filter(c=>!sel||String(c.disease||a.disease)===String(sel)))}
+ function activeCases(){const a=typeof act==='function'?act():{};const sel=E('demoDiseaseV49')?.value;return uniqueCaseRowsForAnalysis((db.cases||[]).filter(c=>String(c.investigationId)===String(db.active)).filter(c=>!isInvalidTestCaseForDashboard128(c)).filter(c=>!sel||String(c.disease||a.disease)===String(sel)))}
  function casePkm(c){const a=c.answers||{};return c.pkm||c.puskesmas||a.pkm||a.Puskesmas||a.puskesmas||''}
  function calcRates(){const y=selectedYear(),rows=rowsFor(y),cs=activeCases();return rows.map(r=>{const p=String(r.puskesmas).toLowerCase(),short=p.replace(/^puskesmas\s+/i,'');const n=cs.filter(c=>{const v=String(casePkm(c)||'').toLowerCase();return v===p||v===short}).length,pop=Number(r.population)||0;return {...r,cases:n,ir:pop?n/pop*100000:null}})}
  window.renderDemographyMapV49=function(){if(!window.L){const e=E('demoMapV49');if(e)e.innerHTML='<div class="notice">Peta memerlukan koneksi internet untuk memuat Leaflet.</div>';return}const el=E('demoMapV49');if(!el)return;if(window.__demoMap49)window.__demoMap49.remove();window.__demoMap49=L.map(el).setView([0.8,122.5],9);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(window.__demoMap49);const metric=E('demoMetricV49')?.value||'cases',rates=calcRates(),cs=activeCases().filter(c=>Number.isFinite(Number(c.lat))&&Number.isFinite(Number(c.lng)));cs.forEach(c=>L.circleMarker([+c.lat,+c.lng],{radius:6,weight:1}).addTo(window.__demoMap49).bindPopup(`<b>${esc49(c.id||'-')}</b><br>${esc49(c.name||'-')}<br>Puskesmas: ${esc49(casePkm(c)||'-')}<br>Status: ${esc49(c.status||'-')}`));if(window.L?.esri){try{window.__demoRbi49=L.esri.dynamicMapLayer({url:'https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/BATAS_WILAYAH/MapServer',layers:[8,9,10,11],opacity:.35,useCors:true}).addTo(window.__demoMap49)}catch(e){}}rates.filter(r=>Number(r.lat)&&Number(r.lng)).forEach(r=>{const radius=metric==='ir'?Math.max(250,Math.min(2500,(r.ir||0)*5)):Math.max(200,Math.min(1800,(r.cases||0)*90));L.circle([+r.lat,+r.lng],{radius,fillOpacity:.20,weight:1}).addTo(window.__demoMap49).bindPopup(`<b>${esc49(r.puskesmas)}</b><br>Kasus: ${r.cases}<br>IR: ${r.ir==null?'NA':r.ir.toFixed(2)}/100.000`)});if(cs.length){const b=L.latLngBounds(cs.map(c=>[+c.lat,+c.lng]));window.__demoMap49.fitBounds(b.pad(.15))}if(E('demoMapTableV49'))E('demoMapTableV49').innerHTML=`<table><thead><tr><th>Puskesmas</th><th>Kasus</th><th>Penduduk ${selectedYear()}</th><th>IR/100.000</th><th>Denominator</th></tr></thead><tbody>${rates.map(r=>`<tr><td>${esc49(r.puskesmas)}</td><td>${r.cases}</td><td>${Number(r.population||0).toLocaleString('id-ID')}</td><td>${r.ir==null?'—':r.ir.toFixed(2)}</td><td>${r.population?'Siap':'Belum ada'}</td></tr>`).join('')}</tbody></table><p class="small">Kasus tanpa pemetaan Puskesmas: ${activeCases().filter(c=>!casePkm(c)).length}. Kasus berkoordinat: ${cs.length}/${activeCases().length}.</p>`}
@@ -2650,7 +2658,7 @@ window.renderDemographyV49=function(){
   function rows(y){return rowsFor(y)}
   function aggregate(d,y){
     const pop={}; rows(y).forEach(r=>{const k=norm(r.kec);if(k)pop[k]=(pop[k]||0)+(Number(r.population)||0)});
-    const cases={}; (db.cases||[]).filter(c=>String(c.investigationId)===String(db.active)).filter(c=>!d||String(c.disease||'')===String(d)).forEach(c=>{const k=norm(c.district||c.kecamatan||c.kec||c.answers?.district||c.answers?.kecamatan||c.answers?.Kecamatan||'');if(k)cases[k]=(cases[k]||0)+1});
+    const cases={}; (db.cases||[]).filter(c=>String(c.investigationId)===String(db.active)).filter(c=>!isInvalidTestCaseForDashboard128(c)).filter(c=>!d||String(c.disease||'')===String(d)).forEach(c=>{const k=norm(c.district||c.kecamatan||c.kec||c.answers?.district||c.answers?.kecamatan||c.answers?.Kecamatan||'');if(k)cases[k]=(cases[k]||0)+1});
     const names={}; rows(y).forEach(r=>{const k=norm(r.kec);if(k&&!names[k])names[k]=r.kec});
     return Object.keys({...pop,...cases}).map(k=>({key:k,name:names[k]||k,cases:cases[k]||0,population:pop[k]||0,ir:pop[k]?(cases[k]||0)/pop[k]*100000:null}));
   }
@@ -2658,7 +2666,7 @@ window.renderDemographyV49=function(){
   window.V51_EPI={version:'v51',rbi:RBI,source:'Badan Informasi Geospasial',edition:'Geodatabase batas wilayah administrasi nasional edisi Juni 2026'};
 
   function flow(){
-    const cs=(db.cases||[]).filter(c=>String(c.investigationId)===String(db.active));
+    const cs=(db.cases||[]).filter(c=>String(c.investigationId)===String(db.active)&&!isInvalidTestCaseForDashboard128(c));
     const inv=(db.investigations||[]).filter(i=>String(i.id)===String(db.active));
     const contacts=(db.contacts||[]).filter(x=>String(x.investigationId)===String(db.active));
     const specimens=(db.specimens||[]).filter(x=>String(x.investigationId)===String(db.active));
@@ -2685,7 +2693,7 @@ window.renderDemographyV49=function(){
     const y=Number(E('demoYearV49')?.value)||new Date().getFullYear(),d=disease(),metric=E('demoMetricV49')?.value||'ir',agg=aggregate(d,y),by={};agg.forEach(a=>by[norm(a.name)]=a);
     let gj;try{gj=await geo()}catch(e){el.innerHTML='<div class="notice">RBI BIG belum dapat dimuat. Periksa koneksi internet.</div>';return}
     const poly=L.geoJSON(gj,{style:f=>{const p=f.properties||{},a=by[norm(p.wadmkc||p.namobj)];const v=metric==='ir'?(a?.ir||0):(a?.cases||0);return {fillColor:metric==='ir'?col(v):col(v*10),color:'#555',weight:1,fillOpacity:.68}},onEachFeature:(f,l)=>{const p=f.properties||{},a=by[norm(p.wadmkc||p.namobj)];l.bindPopup(`<b>${esc49(p.wadmkc||p.namobj||'-')}</b><br>Kasus: ${a?.cases||0}<br>Penduduk ${y}: ${Number(a?.population||0).toLocaleString('id-ID')}<br>IR: ${a?.ir==null?'Belum tersedia':a.ir.toFixed(2)+' / 100.000'}`)}}).addTo(map);
-    (db.cases||[]).filter(c=>String(c.investigationId)===String(db.active)).filter(c=>!d||String(c.disease||'')===String(d)).filter(c=>Number.isFinite(+c.lat)&&Number.isFinite(+c.lng)).forEach(c=>L.circleMarker([+c.lat,+c.lng],{radius:5,weight:1,fillOpacity:.9}).addTo(map).bindPopup(`<b>${esc49(c.id||'-')}</b><br>${esc49(c.name||'-')}<br>${esc49(c.district||c.kecamatan||'-')}`));
+    (db.cases||[]).filter(c=>String(c.investigationId)===String(db.active)).filter(c=>!isInvalidTestCaseForDashboard128(c)).filter(c=>!d||String(c.disease||'')===String(d)).filter(c=>Number.isFinite(+c.lat)&&Number.isFinite(+c.lng)).forEach(c=>L.circleMarker([+c.lat,+c.lng],{radius:5,weight:1,fillOpacity:.9}).addTo(map).bindPopup(`<b>${esc49(c.id||'-')}</b><br>${esc49(c.name||'-')}<br>${esc49(c.district||c.kecamatan||'-')}`));
     try{map.fitBounds(poly.getBounds().pad(.03))}catch(e){}
     const lc=L.control({position:'bottomright'});lc.onAdd=()=>{const z=document.createElement('div');z.className='v51-legend';z.innerHTML=metric==='ir'?'<b>IR / 100.000</b>'+CLASSES.map(x=>`<span><i style="background:${col(x.max===Infinity?251:x.max)}"></i>${x.label}</span>`).join(''):'<b>Jumlah kasus (visual)</b><span><i style="background:#eef2f7"></i>0</span><span><i style="background:#c8e6c9"></i>1–5</span><span><i style="background:#fff3cd"></i>6–10</span><span><i style="background:#ffd8a8"></i>11–25</span><span><i style="background:#f8b4b4"></i>>25</span>';return z};lc.addTo(map);
     const t=E('demoMapTableV49');if(t)t.innerHTML=`<table><thead><tr><th>Kecamatan RBI</th><th>Kasus</th><th>Penduduk ${y}</th><th>IR/100.000</th><th>Kelas</th></tr></thead><tbody>${agg.sort((a,b)=>(b.ir??-1)-(a.ir??-1)).map(a=>`<tr><td>${esc49(a.name)}</td><td>${a.cases}</td><td>${Number(a.population||0).toLocaleString('id-ID')}</td><td>${a.ir==null?'—':a.ir.toFixed(2)}</td><td>${a.ir==null?'Belum tersedia':cls(a.ir).label}</td></tr>`).join('')}</tbody></table><p class="small">Peta: RBI/BIG, layer administrasi kecamatan. Titik: kasus berkoordinat. Kelas IR adalah klasifikasi visual aplikasi dan bukan ambang resmi KLB.</p>`;
@@ -2700,7 +2708,7 @@ window.renderDemographyV49=function(){
 })();
 (function(){
   const E=id=>document.getElementById(id), esc53=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const cs53=()=>db.cases.filter(c=>String(c.investigationId)===String(db.active));
+  const cs53=()=>db.cases.filter(c=>String(c.investigationId)===String(db.active)&&!isInvalidTestCaseForDashboard128(c));
   const get53=(c,k)=>k.startsWith('answers.')?(c.answers||{})[k.slice(8)]:c[k];
   const bin53=v=>{if(v===true||v===1)return 1;if(v===false||v===0)return 0;if(v==null||v==='')return null;const s=String(v).trim().toLowerCase();if(['ya','yes','y','true','1','positif','positive','sakit','terpapar','makan','consumed'].includes(s))return 1;if(['tidak','no','n','false','0','negatif','negative','sehat','tidak terpapar','tidak makan','not consumed'].includes(s))return 0;return null};
   const label53=k=>k.startsWith('answers.')?k.slice(8).replace(/[_-]+/g,' '):({status:'Status kasus',outcome:'Outcome',sex:'Jenis kelamin',age:'Umur',onset:'Tanggal onset'}[k]||k);
@@ -2723,7 +2731,7 @@ window.renderDemographyV49=function(){
 /* ========================= V54 — ADVANCED OUTBREAK ANALYSIS ========================= */
 (function(){
   const E54=id=>document.getElementById(id), esc54=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const cases54=()=>((db&&db.cases)||[]).filter(c=>String(c.investigationId)===String(db.active));
+  const cases54=()=>((db&&db.cases)||[]).filter(c=>String(c.investigationId)===String(db.active)&&!isInvalidTestCaseForDashboard128(c));
   const val54=(c,k)=>k.startsWith('answers.')?(c.answers||{})[k.slice(8)]:c[k];
   const norm54=v=>String(v??'').trim().toLowerCase();
   const bin54=v=>{
