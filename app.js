@@ -861,10 +861,11 @@ const INVALID_RESEARCH_SOURCE_IDS_128=new Set(['1468d9f8-e408-4fee-9da2-760e6a0b
 const INVALID_RESEARCH_CASE_IDS_128=new Set(['pub-1468d9f8-e40']);
 function isInvalidTestCaseForDashboard128(row){
   if(!row||typeof row!=='object')return false;
+  /* Inline constants keep this guard safe even when an earlier dashboard runs before research setup initializes. */
   const sourceKeys=['ID Rekaman Sumber','sourceRecordId','source_record_id','serverId','recordId','uuid','__sourceRecordId'];
-  if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&INVALID_RESEARCH_SOURCE_IDS_128.has(String(row[k]).trim().toLowerCase())))return true;
+  if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&String(row[k]).trim().toLowerCase()==='1468d9f8-e408-4fee-9da2-760e6a0bfcc6'))return true;
   const caseKeys=['ID Kasus','caseId','case_id','__caseId','id'];
-  return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&INVALID_RESEARCH_CASE_IDS_128.has(String(row[k]).trim().toLowerCase()));
+  return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&String(row[k]).trim().toLowerCase()==='pub-1468d9f8-e40');
 }
 function isInvalidResearchRow128(row){return isInvalidTestCaseForDashboard128(row)}
 function ensureInvalidTestRecordNotice128(){
