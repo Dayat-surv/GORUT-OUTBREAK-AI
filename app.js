@@ -4984,13 +4984,14 @@ try{installBrandingV67();}catch(e){}
       var panel=E('v126SelectionPanel');
       if(!panel){panel=document.createElement('div');panel.id='v126SelectionPanel';panel.className='card';var link=E('v126ResearchLink');if(link)link.appendChild(panel)}
       var html='<h4 style="margin-top:0">Pilih rekaman/kuesioner untuk dataset penelitian</h4><div class="notice">Pilih tepat satu rekaman untuk setiap ID kasus agar analisis tingkat kasus tidak menghitung orang yang sama berulang. Rekaman sumber asli tidak dihapus atau diubah. Untuk ID yang memiliki beberapa rekaman, pilihan sengaja dikosongkan sampai Anda menentukan rekaman yang sesuai.</div>';
-      html+='<div class="v126-table-scroll"><table class="v126-table"><thead><tr><th>Pilih</th><th>ID Kasus</th><th>Rekaman / sumber</th><th>Nama</th><th>Jumlah jawaban tersimpan</th><th>Indikasi sumber</th></tr></thead><tbody>';
+      html+='<div class="v126-table-scroll"><table class="v126-table"><thead><tr><th>Pilih</th><th>ID Kasus</th><th>ID Rekaman Sumber</th><th>Rekaman / sumber</th><th>Nama</th><th>Jumlah jawaban tersimpan</th><th>Indikasi sumber</th></tr></thead><tbody>';
       groups.forEach(function(g,gi){
         g.items.forEach(function(item){
           var c=item.record,ans=c.answers&&typeof c.answers==='object'?c.answers:{};
           var source=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(item.index+1));
           var checked=g.items.length===1?' checked':'';
-          html+='<tr><td><input style="width:auto" type="radio" name="v126-case-group-'+gi+'" value="'+item.index+'" data-v126-group="'+gi+'"'+checked+'></td><td>'+esc126(g.caseId)+'</td><td>'+esc126(source)+'<div class="small">Urutan rekaman '+(item.index+1)+'</div><button type="button" data-v126-detail-index="'+item.index+'">Lihat jawaban lengkap</button></td><td>'+esc126(c.name||c.fullName||c.patientName||'-')+'</td><td>'+Object.keys(ans).length+'</td><td>'+(g.items.length>1?'<span class="badge">Perlu dipilih</span>':'<span class="badge">Satu rekaman</span>')+'</td></tr>';
+          var sourceId=c.serverId||c.recordId||c.uuid||c.sourceRecordId||'';
+          html+='<tr><td><input style="width:auto" type="radio" name="v126-case-group-'+gi+'" value="'+item.index+'" data-v126-group="'+gi+'"'+checked+'></td><td>'+esc126(g.caseId)+'</td><td><code style="overflow-wrap:anywhere">'+esc126(sourceId||'Belum tersedia')+'</code><div class="small">'+(sourceId?'ID sumber/server':'ID sumber belum tersedia')+'</div></td><td>'+esc126(source)+'<div class="small">Urutan rekaman '+(item.index+1)+'</div><button type="button" data-v126-detail-index="'+item.index+'">Lihat jawaban lengkap</button></td><td>'+esc126(c.name||c.fullName||c.patientName||'-')+'</td><td>'+Object.keys(ans).length+'</td><td>'+(g.items.length>1?'<span class="badge">Perlu dipilih</span>':'<span class="badge">Satu rekaman</span>')+'</td></tr>';
         });
       });
       html+='</tbody></table></div><div class="toolbar" style="margin-top:12px"><button class="primary" type="button" id="v126ConfirmSelection">Buat snapshot dari pilihan</button><button type="button" id="v126CancelSelection">Batal</button></div><div id="v126SelectionFeedback" class="small"></div>';
@@ -5009,7 +5010,7 @@ try{installBrandingV67();}catch(e){}
         if(!box){alert('Panel detail belum tersedia. Silakan muat ulang halaman dan coba kembali.');return;}
         if(!c){box.style.display='block';box.textContent='Rekaman tidak ditemukan pada daftar aktif. Silakan tutup panel dan buat ulang daftar rekaman.';return;}
         try{
-          var pairs=[],baseFields=['id','recordId','uuid','sourceRecordId','name','fullName','patientName','age','sex','onset','status','outcome','address','desa','kec','investigationId','createdAt','updatedAt','sourceName','source','sourceType','questionnaireSource','formName','origin','recordSource'];
+          var pairs=[],baseFields=['id','serverId','recordId','uuid','sourceRecordId','name','fullName','patientName','age','sex','onset','status','outcome','address','desa','kec','investigationId','createdAt','updatedAt','sourceName','source','sourceType','questionnaireSource','formName','origin','recordSource'];
           baseFields.forEach(function(k){if(c[k]!==undefined&&c[k]!==null&&String(c[k])!=='')pairs.push([k,c[k]])});
           var ans=c.answers;
           if(typeof ans==='string'){try{ans=JSON.parse(ans)}catch(parseErr){pairs.push(['Jawaban tersimpan',ans])}}
