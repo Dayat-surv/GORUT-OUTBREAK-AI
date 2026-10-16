@@ -5040,6 +5040,10 @@ try{installBrandingV67();}catch(e){}
         var cols={id:'ID Kasus',name:'Nama',age:'Umur',sex:'Jenis kelamin',onset:'Tanggal onset',status:'Status kasus',outcome:'Outcome',address:'Alamat',desa:'Desa/Kelurahan',kec:'Kecamatan'};
         var rows=selected.map(function(sel){
           var c=sel.record,row={};Object.keys(cols).forEach(function(k){row[cols[k]]=c[k]===undefined||c[k]===null?'':c[k]});
+          /* Jejak sumber dipertahankan di setiap baris snapshot agar pilihan dapat diaudit tanpa mencampur jawaban antarrekaman. */
+          row['ID Rekaman Sumber']=c.serverId||c.recordId||c.uuid||c.sourceRecordId||'';
+          row['Urutan Rekaman Sumber']=sel.index+1;
+          row['Nama/Label Sumber']=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(sel.index+1));
           row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';row['Penyakit']=diseaseName126(activeInv.disease);
           var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
           Object.keys(ans).forEach(function(k){if(k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId')row[k]=Array.isArray(ans[k])?ans[k].join(', '):(ans[k]&&typeof ans[k]==='object'?JSON.stringify(ans[k]):ans[k])});
