@@ -856,10 +856,15 @@ const _exportResearchJSONV23=exportResearchJSON;exportResearchJSON=function(){co
 /* ===================== v24 RESEARCH STUDIO ===================== */
 /* v128: preserve the stored snapshot, but never expose the confirmed invalid test record to preview or analysis. */
 const INVALID_RESEARCH_SOURCE_IDS_128=new Set(['1468d9f8-e408-4fee-9da2-760e6a0bfcc6']);
+/* Pengguna mengonfirmasi Rekaman 1 dan Rekaman 2 untuk kasus uji ini sama-sama diisi asal-asalan.
+   Karena ID sumber Rekaman 2 belum dikonfirmasi, kecualikan kasus uji bersama dari analisis melalui ID kasusnya juga. */
+const INVALID_RESEARCH_CASE_IDS_128=new Set(['pub-1468d9f8-e40']);
 function isInvalidResearchRow128(row){
   if(!row||typeof row!=='object')return false;
-  const candidates=['ID Rekaman Sumber','sourceRecordId','source_record_id','serverId','recordId','uuid','__sourceRecordId'];
-  return candidates.some(k=>row[k]!==undefined&&row[k]!==null&&INVALID_RESEARCH_SOURCE_IDS_128.has(String(row[k]).trim().toLowerCase()));
+  const sourceKeys=['ID Rekaman Sumber','sourceRecordId','source_record_id','serverId','recordId','uuid','__sourceRecordId'];
+  if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&INVALID_RESEARCH_SOURCE_IDS_128.has(String(row[k]).trim().toLowerCase())))return true;
+  const caseKeys=['ID Kasus','caseId','case_id','__caseId','id'];
+  return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&INVALID_RESEARCH_CASE_IDS_128.has(String(row[k]).trim().toLowerCase()));
 }
 function researchDatasetExcludedCount128(){
   const rows=Array.isArray(researchState.dataset?.rows)?researchState.dataset.rows:[];
@@ -2332,7 +2337,7 @@ function installLogin(){
   function answers47(c){return c&&c.answers&&typeof c.answers==='object'?c.answers:{}}
   function qRows47(){return typeof db!=='undefined'&&Array.isArray(db.questions)?db.questions:[]}
   function questionLabel47(key){const q=qRows47().find(x=>String(x.id)===String(key)||String(x.key)===String(key)||String(x.name)===String(key));return q?.label||q?.question||key}
-  function appRows47(){return uniqueCaseRowsForAnalysis(cases47()).map(c=>{const o={...c};const a=answers47(c);Object.entries(a).forEach(([k,v])=>{if(o[k]===undefined)o[k]=v;o['answers.'+k]=v});o.__source='GORUT-OUTBREAK AI / Data Kasus';o.__caseId=c.id;return o})}
+  function appRows47(){return uniqueCaseRowsForAnalysis(cases47()).filter(c=>!isInvalidResearchRow128(c)).map(c=>{const o={...c};const a=answers47(c);Object.entries(a).forEach(([k,v])=>{if(o[k]===undefined)o[k]=v;o['answers.'+k]=v});o.__source='GORUT-OUTBREAK AI / Data Kasus';o.__caseId=c.id;return o})}
 
   /* Research must use application-collected cases by default. Imported datasets remain an explicit, separate option. */
   window.researchAppRows=function(){return appRows47()}
