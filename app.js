@@ -5069,6 +5069,7 @@ try{installBrandingV67();}catch(e){}
           var index=Number(picked.value);if(Number.isInteger(index)&&records[index])selected.push({record:records[index],index:index,caseId:g.caseId});
         });
         if(missing.length){var fb=E('v126SelectionFeedback');if(fb)fb.textContent='Belum lengkap. Pilih satu rekaman untuk ID kasus: '+missing.join(', ')+'.';alert('Pilih satu rekaman untuk setiap ID kasus yang memiliki rekaman ganda sebelum membuat dataset.');return}
+        if(!selected.length){var emptyFb=E('v126SelectionFeedback');if(emptyFb)emptyFb.textContent='Snapshot tidak dibuat karena tidak ada rekaman valid yang dipilih. Pilih investigasi dengan data valid.';alert('Snapshot penelitian tidak dibuat: seluruh rekaman yang tersedia untuk pilihan ini merupakan data uji tidak valid. Data operasional tetap dipertahankan.');return}
         var cols={id:'ID Kasus',name:'Nama',age:'Umur',sex:'Jenis kelamin',onset:'Tanggal onset',status:'Status kasus',outcome:'Outcome',address:'Alamat',desa:'Desa/Kelurahan',kec:'Kecamatan'};
         var rows=selected.map(function(sel){
           var c=sel.record,row={};Object.keys(cols).forEach(function(k){row[cols[k]]=c[k]===undefined||c[k]===null?'':c[k]});
