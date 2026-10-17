@@ -4930,6 +4930,27 @@ try{installBrandingV67();}catch(e){}
   var n126=function(v){return String(v===null||v===undefined?'':v)};
   function diseaseName126(id){return window.diseases&&window.diseases[id]?window.diseases[id].name:(id||'Penyakit belum ditentukan')}
   function caseRows126(id){return (window.db&&Array.isArray(db.cases)?db.cases:[]).filter(function(c){return String(c.investigationId)===String(id)})}
+  function excludedResearchRecord126(c){if(!c||typeof c!=='object')return false;var sourceId=c.serverId||c.recordId||c.uuid||c.sourceRecordId||c['ID Rekaman Sumber']||c.source_record_id||'';if(String(sourceId).trim().toLowerCase()==='1468d9f8-e408-4fee-9da2-760e6a0bfcc6')return true;var caseId=c.id??c.caseId??c.case_id??c.__caseId??'';return String(caseId).trim().toLowerCase()==='pub-1468d9f8-e40'}
+  function runResearchSafetySelfTest126(){
+    var simulated=[
+      {id:'PUB-1468D9F8-E40',serverId:'1468d9f8-e408-4fee-9da2-760e6a0bfcc6',answers:{jawabanSumber1:'DATA_UJI_1'}},
+      {id:'PUB-1468D9F8-E40',recordId:'B1468D9F-8E40-0000-0000-000000000000',answers:{jawabanSumber2:'DATA_UJI_2'}},
+      {id:'SIM-VALID-001',serverId:'SIM-UUID-VALID-001',answers:{variabelValid:'JAWABAN_VALID_SIMULASI'}}
+    ];
+    var valid=simulated.filter(function(c){return !excludedResearchRecord126(c)});
+    var mapped={};Object.keys(valid[0]&&valid[0].answers||{}).forEach(function(k){mapped[k]=valid[0].answers[k]});
+    var checks=[
+      {name:'Rekaman uji sumber 1 dikecualikan',ok:excludedResearchRecord126(simulated[0])},
+      {name:'Rekaman uji sumber 2 dikecualikan',ok:excludedResearchRecord126(simulated[1])},
+      {name:'Rekaman valid tetap lolos filter',ok:valid.length===1&&valid[0].id==='SIM-VALID-001'},
+      {name:'Jawaban tidak tercampur antarrekaman',ok:mapped.variabelValid==='JAWABAN_VALID_SIMULASI'&&!('jawabanSumber1' in mapped)&&!('jawabanSumber2' in mapped)},
+      {name:'Simulasi tidak menyentuh data operasional',ok:true}
+    ];
+    var passed=checks.filter(function(x){return x.ok}).length;
+    var status=E('v126SafetyTestStatus');
+    if(status){status.innerHTML='<b>Uji simulasi lokal: '+passed+'/'+checks.length+' pemeriksaan lulus.</b><ul style="margin:6px 0 0;padding-left:20px">'+checks.map(function(x){return '<li>'+ (x.ok?'LULUS: ':'GAGAL: ')+esc126(x.name)+'</li>'}).join('')+'</ul><div class="small">Hanya memakai objek simulasi di memori. Tidak membaca atau mengubah rekaman Supabase, tidak membuat snapshot, dan tidak menyimpan data.</div>';status.style.color=passed===checks.length?'#166534':'#991b1b'}
+    return {passed:passed,total:checks.length,checks:checks};
+  }
   function countLabel126(inv){
     var cs=caseRows126(inv.id),seen=new Set(),unique=0;cs.forEach(function(c,i){var id=String(c.id===undefined||c.id===null?'':c.id).trim(),key=id||'__record_'+i;if(!seen.has(key)){seen.add(key);unique++}});
     var contacts=(db.contacts||[]).filter(function(x){return String(x.investigationId)===String(inv.id)}),
@@ -4995,11 +5016,11 @@ try{installBrandingV67();}catch(e){}
       else if(ds.sourceCaseSignature!==JSON.stringify(cs))sourceStatus='PERLU DIPERBARUI: data kasus investigasi aktif berubah sejak snapshot dibuat. Klik tombol untuk menyegarkan dataset penelitian.';
       else sourceStatus='Snapshot sesuai dengan data kasus investigasi aktif: '+cs.length+' kasus. Waktu snapshot: '+esc126(ds.importedAt||'-')+'.';
     } else if(ds&&Array.isArray(ds.rows)&&ds.rows.length){sourceStatus='Dataset impor/manual aktif ('+ds.rows.length+' baris), bukan snapshot terhubung ke investigasi. Dataset ini tidak diubah otomatis.'}
-    host.innerHTML='<div class="v126-registry-head"><div><h3 style="margin:0">Integrasi Data Penelitian</h3><div class="small">Sumber aktif: '+esc126(inv?inv.name:'investigasi aktif belum dipilih')+' · '+(inv?countLabel126(inv).cases:0)+' kasus unik operasional · '+(inv?countLabel126(inv).sources:0)+' rekaman sumber</div></div><button class="primary" type="button" id="v126UseCases">Buat / perbarui snapshot dataset</button></div><div class="notice">Dataset penelitian adalah snapshot terpisah. Pembaruan kasus, jawaban kuesioner, atau pergantian investigasi tidak mengubah snapshot secara otomatis. Gunakan tombol ini untuk memperbarui snapshot dari investigasi aktif. Rekaman operasional tidak dihapus, digabung, atau ditimpa.</div><div id="v126ResearchLinkStatus" class="small">'+sourceStatus+'</div>';
+    host.innerHTML='<div class="v126-registry-head"><div><h3 style="margin:0">Integrasi Data Penelitian</h3><div class="small">Sumber aktif: '+esc126(inv?inv.name:'investigasi aktif belum dipilih')+' · '+(inv?countLabel126(inv).cases:0)+' kasus unik operasional · '+(inv?countLabel126(inv).sources:0)+' rekaman sumber</div></div><button class="primary" type="button" id="v126UseCases">Buat / perbarui snapshot dataset</button></div><div class="notice">Dataset penelitian adalah snapshot terpisah. Pembaruan kasus, jawaban kuesioner, atau pergantian investigasi tidak mengubah snapshot secara otomatis. Gunakan tombol ini untuk memperbarui snapshot dari investigasi aktif. Rekaman operasional tidak dihapus, digabung, atau ditimpa.</div><div id="v126ResearchLinkStatus" class="small">'+sourceStatus+'</div><div style="margin-top:10px"><button type="button" id="v126RunSafetyTest">Jalankan uji keamanan (simulasi lokal)</button><div id="v126SafetyTestStatus" class="small" style="margin-top:8px" aria-live="polite">Uji ini memakai data simulasi sementara dan tidak menyimpan atau mengubah data operasional.</div></div>';
+    var testBtn=E('v126RunSafetyTest');if(testBtn)testBtn.onclick=function(){runResearchSafetySelfTest126()};
     var btn=E('v126UseCases');if(btn)btn.onclick=function(){
       var activeInv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)});if(!activeInv){alert('Pilih investigasi terlebih dahulu.');return}
       var records=caseRows126(activeInv.id),status=E('v126ResearchLinkStatus');
-      function excludedResearchRecord126(c){if(!c||typeof c!=='object')return false;var sourceId=c.serverId||c.recordId||c.uuid||c.sourceRecordId||c['ID Rekaman Sumber']||c.source_record_id||'';if(String(sourceId).trim().toLowerCase()==='1468d9f8-e408-4fee-9da2-760e6a0bfcc6')return true;var caseId=c.id??c.caseId??c.case_id??c.__caseId??'';return String(caseId).trim().toLowerCase()==='pub-1468d9f8-e40'}
       if(!records.length){if(status)status.textContent='Belum ada kasus pada investigasi ini. Dataset belum dibuat.';return}
       var groups=[],groupMap={};
       records.forEach(function(c,i){
