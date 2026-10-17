@@ -4481,7 +4481,7 @@ try{installBrandingV67();}catch(e){}
     // preserved in storage and are not deleted; they are simply not used as the active form.
     var activeRows=g.rows.slice(); // v130: show each original source record separately; never merge or overwrite.
     activeRows.forEach(function(c,i){
-      var ans=snapshotObject126(c.answers);
+      var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
       var sourceIndex=window.db&&Array.isArray(window.db.cases)?window.db.cases.indexOf(c):-1;
       var inv=(window.db.investigations||[]).find(function(x){return String(x.id)===String(c.investigationId)});
       var instrument=c.questionnaire||c.instrument||{};
@@ -4954,7 +4954,7 @@ try{installBrandingV67();}catch(e){}
       row['Urutan Rekaman Sumber']=sel.index+1;
       row['Nama/Label Sumber']=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(sel.index+1));
       row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';row['Penyakit']=diseaseName126(activeInv.disease);
-      var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
+      var ans=snapshotObject126(c.answers);
       Object.keys(ans).forEach(function(k){if(k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId')row[k]=Array.isArray(ans[k])?ans[k].join(', '):(ans[k]&&typeof ans[k]==='object'?JSON.stringify(ans[k]):ans[k])});
       var foodCase=snapshotObject126(c.foodCase),priority=snapshotObject126(c.priority);
       Object.keys(foodCase).forEach(function(k){row['Keracunan pangan: '+k]=Array.isArray(foodCase[k])?foodCase[k].join(', '):(foodCase[k]&&typeof foodCase[k]==='object'?JSON.stringify(foodCase[k]):foodCase[k])});
