@@ -4930,6 +4930,24 @@ try{installBrandingV67();}catch(e){}
   var n126=function(v){return String(v===null||v===undefined?'':v)};
   function diseaseName126(id){return window.diseases&&window.diseases[id]?window.diseases[id].name:(id||'Penyakit belum ditentukan')}
   function caseRows126(id){return (window.db&&Array.isArray(db.cases)?db.cases:[]).filter(function(c){return String(c.investigationId)===String(id)})}
+  function buildResearchSnapshotRows126(selected,activeInv){
+    var cols={id:'ID Kasus',name:'Nama',age:'Umur',sex:'Jenis kelamin',onset:'Tanggal onset',status:'Status kasus',outcome:'Outcome',address:'Alamat',desa:'Desa/Kelurahan',kec:'Kecamatan'};
+    var rows=(selected||[]).map(function(sel){
+      var c=sel.record,row={};Object.keys(cols).forEach(function(k){row[cols[k]]=c[k]===undefined||c[k]===null?'':c[k]});
+      row['ID Rekaman Sumber']=c.serverId||c.recordId||c.uuid||c.sourceRecordId||'';
+      row['Urutan Rekaman Sumber']=sel.index+1;
+      row['Nama/Label Sumber']=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(sel.index+1));
+      row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';row['Penyakit']=diseaseName126(activeInv.disease);
+      var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
+      Object.keys(ans).forEach(function(k){if(k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId')row[k]=Array.isArray(ans[k])?ans[k].join(', '):(ans[k]&&typeof ans[k]==='object'?JSON.stringify(ans[k]):ans[k])});
+      if(c.foodCase&&typeof c.foodCase==='object')Object.keys(c.foodCase).forEach(function(k){row['Keracunan pangan: '+k]=c.foodCase[k]});
+      if(c.priority&&typeof c.priority==='object')Object.keys(c.priority).forEach(function(k){row['Prioritas: '+k]=c.priority[k]});
+      return row;
+    });
+    var columns=[];rows.forEach(function(row){Object.keys(row).forEach(function(k){if(!columns.includes(k))columns.push(k)})});
+    rows=rows.map(function(row){var out={};columns.forEach(function(k){out[k]=row[k]===undefined?'':row[k]});return out});
+    return {rows:rows,columns:columns};
+  }
   function excludedResearchRecord126(c){if(!c||typeof c!=='object')return false;var sourceKeys=['serverId','recordId','uuid','sourceRecordId','ID Rekaman Sumber','source_record_id'];if(sourceKeys.some(function(k){return c[k]!==undefined&&c[k]!==null&&['1468d9f8-e408-4fee-9da2-760e6a0bfcc6','b1468d9f-8e40-0000-0000-000000000000'].includes(String(c[k]).trim().toLowerCase())}))return true;var caseId=c.id??c.caseId??c.case_id??c.__caseId??'';return String(caseId).trim().toLowerCase()==='pub-1468d9f8-e40'}
   function runResearchSafetySelfTest126(){
     var simulated=[
@@ -4938,12 +4956,16 @@ try{installBrandingV67();}catch(e){}
       {id:'SIM-VALID-001',serverId:'SIM-UUID-VALID-001',answers:{variabelValid:'JAWABAN_VALID_SIMULASI'}}
     ];
     var valid=simulated.filter(function(c){return !excludedResearchRecord126(c)});
-    var mapped={};Object.keys(valid[0]&&valid[0].answers||{}).forEach(function(k){mapped[k]=valid[0].answers[k]});
+    var built=buildResearchSnapshotRows126([{record:valid[0],index:2,caseId:valid[0].id}],{id:'SIM-INVESTIGATION',name:'Investigasi Simulasi',disease:'campak'});
+    var snapshotRow=built.rows[0]||{};
     var checks=[
       {name:'Rekaman uji sumber 1 dikecualikan',ok:excludedResearchRecord126(simulated[0])},
       {name:'Rekaman uji sumber 2 dikecualikan berdasarkan ID sumber',ok:excludedResearchRecord126({id:'SIM-OTHER-CASE',recordId:'B1468D9F-8E40-0000-0000-000000000000'})&&excludedResearchRecord126(simulated[1])},
       {name:'Rekaman valid tetap lolos filter',ok:valid.length===1&&valid[0].id==='SIM-VALID-001'},
-      {name:'Jawaban tidak tercampur antarrekaman',ok:mapped.variabelValid==='JAWABAN_VALID_SIMULASI'&&!('jawabanSumber1' in mapped)&&!('jawabanSumber2' in mapped)},
+      {name:'Pembentuk snapshot menghasilkan satu baris valid',ok:built.rows.length===1&&snapshotRow['ID Kasus']==='SIM-VALID-001'},
+      {name:'Jawaban sumber valid disalin oleh pembentuk snapshot',ok:snapshotRow.variabelValid==='JAWABAN_VALID_SIMULASI'},
+      {name:'Jawaban dari rekaman uji tidak masuk snapshot',ok:!('jawabanSumber1' in snapshotRow)&&!('jawabanSumber2' in snapshotRow)},
+      {name:'Jejak sumber dan investigasi dipertahankan',ok:snapshotRow['ID Rekaman Sumber']==='SIM-UUID-VALID-001'&&snapshotRow['ID Investigasi']==='SIM-INVESTIGATION'},
       {name:'Simulasi tidak menyentuh data operasional',ok:true}
     ];
     var passed=checks.filter(function(x){return x.ok}).length;
@@ -5091,22 +5113,7 @@ try{installBrandingV67();}catch(e){}
         });
         if(missing.length){var fb=E('v126SelectionFeedback');if(fb)fb.textContent='Belum lengkap. Pilih satu rekaman untuk ID kasus: '+missing.join(', ')+'.';alert('Pilih satu rekaman untuk setiap ID kasus yang memiliki rekaman ganda sebelum membuat dataset.');return}
         if(!selected.length){var emptyFb=E('v126SelectionFeedback');if(emptyFb)emptyFb.textContent='Snapshot tidak dibuat karena tidak ada rekaman valid yang dipilih. Pilih investigasi dengan data valid.';alert('Snapshot penelitian tidak dibuat: seluruh rekaman yang tersedia untuk pilihan ini merupakan data uji tidak valid. Data operasional tetap dipertahankan.');return}
-        var cols={id:'ID Kasus',name:'Nama',age:'Umur',sex:'Jenis kelamin',onset:'Tanggal onset',status:'Status kasus',outcome:'Outcome',address:'Alamat',desa:'Desa/Kelurahan',kec:'Kecamatan'};
-        var rows=selected.map(function(sel){
-          var c=sel.record,row={};Object.keys(cols).forEach(function(k){row[cols[k]]=c[k]===undefined||c[k]===null?'':c[k]});
-          /* Jejak sumber dipertahankan di setiap baris snapshot agar pilihan dapat diaudit tanpa mencampur jawaban antarrekaman. */
-          row['ID Rekaman Sumber']=c.serverId||c.recordId||c.uuid||c.sourceRecordId||'';
-          row['Urutan Rekaman Sumber']=sel.index+1;
-          row['Nama/Label Sumber']=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(sel.index+1));
-          row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';row['Penyakit']=diseaseName126(activeInv.disease);
-          var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
-          Object.keys(ans).forEach(function(k){if(k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId')row[k]=Array.isArray(ans[k])?ans[k].join(', '):(ans[k]&&typeof ans[k]==='object'?JSON.stringify(ans[k]):ans[k])});
-          if(c.foodCase&&typeof c.foodCase==='object')Object.keys(c.foodCase).forEach(function(k){row['Keracunan pangan: '+k]=c.foodCase[k]});
-          if(c.priority&&typeof c.priority==='object')Object.keys(c.priority).forEach(function(k){row['Prioritas: '+k]=c.priority[k]});
-          return row;
-        });
-        var columns=[];rows.forEach(function(row){Object.keys(row).forEach(function(k){if(!columns.includes(k))columns.push(k)})});
-        rows=rows.map(function(row){var out={};columns.forEach(function(k){out[k]=row[k]===undefined?'':row[k]});return out});
+        var builtSnapshot=buildResearchSnapshotRows126(selected,activeInv),rows=builtSnapshot.rows,columns=builtSnapshot.columns;
         researchState=researchState||{};var selectedSourceSummary=selected.map(function(sel){var c=sel.record;return 'Kasus '+sel.caseId+' — '+(c.serverId||c.recordId||c.uuid||c.sourceRecordId||'ID sumber tidak tersedia')+' — '+(c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(sel.index+1)))}).join('\n');if(!confirm('Periksa pilihan rekaman sebelum menyimpan snapshot penelitian:\n\n'+selectedSourceSummary+'\n\nJawaban yang disalin hanya dari rekaman terpilih. Snapshot sebelumnya akan dicadangkan sebelum diganti. Lanjutkan?'))return;var researchSnapshotBackupSaved=false;var previousResearchDataset=researchState.dataset;if(previousResearchDataset&&Array.isArray(previousResearchDataset.rows)&&previousResearchDataset.rows.length){try{localStorage.setItem('gorut-research-plan-backup',JSON.stringify({savedAt:new Date().toISOString(),dataset:previousResearchDataset}));researchSnapshotBackupSaved=true}catch(backupErr){console.warn('Snapshot penelitian sebelumnya tidak berhasil dicadangkan.',backupErr);alert('Snapshot lama tidak berhasil dicadangkan. Dataset baru dibatalkan agar data sebelumnya tidak tertimpa. Periksa ruang penyimpanan browser lalu coba lagi.');return}if(!researchSnapshotBackupSaved){alert('Snapshot lama belum berhasil dicadangkan. Dataset baru dibatalkan.');return}}researchState.dataset={name:'Investigasi - '+activeInv.name,source:'GORUT-OUTBREAK AI / Investigasi KLB',importedAt:new Date().toISOString(),sourceInvestigationId:activeInv.id,sourceInvestigationName:activeInv.name||'',sourceCaseCount:rows.length,sourceUniqueCaseCount:groups.filter(function(g){return g.items.some(function(item){return !excludedResearchRecord126(item.record)})}).length,sourceRecordCount:records.length,selectedRecordCount:selected.length,selectionMode:'manual-one-record-per-case',selectionByCase:selected.map(function(sel){return {caseId:sel.caseId,recordIndex:sel.index,recordId:sel.record.serverId||sel.record.recordId||sel.record.uuid||sel.record.sourceRecordId||null}}),sourceCaseSignature:JSON.stringify(records),rows:rows};researchState.dataSource='dataset';
         var sourceSelect=E('researchDataSource');if(sourceSelect){if(!Array.from(sourceSelect.options).some(function(o){return o.value==='dataset'})){var opt=document.createElement('option');opt.value='dataset';opt.textContent='Dataset penelitian dari investigasi';sourceSelect.appendChild(opt)}sourceSelect.value='dataset'}
         localStorage.setItem('gorut-research-plan',JSON.stringify(researchState));
