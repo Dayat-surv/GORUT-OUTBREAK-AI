@@ -1731,7 +1731,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   function e(id){return document.getElementById(id)}
   function vv(id){return e(id)?.value||''}
   function uniq(a){return [...new Set(a.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'id'))}
-  function allCases(){return (db.cases||[])}
+  function allCases(){return (db.cases||[]).filter(c=>!isInvalidTestCaseForDashboard128(c))}
   function diseaseList(){const s=e('adminEpiDisease');if(!s||typeof diseases==='undefined')return;const cur=s.value;s.innerHTML='<option value="">Semua penyakit</option>'+Object.entries(diseases).map(([id,d])=>`<option value="${esc(id)}">${esc(d.name||id)}</option>`).join('');if(cur)s.value=cur}
   function filtered(){
     const disease=vv('adminEpiDisease'),prov=vv('adminEpiProv').trim().toLowerCase(),kab=vv('adminEpiKab').trim().toLowerCase(),kec=vv('adminEpiKec').trim().toLowerCase(),desa=vv('adminEpiDesa').trim().toLowerCase();
@@ -3925,7 +3925,7 @@ try{installBrandingV67();}catch(e){}
   window.saveDemographyV66=saveCompact;
 
   function optionList(){return villages.map(v=>`<option value="${esc78(v.desa)}">${esc78(v.desa)} — ${esc78(v.puskesmas)}</option>`).join('')}
-  function caseOptions(){return (db.cases||[]).filter(c=>!db.active||String(c.investigationId)===String(db.active)).map(c=>`<option value="${esc78(c.id)}">${esc78(c.id)} — ${esc78(c.name||'Tanpa nama')}</option>`).join('')}
+  function caseOptions(){return (db.cases||[]).filter(c=>(!db.active||String(c.investigationId)===String(db.active))&&!isInvalidTestCaseForDashboard128(c)).map(c=>`<option value="${esc78(c.id)}">${esc78(c.id)} — ${esc78(c.name||'Tanpa nama')}</option>`).join('')}
   function contactOptions(){return (db.contacts||[]).filter(c=>!db.active||String(c.investigationId)===String(db.active)).map(c=>`<option value="${esc78(c.id)}">${esc78(c.id)} — ${esc78(c.name||'Tanpa nama')}</option>`).join('')}
   function getDraft(){try{return JSON.parse(localStorage.getItem(DRAFT)||'null')}catch(e){return null}}
   function setVal(id,v){const e=E(id);if(e)e.value=v??''}
