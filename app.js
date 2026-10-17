@@ -4941,7 +4941,7 @@ try{installBrandingV67();}catch(e){}
     var mapped={};Object.keys(valid[0]&&valid[0].answers||{}).forEach(function(k){mapped[k]=valid[0].answers[k]});
     var checks=[
       {name:'Rekaman uji sumber 1 dikecualikan',ok:excludedResearchRecord126(simulated[0])},
-      {name:'Rekaman uji sumber 2 dikecualikan',ok:excludedResearchRecord126(simulated[1])},
+      {name:'Rekaman uji sumber 2 dikecualikan berdasarkan ID sumber',ok:excludedResearchRecord126({id:'SIM-OTHER-CASE',recordId:'B1468D9F-8E40-0000-0000-000000000000'})&&excludedResearchRecord126(simulated[1])},
       {name:'Rekaman valid tetap lolos filter',ok:valid.length===1&&valid[0].id==='SIM-VALID-001'},
       {name:'Jawaban tidak tercampur antarrekaman',ok:mapped.variabelValid==='JAWABAN_VALID_SIMULASI'&&!('jawabanSumber1' in mapped)&&!('jawabanSumber2' in mapped)},
       {name:'Simulasi tidak menyentuh data operasional',ok:true}
