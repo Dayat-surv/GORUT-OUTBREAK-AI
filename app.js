@@ -863,7 +863,7 @@ function isInvalidTestCaseForDashboard128(row){
   if(!row||typeof row!=='object')return false;
   /* Inline constants keep this guard safe even when an earlier dashboard runs before research setup initializes. */
   const sourceKeys=['ID Rekaman Sumber','sourceRecordId','source_record_id','serverId','recordId','uuid','__sourceRecordId'];
-  if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&String(row[k]).trim().toLowerCase()==='1468d9f8-e408-4fee-9da2-760e6a0bfcc6'))return true;
+  if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&['1468d9f8-e408-4fee-9da2-760e6a0bfcc6','b1468d9f-8e40-0000-0000-000000000000'].includes(String(row[k]).trim().toLowerCase())))return true;
   const caseKeys=['ID Kasus','caseId','case_id','__caseId','id'];
   return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&String(row[k]).trim().toLowerCase()==='pub-1468d9f8-e40');
 }
@@ -4930,7 +4930,7 @@ try{installBrandingV67();}catch(e){}
   var n126=function(v){return String(v===null||v===undefined?'':v)};
   function diseaseName126(id){return window.diseases&&window.diseases[id]?window.diseases[id].name:(id||'Penyakit belum ditentukan')}
   function caseRows126(id){return (window.db&&Array.isArray(db.cases)?db.cases:[]).filter(function(c){return String(c.investigationId)===String(id)})}
-  function excludedResearchRecord126(c){if(!c||typeof c!=='object')return false;var sourceId=c.serverId||c.recordId||c.uuid||c.sourceRecordId||c['ID Rekaman Sumber']||c.source_record_id||'';if(String(sourceId).trim().toLowerCase()==='1468d9f8-e408-4fee-9da2-760e6a0bfcc6')return true;var caseId=c.id??c.caseId??c.case_id??c.__caseId??'';return String(caseId).trim().toLowerCase()==='pub-1468d9f8-e40'}
+  function excludedResearchRecord126(c){if(!c||typeof c!=='object')return false;var sourceId=c.serverId||c.recordId||c.uuid||c.sourceRecordId||c['ID Rekaman Sumber']||c.source_record_id||'';if(['1468d9f8-e408-4fee-9da2-760e6a0bfcc6','b1468d9f-8e40-0000-0000-000000000000'].includes(String(sourceId).trim().toLowerCase()))return true;var caseId=c.id??c.caseId??c.case_id??c.__caseId??'';return String(caseId).trim().toLowerCase()==='pub-1468d9f8-e40'}
   function runResearchSafetySelfTest126(){
     var simulated=[
       {id:'PUB-1468D9F8-E40',serverId:'1468d9f8-e408-4fee-9da2-760e6a0bfcc6',answers:{jawabanSumber1:'DATA_UJI_1'}},
