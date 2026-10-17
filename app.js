@@ -4941,6 +4941,11 @@ try{installBrandingV67();}catch(e){}
   var n126=function(v){return String(v===null||v===undefined?'':v)};
   function diseaseName126(id){return window.diseases&&window.diseases[id]?window.diseases[id].name:(id||'Penyakit belum ditentukan')}
   function caseRows126(id){return (window.db&&Array.isArray(db.cases)?db.cases:[]).filter(function(c){return String(c.investigationId)===String(id)})}
+  function snapshotObject126(value){
+    if(value&&typeof value==='object'&&!Array.isArray(value))return value;
+    if(typeof value==='string'){try{var parsed=JSON.parse(value);if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))return parsed}catch(e){}}
+    return {};
+  }
   function buildResearchSnapshotRows126(selected,activeInv){
     var cols={id:'ID Kasus',name:'Nama',age:'Umur',sex:'Jenis kelamin',onset:'Tanggal onset',status:'Status kasus',outcome:'Outcome',address:'Alamat',desa:'Desa/Kelurahan',kec:'Kecamatan'};
     var rows=(selected||[]).map(function(sel){
@@ -4949,10 +4954,11 @@ try{installBrandingV67();}catch(e){}
       row['Urutan Rekaman Sumber']=sel.index+1;
       row['Nama/Label Sumber']=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(sel.index+1));
       row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';row['Penyakit']=diseaseName126(activeInv.disease);
-      var ans=c.answers&&typeof c.answers==='object'?c.answers:{};
+      var ans=snapshotObject126(c.answers);
       Object.keys(ans).forEach(function(k){if(k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId')row[k]=Array.isArray(ans[k])?ans[k].join(', '):(ans[k]&&typeof ans[k]==='object'?JSON.stringify(ans[k]):ans[k])});
-      if(c.foodCase&&typeof c.foodCase==='object')Object.keys(c.foodCase).forEach(function(k){row['Keracunan pangan: '+k]=c.foodCase[k]});
-      if(c.priority&&typeof c.priority==='object')Object.keys(c.priority).forEach(function(k){row['Prioritas: '+k]=c.priority[k]});
+      var foodCase=snapshotObject126(c.foodCase),priority=snapshotObject126(c.priority);
+      Object.keys(foodCase).forEach(function(k){row['Keracunan pangan: '+k]=Array.isArray(foodCase[k])?foodCase[k].join(', '):(foodCase[k]&&typeof foodCase[k]==='object'?JSON.stringify(foodCase[k]):foodCase[k])});
+      Object.keys(priority).forEach(function(k){row['Prioritas: '+k]=Array.isArray(priority[k])?priority[k].join(', '):(priority[k]&&typeof priority[k]==='object'?JSON.stringify(priority[k]):priority[k])});
       return row;
     });
     var columns=[];rows.forEach(function(row){Object.keys(row).forEach(function(k){if(!columns.includes(k))columns.push(k)})});
@@ -4969,12 +4975,15 @@ try{installBrandingV67();}catch(e){}
     var valid=simulated.filter(function(c){return !excludedResearchRecord126(c)});
     var built=buildResearchSnapshotRows126([{record:valid[0],index:2,caseId:valid[0].id}],{id:'SIM-INVESTIGATION',name:'Investigasi Simulasi',disease:'campak'});
     var snapshotRow=built.rows[0]||{};
+    var jsonBuilt=buildResearchSnapshotRows126([{record:{id:'SIM-JSON-001',answers:'{\"jawabanJson\":\"JAWABAN_JSON_SIMULASI\"}',foodCase:'{\"makanan\":\"NASI_SIMULASI\"}',priority:'{\"tingkat\":\"TINGGI_SIMULASI\"}'},index:0,caseId:'SIM-JSON-001'}],{id:'SIM-INVESTIGATION',name:'Investigasi Simulasi',disease:'campak'});
+    var jsonRow=jsonBuilt.rows[0]||{};
     var checks=[
       {name:'Rekaman uji sumber 1 dikecualikan',ok:excludedResearchRecord126(simulated[0])},
       {name:'Rekaman uji sumber 2 dikecualikan berdasarkan ID sumber',ok:excludedResearchRecord126({id:'SIM-OTHER-CASE',recordId:'B1468D9F-8E40-0000-0000-000000000000'})&&excludedResearchRecord126(simulated[1])},
       {name:'Rekaman valid tetap lolos filter',ok:valid.length===1&&valid[0].id==='SIM-VALID-001'},
       {name:'Pembentuk snapshot menghasilkan satu baris valid',ok:built.rows.length===1&&snapshotRow['ID Kasus']==='SIM-VALID-001'},
       {name:'Jawaban sumber valid disalin oleh pembentuk snapshot',ok:snapshotRow.variabelValid==='JAWABAN_VALID_SIMULASI'},
+      {name:'Jawaban, keracunan pangan, dan prioritas berbentuk JSON-string tetap masuk snapshot',ok:jsonRow.jawabanJson==='JAWABAN_JSON_SIMULASI'&&jsonRow['Keracunan pangan: makanan']==='NASI_SIMULASI'&&jsonRow['Prioritas: tingkat']==='TINGGI_SIMULASI'},
       {name:'Jawaban dari rekaman uji tidak masuk snapshot',ok:!('jawabanSumber1' in snapshotRow)&&!('jawabanSumber2' in snapshotRow)},
       {name:'Jejak sumber dan investigasi dipertahankan',ok:snapshotRow['ID Rekaman Sumber']==='SIM-UUID-VALID-001'&&snapshotRow['ID Investigasi']==='SIM-INVESTIGATION'},
       {name:'Dataset kosong tidak beralih diam-diam ke data aplikasi',ok:typeof window.researchRowsForSource47==='function'&&window.researchRowsForSource47('dataset',[],[valid[0]]).length===0},
