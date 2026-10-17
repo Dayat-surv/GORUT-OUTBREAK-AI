@@ -5078,7 +5078,7 @@ try{installBrandingV67();}catch(e){}
     var btn=E('v126UseCases');if(btn)btn.onclick=function(){
       var activeInv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)});if(!activeInv){alert('Pilih investigasi terlebih dahulu.');return}
       var records=caseRows126(activeInv.id),status=E('v126ResearchLinkStatus');
-      if(!records.length){if(status)status.textContent='Belum ada kasus pada investigasi ini. Dataset belum dibuat.';return}
+      if(!records.length&&status)status.textContent='Investigasi ini belum memiliki rekaman kasus. Anda tetap dapat membuat snapshot kosong secara eksplisit, tetapi pastikan investigasi yang aktif sudah benar.';
       var groups=[],groupMap={};
       records.forEach(function(c,i){
         var caseId=String(c.id===undefined||c.id===null?'':c.id).trim(),key=caseId||'__record_'+i;
@@ -5089,6 +5089,7 @@ try{installBrandingV67();}catch(e){}
       if(!panel){panel=document.createElement('div');panel.id='v126SelectionPanel';panel.className='card';var link=E('v126ResearchLink');if(link)link.appendChild(panel)}
       var html='<h4 style="margin-top:0">Pilih rekaman/kuesioner untuk dataset penelitian</h4><div class="notice">Pilih tepat satu rekaman valid untuk setiap ID kasus agar analisis tingkat kasus tidak menghitung orang yang sama berulang. Rekaman sumber asli tidak dihapus atau diubah. Rekaman dengan ID 1468d9f8-e408-4fee-9da2-760e6a0bfcc6 ditandai sebagai data uji yang tidak valid sesuai konfirmasi pengguna dan tidak dapat dimasukkan ke snapshot penelitian. Jika hanya rekaman itu yang tersedia, proses akan meminta rekaman valid lain dan tidak membuat snapshot.</div>';
       html+='<div class="v126-table-scroll"><table class="v126-table"><thead><tr><th>Pilih</th><th>ID Kasus</th><th>ID Rekaman Sumber</th><th>Rekaman / sumber</th><th>Nama</th><th>Jumlah jawaban tersimpan</th><th>Indikasi sumber</th></tr></thead><tbody>';
+      if(!records.length)html+='<tr><td colspan="7">Tidak ada rekaman kasus pada investigasi aktif. Jika Anda memang ingin menyiapkan dataset penelitian kosong, lanjutkan melalui tombol konfirmasi di bawah.</td></tr>';
       groups.forEach(function(g,gi){
         g.items.forEach(function(item){
           var c=item.record,ans=c.answers&&typeof c.answers==='object'?c.answers:{};
