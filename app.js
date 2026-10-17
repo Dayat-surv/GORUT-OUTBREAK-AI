@@ -2359,8 +2359,11 @@ function installLogin(){
     const caseIdOf=function(r){return r&&String(r['ID Kasus']??r.id??r.caseId??r.case_id??r.__caseId??'').trim()};
     const caseIds=[...new Set(rows.map(caseIdOf).filter(Boolean))];
     const rawCaseIds=raw.map(caseIdOf).filter(Boolean),duplicateRecords=Math.max(0,rawCaseIds.length-new Set(rawCaseIds).size);
-    const excludedRecords=raw.filter(isInvalidResearchRow128).length;
-    return {source:isDataset?'Dataset penelitian yang dipilih secara eksplisit':'Data kasus yang dikumpulkan melalui aplikasi',investigation:active47().name||active47().id||db.active||'-',disease:rs.researchDisease||'',n:rows.length,sourceRecords:raw.length,excludedRecords:excludedRecords,duplicateRecords:duplicateRecords,caseIds:caseIds}
+    const computedExcludedRecords=raw.filter(isInvalidResearchRow128).length;
+    /* Investigation snapshots store only eligible rows, so preserve source-level counts from snapshot metadata. */
+    const sourceRecords=isDataset&&rs.dataset?.sourceInvestigationId&&Number.isFinite(Number(rs.dataset.sourceRecordCount))?Number(rs.dataset.sourceRecordCount):raw.length;
+    const excludedRecords=isDataset&&rs.dataset?.sourceInvestigationId&&Number.isFinite(Number(rs.dataset.excludedSourceRecordCount))?Number(rs.dataset.excludedSourceRecordCount):computedExcludedRecords;
+    return {source:isDataset?'Dataset penelitian yang dipilih secara eksplisit':'Data kasus yang dikumpulkan melalui aplikasi',investigation:active47().name||active47().id||db.active||'-',disease:rs.researchDisease||'',n:rows.length,sourceRecords:sourceRecords,excludedRecords:excludedRecords,duplicateRecords:duplicateRecords,caseIds:caseIds}
   }
 
   /* Source selection is authoritative: an empty/fully excluded dataset must stay empty, never silently fall back to app records. */
