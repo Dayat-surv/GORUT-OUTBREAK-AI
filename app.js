@@ -880,7 +880,7 @@ function researchDatasetExcludedCount128(){
   return rows.filter(isInvalidResearchRow128).length;
 }
 function researchDatasetRows(){return (Array.isArray(researchState.dataset?.rows)?researchState.dataset.rows:[]).filter(row=>!isInvalidResearchRow128(row))}
-function researchCases(){return researchState.dataSource==='dataset'&&researchDatasetRows().length?researchDatasetRows():currentCases()}
+function researchCases(){return researchState.dataSource==='dataset'?researchDatasetRows():currentCases()}
 function normalizeResearchValue(v){if(v===undefined||v===null)return null;const s=String(v).trim();if(!s)return null;const tokens=(val('researchMissingTokens')||'NA,N/A,.,-,kosong,null,NULL').split(',').map(x=>x.trim().toLowerCase());if(tokens.includes(s.toLowerCase()))return null;return s}
 function splitCSVLine(line,delimiter){const out=[];let cur='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q}else if(ch===delimiter&&!q){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out}
 function parseCSVText(text,delimiter){const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim()!=='');if(!lines.length)return [];const headers=splitCSVLine(lines[0],delimiter).map((h,i)=>String(h).trim()||`var_${i+1}`);return lines.slice(1).map(line=>{const a=splitCSVLine(line,delimiter),o={};headers.forEach((h,i)=>o[h]=normalizeResearchValue(a[i]??''));return o})}
