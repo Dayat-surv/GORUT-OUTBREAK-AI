@@ -333,7 +333,26 @@ paparan → outcome"></textarea></div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="backend-config.js" onerror="window.GORUT_BACKEND={enabled:false}"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://unpkg.com/esri-leaflet@3.0.16/dist/esri-leaflet.js"></script>
-<script src="app.js?v=148"></script>
+<script src="app.js?v=149"></script>
+<script>
+/* v149: clarify research snapshot behavior for records explicitly excluded as invalid test data. */
+(function(){
+  function clarifyResearchNotice(){
+    var panel=document.getElementById('v126SelectionPanel');
+    if(!panel)return;
+    panel.querySelectorAll('.notice').forEach(function(el){
+      if(el.dataset.v149Copy==='done')return;
+      if((el.textContent||'').includes('1468d9f8-e408-4fee-9da2-760e6a0bfcc6')){
+        el.innerHTML='Pilih tepat satu rekaman valid untuk setiap ID kasus yang memenuhi syarat agar analisis tingkat kasus tidak menghitung orang yang sama berulang. Rekaman sumber asli tidak dihapus atau diubah. Rekaman dengan ID <code>1468d9f8-e408-4fee-9da2-760e6a0bfcc6</code> tetap dikecualikan dari snapshot penelitian karena telah dikonfirmasi sebagai data uji tidak valid. Jika semua rekaman yang tersedia hanya berupa data uji tidak valid tersebut, sistem dapat membuat snapshot kosong (0 kasus valid); snapshot kosong ini mencegah data uji masuk analisis dan tidak menghapus rekaman operasional. Jika masih ada kasus lain yang valid, pilih satu rekaman valid untuk setiap ID kasus.';
+        el.dataset.v149Copy='done';
+      }
+    });
+  }
+  var observer=new MutationObserver(clarifyResearchNotice);
+  function start(){if(document.body)observer.observe(document.body,{childList:true,subtree:true});clarifyResearchNotice();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
 <script src="public-survey-integration.js"></script>
 
 <script>
