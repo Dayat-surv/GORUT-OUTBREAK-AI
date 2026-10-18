@@ -41,9 +41,9 @@ assert.match(normalizedPersistence, /insert into public\.cases \( id, owner_id, 
   'each survey response must create a linked initial case record for line listing');
 assert.match(normalizedPersistence, /input_key\.key = 'disease_module'/,
   'disease module metadata must be recognized separately from question IDs');
-assert.match(normalizedPersistence, /input_key\.key = 'disease_module'/,
+assert.match(normalizedPersistence, /module\.item ->> 'id' = p_payload ->> 'disease_module'/,
   'only a disease module declared in the questionnaire schema may be submitted');
-assert.match(normalizedPersistence, /insert into public\.survey_responses \( survey_id, submission_id, respondent_device, payload \)/,
+assert.match(normalizedPersistence, /create unique index if not exists survey_responses_survey_submission_uidx/,
   'submission retries must be idempotent and not duplicate a response');
 
 console.log('Supabase RPC and questionnaire persistence static contract passed.');
