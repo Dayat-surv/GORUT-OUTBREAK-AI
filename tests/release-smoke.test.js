@@ -12,10 +12,14 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=158/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v158/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=158/, 'service worker must precache the release application script');
+assert.match(index, /app\.js\?v=159/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v159/, 'service worker cache version must match the release');
+assert.match(sw, /app\.js\?v=159/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
+const appJs = read('app.js');
+const publicSurvey = read('public_survey.html');
+assert.match(appJs, /Inisial nama \(tanpa nama lengkap\)/, 'master questionnaire must request initials rather than full names');
+assert.match(publicSurvey, /Isi inisial saja, jangan tuliskan nama lengkap\./, 'public questionnaire must guide respondents to enter initials');
 assert.match(manifest.name, /GORUT-OUTBREAK AI/, 'PWA manifest must name the application');
 assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'PWA manifest must declare at least one icon');
 

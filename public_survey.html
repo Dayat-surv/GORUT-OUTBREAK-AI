@@ -23,7 +23,7 @@ function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function setStatus(v){statusEl.textContent=v;}
 function readQueue(){try{const a=JSON.parse(localStorage.getItem(queueKey)||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}}
 function writeQueue(a){localStorage.setItem(queueKey,JSON.stringify(a))}
-function normalizeQuestion(q,i){return {...q,id:String(q.id||'q'+i),label:String(q.label||q.title||('Pertanyaan '+(i+1))),type:String(q.type||'text').toLowerCase(),section:String(q.section||q.cat||'PE Umum'),options:Array.isArray(q.options)?q.options:[],required:q.required===true};}
+function normalizeQuestion(q,i){const rawLabel=String(q.label||q.title||('Pertanyaan '+(i+1)));const privacyName=/^nama lengkap$/i.test(rawLabel.trim());return {...q,id:String(q.id||'q'+i),label:privacyName?'Inisial nama (tanpa nama lengkap)':rawLabel,help:privacyName?'Isi inisial saja, jangan tuliskan nama lengkap.':q.help,type:String(q.type||'text').toLowerCase(),section:String(q.section||q.cat||'PE Umum'),options:Array.isArray(q.options)?q.options:[],required:q.required===true};}
 function fieldHtml(q,i){
  const id=q.id,req=q.required?'required':'',label=esc(q.label)+(q.required?' <span class="required">*</span>':'');
  let control='';

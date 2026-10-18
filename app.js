@@ -103,7 +103,8 @@ const conditionalEngine=[
 
 function buildQuestion(label,cat='Spesifik'){
   const m=fieldMeta[label]||inferMeta(label);
-  return {id:'Q_'+label.toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,55),cat,label,type:m.type,options:m.options||[],required:false,source:instrumentMeta.diseaseSpecificBasis,version:instrumentMeta.release};
+  const privacyName=/^nama lengkap$/i.test(String(label||'').trim());
+  return {id:'Q_'+label.toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,55),cat,label:privacyName?'Inisial nama (tanpa nama lengkap)':label,help:privacyName?'Isi inisial saja, jangan tuliskan nama lengkap.':undefined,type:m.type,options:m.options||[],required:false,source:instrumentMeta.diseaseSpecificBasis,version:instrumentMeta.release};
 }
 
 const baseQ=[
