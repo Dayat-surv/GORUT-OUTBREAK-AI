@@ -4994,7 +4994,20 @@ try{installBrandingV67();}catch(e){}
       row['Nama/Label Sumber']=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(sel.index+1));
       row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';row['Penyakit']=diseaseName126(activeInv.disease);
       var ans=snapshotObject126(c.answers);
-      Object.keys(ans).forEach(function(k){if(k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId')row[k]=Array.isArray(ans[k])?ans[k].join(', '):(ans[k]&&typeof ans[k]==='object'?JSON.stringify(ans[k]):ans[k])});
+      /* v133: map known questionnaire fields to analysis-friendly columns and never expose raw Q_* keys. */
+      var answerAliases={
+        Q_umur:'Umur',Q_id_kasus:'ID Kasus',Q_provinsi:'Provinsi',Q_kabupaten:'Kabupaten'
+      };
+      function researchAnswerValue126(v){return Array.isArray(v)?v.join(', '):(v&&typeof v==='object'?JSON.stringify(v):v)}
+      Object.keys(ans).forEach(function(k){
+        if(k==='foodCase'||k==='priority'||k==='disease'||k==='diseaseId')return;
+        if(/^Q_/i.test(k)){
+          var target=answerAliases[k]||'';
+          if(target&&(row[target]===undefined||row[target]===null||String(row[target]).trim()==='')&&ans[k]!==undefined&&ans[k]!==null&&String(researchAnswerValue126(ans[k])).trim()!=='')row[target]=researchAnswerValue126(ans[k]);
+          return;
+        }
+        row[k]=researchAnswerValue126(ans[k]);
+      });
       var foodCase=snapshotObject126(c.foodCase),priority=snapshotObject126(c.priority);
       Object.keys(foodCase).forEach(function(k){row['Keracunan pangan: '+k]=Array.isArray(foodCase[k])?foodCase[k].join(', '):(foodCase[k]&&typeof foodCase[k]==='object'?JSON.stringify(foodCase[k]):foodCase[k])});
       Object.keys(priority).forEach(function(k){row['Prioritas: '+k]=Array.isArray(priority[k])?priority[k].join(', '):(priority[k]&&typeof priority[k]==='object'?JSON.stringify(priority[k]):priority[k])});
