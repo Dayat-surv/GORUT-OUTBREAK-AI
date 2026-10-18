@@ -5,6 +5,6 @@ window.GORUT_BACKEND = {
   url: 'https://lheuszdhprwmtajhdukc.supabase.co',
   anonKey: 'sb_publishable_avKj9iO9b_VMaOPNvPB9_g_TyMoKotr',
   enabled: true,
-  // Aktifkan hanya untuk pengujian formulir publik; tidak mengaktifkan backend aplikasi utama.
-  publicSurveyEnabled: true
+  // Fail closed: formulir publik tetap nonaktif sampai RPC, skema, RLS, dan alur retry lulus uji langsung.
+  publicSurveyEnabled: false
 };
