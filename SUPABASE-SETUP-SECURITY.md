@@ -4,11 +4,12 @@ Dokumen ini adalah panduan konfigurasi, bukan bukti bahwa backend aman. Pada ver
 
 ## Status audit dokumentasi — 18 Oktober 2026
 
-- Website statis dipublikasikan melalui GitHub Pages.
-- Mode lokal menyimpan data pada browser/perangkat masing-masing.
-- Kode aplikasi memiliki jalur login Supabase Auth dan membaca peran dari `profiles`.
-- Sinkronisasi yang tersedia mengirim data lokal dengan `upsert`; jangan menganggapnya sebagai sinkronisasi dua arah atau database bersama yang sudah tervalidasi.
-- Skema database aktual, kebijakan RLS, serta pengujian lintas-peran belum dikonfirmasi. Jangan gunakan identitas pasien nyata sebelum pemeriksaan tersebut selesai.
+- Website statis telah dipublikasikan melalui GitHub Pages.
+- Mode browser lokal menyimpan data pada perangkat masing-masing; ini bukan basis data bersama.
+- Konfigurasi frontend Supabase saat ini aktif dan menggunakan publishable key. Kode login dan sinkronisasi tersedia, tetapi konfigurasi aktif bukan bukti bahwa akses aman.
+- Sinkronisasi yang tersedia menggunakan jalur upsert; jangan menganggapnya sinkronisasi dua arah atau database bersama yang tervalidasi.
+- Skema database aktual, kebijakan RLS, pengujian lintas-peran, dan uji browser end-to-end belum dikonfirmasi.
+- **Jangan gunakan identitas pasien nyata sebelum semua pemeriksaan keamanan dan uji penerimaan selesai.**
 
 ## 1. Nilai konfigurasi
 
