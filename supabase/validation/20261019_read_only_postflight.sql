@@ -24,8 +24,7 @@ SELECT
   p.prosecdef AS security_definer,
   p.proconfig AS function_settings,
   has_function_privilege('anon', p.oid, 'EXECUTE') AS anon_can_execute,
-  has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated_can_execute,
-  has_function_privilege('public', p.oid, 'EXECUTE') AS public_role_can_execute
+  has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated_can_execute
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public'
@@ -34,9 +33,8 @@ ORDER BY p.oid::regprocedure::text;
 
 -- Expected for the four-argument overload:
 -- security_definer=true, search_path="", anon_can_execute=true,
--- authenticated_can_execute=true. The PUBLIC pseudo-role grant is best
--- inspected in the preflight ACL query; has_function_privilege('public', ...)
--- may not represent the pseudo-role as intended on all PostgreSQL versions.
+-- authenticated_can_execute=true. Inspect the ACL query from the preflight
+-- for any explicit PUBLIC pseudo-role grants.
 
 -- 3) Aggregate integrity check for response-to-case linkage.
 -- Historical responses may predate this workflow; review counts, do not auto-fix.
