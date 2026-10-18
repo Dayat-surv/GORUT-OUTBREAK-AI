@@ -894,14 +894,14 @@ const _exportResearchJSONV23=exportResearchJSON;exportResearchJSON=function(){co
 const INVALID_RESEARCH_SOURCE_IDS_128=new Set(['1468d9f8-e408-4fee-9da2-760e6a0bfcc6']);
 /* Pengguna mengonfirmasi Rekaman 1 dan Rekaman 2 untuk kasus uji ini sama-sama diisi asal-asalan.
    Kedua rekaman sumber dipertahankan, tetapi kasus induknya dikecualikan dari seluruh analitik/dashboard. */
-const INVALID_RESEARCH_CASE_IDS_128=new Set(['pub-1468d9f8-e40']);
+const INVALID_RESEARCH_CASE_IDS_128=new Set(['pub-1468d9f8-e40','pub-191b33fd-032']);
 function isInvalidTestCaseForDashboard128(row){
   if(!row||typeof row!=='object')return false;
   /* Inline constants keep this guard safe even when an earlier dashboard runs before research setup initializes. */
   const sourceKeys=['ID Rekaman Sumber','sourceRecordId','source_record_id','serverId','recordId','uuid','__sourceRecordId'];
-  if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&['1468d9f8-e408-4fee-9da2-760e6a0bfcc6','b1468d9f-8e40-0000-0000-000000000000'].includes(String(row[k]).trim().toLowerCase())))return true;
+  if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&['1468d9f8-e408-4fee-9da2-760e6a0bfcc6','b1468d9f-8e40-0000-0000-000000000000','191b33fd-032f-4220-9dac-711f274cfc6a'].includes(String(row[k]).trim().toLowerCase())))return true;
   const caseKeys=['ID Kasus','caseId','case_id','__caseId','id'];
-  return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&String(row[k]).trim().toLowerCase()==='pub-1468d9f8-e40');
+  return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&INVALID_RESEARCH_CASE_IDS_128.has(String(row[k]).trim().toLowerCase()));
 }
 function isInvalidResearchRow128(row){return isInvalidTestCaseForDashboard128(row)}
 function ensureInvalidTestRecordNotice128(){
@@ -5032,7 +5032,7 @@ try{installBrandingV67();}catch(e){}
     rows=rows.map(function(row){var out={};columns.forEach(function(k){out[k]=row[k]===undefined?'':row[k]});return out});
     return {rows:rows,columns:columns};
   }
-  function excludedResearchRecord126(c){if(!c||typeof c!=='object')return false;var sourceKeys=['serverId','recordId','uuid','sourceRecordId','ID Rekaman Sumber','source_record_id'];if(sourceKeys.some(function(k){return c[k]!==undefined&&c[k]!==null&&['1468d9f8-e408-4fee-9da2-760e6a0bfcc6','b1468d9f-8e40-0000-0000-000000000000'].includes(String(c[k]).trim().toLowerCase())}))return true;var caseId=c.id??c.caseId??c.case_id??c.__caseId??'';return String(caseId).trim().toLowerCase()==='pub-1468d9f8-e40'}
+  function excludedResearchRecord126(c){if(!c||typeof c!=='object')return false;var sourceKeys=['serverId','recordId','uuid','sourceRecordId','ID Rekaman Sumber','source_record_id'];if(sourceKeys.some(function(k){return c[k]!==undefined&&c[k]!==null&&['1468d9f8-e408-4fee-9da2-760e6a0bfcc6','b1468d9f-8e40-0000-0000-000000000000','191b33fd-032f-4220-9dac-711f274cfc6a'].includes(String(c[k]).trim().toLowerCase())}))return true;var caseId=c.id??c.caseId??c.case_id??c.__caseId??'';return ['pub-1468d9f8-e40','pub-191b33fd-032'].includes(String(caseId).trim().toLowerCase())}
   function runResearchSafetySelfTest126(){
     var simulated=[
       {id:'PUB-1468D9F8-E40',serverId:'1468d9f8-e408-4fee-9da2-760e6a0bfcc6',answers:{jawabanSumber1:'DATA_UJI_1'}},
