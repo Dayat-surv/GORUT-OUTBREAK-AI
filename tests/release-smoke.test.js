@@ -2,6 +2,8 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
+const { spawnSync } = require('node:child_process');
 const root = path.join(__dirname, '..');
 const read = name => fs.readFileSync(path.join(root, name), 'utf8');
 const index = read('index.html');
@@ -16,6 +18,18 @@ assert.match(sw, /app\.js\?v=157/, 'service worker must precache the release app
 assert.match(sw, /premium\.css\?v=157/, 'service worker must precache premium styling');
 assert.match(manifest.name, /GORUT-OUTBREAK AI/, 'PWA manifest must name the application');
 assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'PWA manifest must declare at least one icon');
+
+
+const inlineScripts = [...index.matchAll(/<script(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)<\\/script>/gi)]
+  .map(m => m[1].trim())
+  .filter(s => s && !/^\\s*\\{/.test(s));
+for (let i = 0; i < inlineScripts.length; i++) {
+  const temp = path.join(os.tmpdir(), 'gorut-inline-script-' + process.pid + '-' + i + '.js');
+  fs.writeFileSync(temp, inlineScripts[i], 'utf8');
+  const check = spawnSync(process.execPath, ['--check', temp], { encoding: 'utf8' });
+  try { fs.unlinkSync(temp); } catch (_) {}
+  assert.equal(check.status, 0, 'inline script ' + (i + 1) + ' in index.html must parse: ' + (check.stderr || check.stdout || 'unknown syntax error'));
+}
 
 const localRefs = [];
 for (const m of index.matchAll(/(?:src|href)="([^"#]+)"/g)) {
