@@ -1,0 +1,52 @@
+/* GORUT-OUTBREAK AI — Premium release layer v157
+   Presentation-only: no data, API, permissions, or workflow behavior is changed. */
+:root{--gorut-navy:#0b1f33;--gorut-blue:#1769aa;--gorut-teal:#0b8f8b;--gorut-ink:#162338;--gorut-muted:#64748b;--gorut-line:#e2eaf2;--gorut-surface:#fff;--gorut-soft:#f5f8fc;--gorut-radius:16px}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{color:var(--gorut-ink);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+::selection{background:#cce8ff;color:#0b1f33}
+button,input,select,textarea{accent-color:var(--gorut-blue)}
+button{transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,border-color .16s ease}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid #65b8ff;outline-offset:2px}
+button.primary,.primary:not(input){background:linear-gradient(135deg,#1769aa,#14558b);box-shadow:0 5px 14px #1769aa22}
+button.primary:hover,.primary:not(input):hover{filter:brightness(1.04);transform:translateY(-1px);box-shadow:0 8px 20px #1769aa2c}
+button:active{transform:translateY(0)}
+input,select,textarea{transition:border-color .15s ease,box-shadow .15s ease}
+input:focus,select:focus,textarea:focus{border-color:#60a5fa;box-shadow:0 0 0 3px #60a5fa25;outline:0}
+.card,.stat,.v30-stat,.v51-flow-item,.readiness-item{transition:box-shadow .18s ease,border-color .18s ease}
+.card:hover{border-color:#d5e2ef}
+.card h2,.card h3,.card h4{letter-spacing:-.015em}
+.badge,.premium-badge,.access-pill,.v30-status{white-space:nowrap}
+table{font-variant-numeric:tabular-nums}
+th{font-weight:750}td{vertical-align:top}
+.notice{border-radius:10px;line-height:1.5}
+.modal{z-index:2000;backdrop-filter:blur(5px)}
+.modalbox{box-shadow:0 24px 80px #06182a33;border:1px solid #e2eaf2}
+.loginbox{animation:gorut-enter .32s ease-out both}
+.gorut-sidebar-brand{backdrop-filter:blur(12px)}nav button{min-height:40px}
+.command-hero,.premium-hero-v29{border-radius:20px}
+.stat,.v30-stat{border-radius:14px}
+.case-table-wrap,.report-table-shell{max-width:100%}
+img{max-width:100%}
+@keyframes gorut-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1000px){main{padding-left:18px;padding-right:18px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v51-flow{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:800px){
+ aside{left:0;right:0;top:auto;bottom:0;width:100%;height:70px;display:flex;align-items:center;gap:8px;padding:6px 8px;overflow-x:auto;overflow-y:hidden;z-index:1000;border-right:0;border-top:1px solid #ffffff20;box-shadow:0 -8px 28px #07182725}
+ .gorut-sidebar-brand{display:none!important}
+ aside nav{display:flex;align-items:center;gap:5px;padding:0;margin:0;min-width:max-content}
+ aside nav button{display:inline-flex!important;align-items:center;width:auto!important;min-width:max-content;min-height:46px;margin:0!important;padding:10px 12px!important;font-size:12px!important;white-space:nowrap;text-align:center}
+ main{margin:0!important;padding:14px 12px 88px!important;max-width:none}
+ .topbar-v29{margin:-14px -12px 16px!important}
+ .grid,.grid2,.summary-grid,.geo-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .risk-row{grid-template-columns:minmax(95px,1fr) 1.2fr 55px;gap:7px}
+ .command-hero{display:block}.case-table-wrap{overflow:auto}.case-table-wrap table{min-width:1000px}
+ .modalbox{width:min(680px,calc(100vw - 20px));max-height:calc(100dvh - 24px)}
+}
+@media(max-width:520px){
+ .grid,.grid2,.summary-grid,.geo-summary,.readiness-list,.metric-strip-v29,.v30-admin-grid{grid-template-columns:1fr 1fr}
+ .card{padding:13px;border-radius:14px}.stat{padding:12px}.stat b,.v30-stat strong{font-size:23px}
+ .quick-grid{grid-template-columns:1fr 1fr}.quick-grid button{padding:10px;font-size:12px}
+ .v51-flow{grid-template-columns:repeat(2,minmax(0,1fr))}.risk-row{grid-template-columns:1fr;gap:5px}
+ .report-doc{font-size:13px}.toolbar input,.toolbar select{max-width:100%;width:100%}.toolbar>*{flex:1 1 140px}.loginbox{padding:22px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@media print{html{scroll-behavior:auto}aside,.topbar-v29,.no-print{display:none!important}main{margin:0!important;padding:0!important;max-width:none!important}.card{box-shadow:none!important;border-color:#ddd!important}}
