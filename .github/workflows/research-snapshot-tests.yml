@@ -41,7 +41,10 @@ jobs:
         with:
           node-version: 20
       - name: Check JavaScript syntax
-        run: node --check app.js
+        run: |
+          node --check app.js
+          node --check sw.js
+          node --check public-survey-integration.js
       - name: Run research snapshot regression tests
         run: node tests/research-snapshot-valid-case.test.js
       - name: Run release smoke tests
