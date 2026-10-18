@@ -29,6 +29,8 @@ assert.match(publicSurvey, /submissionId=newSubmissionId\(\)/,'each send attempt
 assert.match(publicSurvey, /result\.data\.success!==true/,'the UI must not report success without explicit server confirmation');
 assert.match(publicSurvey, /ID respons:/,'the respondent must receive a server response reference after successful save');
 assert.match(publicSurvey, /readQueue\(\)/,'failed submissions must be queued locally for retry');
+assert.match(publicSurvey, /if\(r\.error\|\|!r\.data\|\|r\.data\.success!==true\)remain\.push\(item\)/, 'offline queue entries must remain until the server confirms each response');
+assert.match(publicSurvey, /Antrian offline berhasil dikirim dan dikonfirmasi server/, 'offline retry success message must require server confirmation');
 const publicSurveyScripts = [...publicSurvey.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
   .filter(match => !/\bsrc\s*=/i.test(match[1]))
   .map(match => match[2].trim()).filter(Boolean);
