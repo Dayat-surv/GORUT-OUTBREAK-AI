@@ -181,10 +181,28 @@ function saveQ(){save();alert('Kuesioner tersimpan.')}
 function publicQ(){let id=act()?.id||'demo';let slug='survey-'+id+'-'+(db.selectedDisease||'campak');modal(`<h2>Kuesioner Publik</h2><div class="notice"><b>Mode prototype:</b> tautan publik belum tersambung ke server. Slug investigasi: <code>${slug}</code><br><br>Pada versi produksi slug ini menjadi URL publik + QR, tanpa login responden, dan setiap kiriman masuk otomatis ke line listing.</div><button onclick="closeAppModal()">Tutup</button>`)}
 function analysis(x){['epi','demo','biv','ai'].forEach(i=>document.getElementById(i).style.display=i===x?'block':'none');if(x==='epi')chart();if(x==='demo')demo();if(x==='biv')renderBivControls();}
 function renderBivControls(){const r=document.getElementById('statResult');if(r)r.innerHTML='Siap menghitung tabel 2×2 dari data kasus investigasi aktif. Pilih outcome dan paparan, lalu tekan <b>Hitung</b>.'}
+/* Simulation investigations are excluded from operational analytics, but may be selected explicitly in the research snapshot. */
+function isSimulationInvestigationForOps(inv) {
+  if (!inv || typeof inv !== 'object') return false;
+  var meta = inv.metadata && typeof inv.metadata === 'object' ? inv.metadata : {};
+  var name = String(inv.name || '');
+  var status = String(inv.status || '');
+  return inv.simulation === true || meta.simulation === true ||
+    String(meta.dataset_type || '').toLowerCase() === 'simulation' ||
+    /SIMULASI UJI SISTEM|BUKAN KASUS NYATA/i.test(name) ||
+    /^uji sistem$/i.test(status);
+}
+function isSimulationCaseForOps(c) {
+  if (!c || typeof c !== 'object') return false;
+  var investigations = window.db && Array.isArray(window.db.investigations) ? window.db.investigations : [];
+  var inv = investigations.find(function(x) { return String(x.id) === String(c.investigationId); });
+  return isSimulationInvestigationForOps(inv);
+}
 /* v137: non-destructive case-level analysis view; original records remain unchanged. */
 function uniqueCaseRowsForAnalysis(rows) {
   var groups = new Map();
   (rows || []).forEach(function(c, i) {
+    if (isSimulationCaseForOps(c)) return;
     var id = String(c && c.id != null ? c.id : '').trim();
     var inv = String(c && c.investigationId != null ? c.investigationId : '');
     var key = inv + '::' + (id || '__record_' + i);
@@ -5007,10 +5025,11 @@ try{installBrandingV67();}catch(e){}
     return seen.size;
   }
   function countLabel126(inv){
-    var cs=caseRows126(inv.id),seen=new Set(),unique=0;cs.forEach(function(c,i){var id=String(c.id===undefined||c.id===null?'':c.id).trim(),key=id||'__record_'+i;if(!seen.has(key)){seen.add(key);unique++}});
-    var contacts=(db.contacts||[]).filter(function(x){return String(x.investigationId)===String(inv.id)}),
-      specs=(db.specimens||[]).filter(function(x){return String(x.investigationId)===String(inv.id)}),
-      visits=(db.fieldVisits||[]).filter(function(x){return String(x.investigationId)===String(inv.id)});
+    var isSimulation = isSimulationInvestigationForOps(inv);
+    var cs=isSimulation?[]:caseRows126(inv.id),seen=new Set(),unique=0;cs.forEach(function(c,i){var id=String(c.id===undefined||c.id===null?'':c.id).trim(),key=id||'__record_'+i;if(!seen.has(key)){seen.add(key);unique++}});
+    var contacts=isSimulation?[]:(db.contacts||[]).filter(function(x){return String(x.investigationId)===String(inv.id)}),
+      specs=isSimulation?[]:(db.specimens||[]).filter(function(x){return String(x.investigationId)===String(inv.id)}),
+      visits=isSimulation?[]:(db.fieldVisits||[]).filter(function(x){return String(x.investigationId)===String(inv.id)});
     return {cases:unique,sources:cs.length,contacts:contacts.length,specs:specs.length,visits:visits.length};
   }
   function select126(id){
