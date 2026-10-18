@@ -901,7 +901,7 @@ function isInvalidTestCaseForDashboard128(row){
   const sourceKeys=['ID Rekaman Sumber','sourceRecordId','source_record_id','serverId','recordId','uuid','__sourceRecordId'];
   if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&['1468d9f8-e408-4fee-9da2-760e6a0bfcc6','b1468d9f-8e40-0000-0000-000000000000','191b33fd-032f-4220-9dac-711f274cfc6a'].includes(String(row[k]).trim().toLowerCase())))return true;
   const caseKeys=['ID Kasus','caseId','case_id','__caseId','id'];
-  return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&INVALID_RESEARCH_CASE_IDS_128.has(String(row[k]).trim().toLowerCase()));
+  return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&['pub-1468d9f8-e40','pub-191b33fd-032'].includes(String(row[k]).trim().toLowerCase()));
 }
 function isInvalidResearchRow128(row){return isInvalidTestCaseForDashboard128(row)}
 function ensureInvalidTestRecordNotice128(){
