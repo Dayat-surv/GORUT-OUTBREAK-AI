@@ -1,9 +1,28 @@
 {
   "name": "GORUT-OUTBREAK AI — Surveilans Epidemiologi Gorontalo Utara",
-  "short_name": "GORUT-OUTBREAK AI",
+  "short_name": "GORUT AI",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f6f9fd",
-  "theme_color": "#102a43",
-  "description": "Platform surveilans, investigasi epidemiologi, PE/KLB, analisis dan GIS Kabupaten Gorontalo Utara."
+  "theme_color": "#0b1f33",
+  "description": "Platform surveilans, investigasi epidemiologi, PE/KLB, analisis dan GIS Kabupaten Gorontalo Utara.",
+  "scope": "./",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
 }

@@ -1,14 +1,15 @@
 # GORUT-OUTBREAK AI — Checklist Konfigurasi Supabase
 
-Dokumen ini adalah panduan konfigurasi, bukan bukti bahwa backend sudah aktif atau aman. Saat ini `backend-config.js` masih memakai placeholder dan `enabled: false`.
+Dokumen ini adalah panduan konfigurasi, bukan bukti bahwa backend aman. Pada versi repository saat ini, `backend-config.js` memuat URL proyek dan publishable key frontend dengan `enabled: true`. Ini bukan secret admin, tetapi juga bukan bukti bahwa skema, RLS, peran, dan sinkronisasi telah lulus audit. Gunakan hanya data sintetis sampai semua uji keamanan dan penerimaan selesai.
 
-## Status saat audit 9 Oktober 2026
+## Status audit dokumentasi — 18 Oktober 2026
 
-- Website statis dipublikasikan melalui GitHub Pages.
-- Mode lokal menyimpan data pada browser/perangkat masing-masing.
-- Kode aplikasi memiliki jalur login Supabase Auth dan membaca peran dari `profiles`.
-- Sinkronisasi yang tersedia mengirim data lokal dengan `upsert`; jangan menganggapnya sebagai sinkronisasi dua arah atau database bersama yang sudah tervalidasi.
-- Skema database aktual, kebijakan RLS, serta pengujian lintas-peran belum dikonfirmasi. Jangan gunakan identitas pasien nyata sebelum pemeriksaan tersebut selesai.
+- Website statis telah dipublikasikan melalui GitHub Pages.
+- Mode browser lokal menyimpan data pada perangkat masing-masing; ini bukan basis data bersama.
+- Konfigurasi frontend Supabase saat ini aktif dan menggunakan publishable key. Kode login dan sinkronisasi tersedia, tetapi konfigurasi aktif bukan bukti bahwa akses aman.
+- Sinkronisasi yang tersedia menggunakan jalur upsert; jangan menganggapnya sinkronisasi dua arah atau database bersama yang tervalidasi.
+- Skema database aktual, kebijakan RLS, pengujian lintas-peran, dan uji browser end-to-end belum dikonfirmasi.
+- **Jangan gunakan identitas pasien nyata sebelum semua pemeriksaan keamanan dan uji penerimaan selesai.**
 
 ## 1. Nilai konfigurasi
 
@@ -25,7 +26,7 @@ window.GORUT_BACKEND = {
 
 - Jangan pernah menaruh `service_role` key atau secret key di JavaScript, GitHub, atau browser.
 - Public anon/publishable key memang digunakan pada browser, tetapi hanya aman jika RLS dan kebijakan akses sudah benar.
-- Jangan mengaktifkan `enabled: true` sebelum tabel, profil, RLS, dan akun uji siap.
+- Pada repository saat ini `enabled` sudah `true`; jangan gunakan backend untuk data nyata sebelum tabel, profil, RLS, dan akun uji diperiksa serta seluruh tes penerimaan lulus.
 - Karena repository bersifat publik, jangan menyimpan kata sandi, token rahasia, atau data pasien di repository.
 
 ## 2. Tabel yang dirujuk oleh aplikasi
