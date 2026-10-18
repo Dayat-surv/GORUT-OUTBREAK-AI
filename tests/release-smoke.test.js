@@ -22,8 +22,8 @@ assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'PWA manif
 
 // Parse every inline JavaScript block so syntax errors in index.html fail CI.
 // External scripts (which have a src attribute) are intentionally excluded.
-const inlineScripts = [...index.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
-  .filter(match => !/\\bsrc\\s*=/i.test(match[1]))
+const inlineScripts = [...index.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+  .filter(match => !/\bsrc\s*=/i.test(match[1]))
   .map(match => match[2].trim())
   .filter(Boolean);
 assert.ok(inlineScripts.length > 0, 'index.html must contain expected inline application handlers');
