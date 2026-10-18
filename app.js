@@ -4992,18 +4992,33 @@ try{installBrandingV67();}catch(e){}
       row['ID Rekaman Sumber']=c.serverId||c.recordId||c.uuid||c.sourceRecordId||'';
       row['Urutan Rekaman Sumber']=sel.index+1;
       row['Nama/Label Sumber']=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(sel.index+1));
-      row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';row['Penyakit']=diseaseName126(activeInv.disease);
+      row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';
+      var diseaseValue=activeInv.disease||activeInv.diseaseId||c.disease||c.diseaseId||'';
+      row['Penyakit']=diseaseName126(diseaseValue);
+      /* Read only this selected source record. Parse JSON answers and support common nested questionnaire wrappers. */
       var ans=snapshotObject126(c.answers);
-      /* v133: map known questionnaire fields to analysis-friendly columns and never expose raw Q_* keys. */
+      if(ans.answers&&typeof ans.answers==='object')ans=snapshotObject126(ans.answers);
+      if(ans.data&&typeof ans.data==='object'&&!Object.keys(ans).some(function(k){return /^Q_/i.test(k)}))ans=snapshotObject126(ans.data);
+      /* v134: map source aliases case-insensitively; never expose raw Q_* columns or fabricate missing values. */
       var answerAliases={
-        Q_umur:'Umur',Q_id_kasus:'ID Kasus',Q_provinsi:'Provinsi',Q_kabupaten:'Kabupaten'
+        q_umur:'Umur',q_id_kasus:'ID Kasus',q_provinsi:'Provinsi',q_kabupaten:'Kabupaten',
+        q_penyakit:'Penyakit',q_nama_penyakit:'Penyakit',q_nama:'Nama',q_jenis_kelamin:'Jenis kelamin',
+        q_alamat:'Alamat',q_desa:'Desa/Kelurahan',q_kelurahan:'Desa/Kelurahan',q_kecamatan:'Kecamatan',
+        q_tanggal_onset:'Tanggal onset',q_status_kasus:'Status kasus',q_outcome:'Outcome'
       };
       function researchAnswerValue126(v){return Array.isArray(v)?v.join(', '):(v&&typeof v==='object'?JSON.stringify(v):v)}
+      function fillIfBlank126(target,value){
+        if(value===undefined||value===null||String(researchAnswerValue126(value)).trim()==='')return;
+        if(row[target]===undefined||row[target]===null||String(row[target]).trim()==='')row[target]=researchAnswerValue126(value);
+      }
+      /* Fallback only from the selected record's own normalized fields. */
+      fillIfBlank126('Provinsi',c.prov||c.province||c.provinsi);
+      fillIfBlank126('Kabupaten',c.kab||c.kabupaten||c.regency||c.district);
       Object.keys(ans).forEach(function(k){
         if(k==='foodCase'||k==='priority'||k==='disease'||k==='diseaseId')return;
         if(/^Q_/i.test(k)){
-          var target=answerAliases[k]||'';
-          if(target&&(row[target]===undefined||row[target]===null||String(row[target]).trim()==='')&&ans[k]!==undefined&&ans[k]!==null&&String(researchAnswerValue126(ans[k])).trim()!=='')row[target]=researchAnswerValue126(ans[k]);
+          var target=answerAliases[String(k).toLowerCase()]||'';
+          if(target)fillIfBlank126(target,ans[k]);
           return;
         }
         row[k]=researchAnswerValue126(ans[k]);
@@ -5039,6 +5054,7 @@ try{installBrandingV67();}catch(e){}
       {name:'Jawaban, keracunan pangan, dan prioritas berbentuk JSON-string tetap masuk snapshot',ok:jsonRow.jawabanJson==='JAWABAN_JSON_SIMULASI'&&jsonRow['Keracunan pangan: makanan']==='NASI_SIMULASI'&&jsonRow['Prioritas: tingkat']==='TINGGI_SIMULASI'},
       {name:'Jawaban dari rekaman uji tidak masuk snapshot',ok:!('jawabanSumber1' in snapshotRow)&&!('jawabanSumber2' in snapshotRow)},
       {name:'Jejak sumber dan investigasi dipertahankan',ok:snapshotRow['ID Rekaman Sumber']==='SIM-UUID-VALID-001'&&snapshotRow['ID Investigasi']==='SIM-INVESTIGATION'},
+      {name:'Alias Q_* dipetakan tanpa menampilkan kolom mentah dan tanpa mengisi data yang hilang',ok:(function(){var x=buildResearchSnapshotRows126([{record:{id:'SIM-MAP-001',serverId:'SIM-SRC-MAP-001',answers:{q_umur:7,Q_id_kasus:'SIM-MAP-001',Q_provinsi:'Gorontalo',Q_kabupaten:'Gorontalo Utara',Q_penyakit:'Campak'}},index:0,caseId:'SIM-MAP-001'}],{id:'SIM-INVESTIGATION',name:'Investigasi Simulasi',disease:''}).rows[0]||{};return x['Umur']===7&&x['ID Kasus']==='SIM-MAP-001'&&x['Provinsi']==='Gorontalo'&&x['Kabupaten']==='Gorontalo Utara'&&x['Penyakit']==='Campak'&&!Object.keys(x).some(function(k){return /^Q_/i.test(k)})&&x['Jenis kelamin']===''})()},
       {name:'Dataset kosong tidak beralih diam-diam ke data aplikasi',ok:typeof window.researchRowsForSource47==='function'&&window.researchRowsForSource47('dataset',[],[valid[0]]).length===0},
       {name:'Dataset hanya berisi rekaman uji menghasilkan nol baris',ok:typeof window.researchRowsForSource47==='function'&&window.researchRowsForSource47('dataset',simulated.slice(0,2),[valid[0]]).length===0},
       {name:'Dataset valid tetap memakai rekaman terpilih',ok:typeof window.researchRowsForSource47==='function'&&window.researchRowsForSource47('dataset',[valid[0]],simulated).length===1&&window.researchRowsForSource47('dataset',[valid[0]],simulated)[0].id==='SIM-VALID-001'},
