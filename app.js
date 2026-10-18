@@ -4951,7 +4951,7 @@ try{installBrandingV67();}catch(e){}
   }
   function buildResearchSnapshotRows126(selected,activeInv){
     var cols={id:'ID Kasus',name:'Nama',age:'Umur',sex:'Jenis kelamin',onset:'Tanggal onset',status:'Status kasus',outcome:'Outcome',address:'Alamat',desa:'Desa/Kelurahan',kec:'Kecamatan'};
-    var rows=(selected||[]).map(function(sel){
+    var rows=(selected||[]).filter(function(sel){return !!(sel&&sel.record&&!excludedResearchRecord126(sel.record))}).map(function(sel){
       var c=sel.record,row={};Object.keys(cols).forEach(function(k){row[cols[k]]=c[k]===undefined||c[k]===null?'':c[k]});
       row['ID Rekaman Sumber']=c.serverId||c.recordId||c.uuid||c.sourceRecordId||'';
       row['Urutan Rekaman Sumber']=sel.index+1;
