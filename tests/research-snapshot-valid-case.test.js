@@ -91,6 +91,10 @@ assert.equal(row['variabelValid'], 'JAWABAN_VALID_SIMULASI');
 assert.equal('jawabanSumber1' in row, false, 'source 1 test answers must not leak into snapshot');
 assert.equal('jawabanSumber2' in row, false, 'source 2 test answers must not leak into snapshot');
 
+const emptyBuilt = api.buildResearchSnapshotRows126([], fixture.investigation);
+assert.deepEqual(emptyBuilt.rows, [], 'an explicitly empty selection must produce a genuinely empty snapshot');
+assert.equal(emptyBuilt.rows.length, 0, 'no synthetic or excluded record may be fabricated for an empty snapshot');
+
 const jsonRow = api.buildResearchSnapshotRows126([{
   record: {
     id: 'SIM-JSON-001',
@@ -107,6 +111,7 @@ assert.equal(jsonRow['Keracunan pangan: makanan'], 'NASI_SIMULASI');
 assert.equal(jsonRow['Prioritas: tingkat'], 'TINGGI_SIMULASI');
 
 console.log('LULUS: fixture valid lolos filter dan menghasilkan 1 baris snapshot.');
+console.log('LULUS: pilihan kosong menghasilkan snapshot 0 baris tanpa membuat data sintetis.');
 console.log('LULUS: filter produksi, preview dataset, dan sumber analisis sepakat pada satu baris valid; kedua rekaman uji tetap dikecualikan.');
 console.log('LULUS: ID sumber/investigasi/penyakit dan jawaban JSON tetap dipertahankan.');
 console.log('AMAN: pengujian hanya menjalankan fungsi murni di memori; tidak menyentuh localStorage, Supabase, atau data operasional.');
