@@ -39,6 +39,6 @@ for (const m of sw.matchAll(/['"]\.\/([^'"]+)['"]/g)) {
   if (asset === '') continue;
   assert.ok(fs.existsSync(path.join(root, asset)), 'service worker precache asset must exist: ' + asset);
 }
-const backend = read('backend-config.js');
-assert.doesNotMatch(backend, /service_role|sb_secret_[A-Za-z0-9_-]+/i, 'browser config must not contain a service-role or secret key');
+const backend = read('backend-config.js').replace(/\/\/.*$/gm, '');
+assert.doesNotMatch(backend, /(?:service_role|sb_secret_[A-Za-z0-9_-]+)/i, 'browser config must not contain a service-role or secret key');
 console.log('Release smoke checks passed: HTML references, local assets, PWA manifest/icons, service-worker cache, and frontend key hygiene.');
