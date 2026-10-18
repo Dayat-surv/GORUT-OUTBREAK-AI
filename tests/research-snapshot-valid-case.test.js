@@ -66,7 +66,7 @@ scopedState = api.selectInvestigationSnapshot126(scopedState, 'INV-C');
 assert.equal(scopedState.dataset, null, 'investigation with no snapshot must not inherit another investigation snapshot');
 assert.equal(scopedState.investigationSnapshots['INV-A'], snapshotA, 'A snapshot remains preserved separately');
 assert.equal(scopedState.investigationSnapshots['INV-B'], snapshotB, 'B snapshot remains preserved separately');
-const noActiveState = { dataSource: 'dataset', dataset: snapshotA };
+let noActiveState = { dataSource: 'dataset', dataset: snapshotA };
 noActiveState = api.selectInvestigationSnapshot126(noActiveState, null);
 assert.equal(noActiveState.dataset, null, 'no active investigation must not expose a linked snapshot as active');
 const manualDataset = { name: 'Impor manual', rows: [{ id: 'MANUAL-1' }] };
