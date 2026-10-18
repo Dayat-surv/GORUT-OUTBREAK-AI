@@ -28,6 +28,7 @@ on:
       - 'backend-config.js'
       - 'public-survey-integration.js'
       - 'supabase/migrations/**'
+      - 'supabase/validation/**'
       - 'tests/**'
       - '.github/workflows/research-snapshot-tests.yml'
   workflow_dispatch:
