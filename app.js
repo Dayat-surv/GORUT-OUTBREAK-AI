@@ -490,6 +490,20 @@ async function loadServerOperationalData(){
   const failed=results.filter(x=>x.error);
   if(failed.length) throw new Error('Data server belum dapat dibaca ('+failed.map(x=>x.name+': '+x.error.message).join('; ')+'). Data lokal tidak dikirim atau dihapus.');
   const raw=Object.fromEntries(results.map(x=>[x.name,x.data||[]]));
+  /* Optional survey payload lookup: attach answers only when response_id exactly matches the case server ID.
+     This restores Q_* fields after reload without merging answers across source records. */
+  const surveyAnswerByResponseId=new Map();
+  try {
+    const surveyResult=await sb.from('survey_responses').select('response_id,payload');
+    if(!surveyResult.error) (surveyResult.data||[]).forEach(function(response){
+      if(response&&response.response_id!==undefined&&response.response_id!==null&&response.payload&&typeof response.payload==='object'&&!Array.isArray(response.payload)){
+        surveyAnswerByResponseId.set(String(response.response_id),response.payload);
+      }
+    });
+    else console.warn('Jawaban survei tambahan tidak dapat dibaca; kolom questionnaire_response tetap digunakan.',surveyResult.error.message);
+  } catch(surveyError) {
+    console.warn('Jawaban survei tambahan tidak tersedia; kolom questionnaire_response tetap digunakan.',surveyError);
+  }
   const backupKey='gorut-pre-server-backup-v1';
   if(!localStorage.getItem(backupKey)){
     try{const existing=localStorage.getItem(K);if(existing)localStorage.setItem(backupKey,existing)}catch(e){console.warn('Backup lokal tidak dapat dibuat',e)}
@@ -503,7 +517,10 @@ async function loadServerOperationalData(){
   const caseMap=new Map();
   const cases=raw.cases.map(r=>{
     const id=String(r.case_code||r.metadata?.local_id||r.id);caseMap.set(String(r.id),id);
-    const q=r.questionnaire_response&&typeof r.questionnaire_response==='object'?r.questionnaire_response:{};
+    const caseAnswers=r.questionnaire_response&&typeof r.questionnaire_response==='object'&&!Array.isArray(r.questionnaire_response)?r.questionnaire_response:{};
+    const surveyAnswers=surveyAnswerByResponseId.get(String(r.id))||{};
+    /* The case-specific response payload takes precedence only for duplicate keys; no other case's payload is consulted. */
+    const q=Object.assign({},surveyAnswers,caseAnswers);
     const inv=invMap.get(String(r.investigation_id))||String(r.investigation_id||'');
     return {id,investigationId:inv,name:r.full_name||'',age:r.age??'',sex:r.sex||'',onset:r.onset_date||'',status:r.status||'',outcome:r.outcome||'',lat:r.latitude??null,lng:r.longitude??null,answers:q,foodCase:q.foodCase||null,priority:q.priority||null,disease:investigations.find(x=>String(x.id)===String(inv))?.disease||q.disease||'',serverId:r.id};
   });
