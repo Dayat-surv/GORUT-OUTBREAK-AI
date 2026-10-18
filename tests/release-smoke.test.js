@@ -20,7 +20,23 @@ assert.match(manifest.name, /GORUT-OUTBREAK AI/, 'PWA manifest must name the app
 assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'PWA manifest must declare at least one icon');
 
 
-// Inline script validation is performed separately when browser tooling is available.
+// Parse every inline JavaScript block so syntax errors in index.html fail CI.
+// External scripts (which have a src attribute) are intentionally excluded.
+const inlineScripts = [...index.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+  .filter(match => !/\bsrc\s*=/i.test(match[1]))
+  .map(match => match[2].trim())
+  .filter(Boolean);
+assert.ok(inlineScripts.length > 0, 'index.html must contain expected inline application handlers');
+for (const [i, script] of inlineScripts.entries()) {
+  try {
+    // Compilation only: never execute page scripts in this test process.
+    new Function(script);
+  } catch (error) {
+    throw new Error('Inline script #' + (i + 1) + ' in index.html has a syntax error: ' + error.message);
+  }
+}
+
+// External inline scripts are syntax-checked above; browser behavior still needs manual QA.
 const localRefs = [];
 for (const m of index.matchAll(/(?:src|href)="([^"#]+)"/g)) {
   const raw = m[1];
