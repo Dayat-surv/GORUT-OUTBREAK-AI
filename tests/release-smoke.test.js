@@ -20,9 +20,9 @@ assert.match(manifest.name, /GORUT-OUTBREAK AI/, 'PWA manifest must name the app
 assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'PWA manifest must declare at least one icon');
 
 
-const inlineScripts = [...index.matchAll(/<script(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)<\\/script>/gi)]
+const inlineScripts = [...index.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
   .map(m => m[1].trim())
-  .filter(s => s && !/^\\s*\\{/.test(s));
+  .filter(s => s && !/^\s*\{/.test(s));
 for (let i = 0; i < inlineScripts.length; i++) {
   const temp = path.join(os.tmpdir(), 'gorut-inline-script-' + process.pid + '-' + i + '.js');
   fs.writeFileSync(temp, inlineScripts[i], 'utf8');
