@@ -1,0 +1,48 @@
+{
+  "description": "FIXTURE SIMULASI — bukan pasien nyata; hanya untuk menguji pembentukan snapshot penelitian.",
+  "investigation": {
+    "id": "SIM-INV-CAMPAK-001",
+    "name": "Investigasi Simulasi Campak",
+    "disease": "campak"
+  },
+  "validRecord": {
+    "id": "SIM-VALID-CAMPAK-001",
+    "serverId": "SIM-SOURCE-VALID-001",
+    "sourceName": "Kuesioner simulasi valid",
+    "name": "KASUS SIMULASI A",
+    "age": 4,
+    "sex": "Perempuan",
+    "onset": "2026-01-05",
+    "status": "Simulasi untuk pengujian",
+    "outcome": "Tidak digunakan untuk keputusan klinis",
+    "address": "ALAMAT SIMULASI",
+    "desa": "DESA SIMULASI",
+    "kec": "KECAMATAN SIMULASI",
+    "answers": {
+      "Tanggal onset demam": "2026-01-05",
+      "Tanggal onset ruam": "2026-01-07",
+      "Demam": "Ya",
+      "Ruam": "Ya",
+      "Batuk": "Tidak",
+      "Status imunisasi MR/MMR": "Lengkap (simulasi)",
+      "Hasil laboratorium": "Belum diperiksa (simulasi)",
+      "variabelValid": "JAWABAN_VALID_SIMULASI"
+    }
+  },
+  "invalidRecords": [
+    {
+      "id": "PUB-1468D9F8-E40",
+      "serverId": "1468d9f8-e408-4fee-9da2-760e6a0bfcc6",
+      "answers": {
+        "jawabanSumber1": "DATA_UJI_1"
+      }
+    },
+    {
+      "id": "PUB-1468D9F8-E40",
+      "recordId": "B1468D9F-8E40-0000-0000-000000000000",
+      "answers": {
+        "jawabanSumber2": "DATA_UJI_2"
+      }
+    }
+  ]
+}
