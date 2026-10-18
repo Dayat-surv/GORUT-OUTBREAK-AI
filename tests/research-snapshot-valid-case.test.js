@@ -79,6 +79,13 @@ const built = api.buildResearchSnapshotRows126(
   fixture.investigation
 );
 assert.equal(built.rows.length, 1, 'snapshot should contain exactly one selected valid case');
+const defensive = api.buildResearchSnapshotRows126([
+  { record: invalid[0], index: 0, caseId: invalid[0].id },
+  { record: invalid[1], index: 1, caseId: invalid[1].id },
+  { record: valid, index: 2, caseId: valid.id }
+], fixture.investigation);
+assert.equal(defensive.rows.length, 1, 'snapshot builder itself must exclude invalid records even if a caller passes them');
+assert.equal(defensive.rows[0]['ID Rekaman Sumber'], valid.serverId, 'defensive filter must preserve only the selected valid source');
 const row = built.rows[0];
 assert.equal(row['ID Kasus'], valid.id);
 assert.equal(row['ID Rekaman Sumber'], valid.serverId);
@@ -112,6 +119,7 @@ assert.equal(jsonRow['Prioritas: tingkat'], 'TINGGI_SIMULASI');
 
 console.log('LULUS: fixture valid lolos filter dan menghasilkan 1 baris snapshot.');
 console.log('LULUS: pilihan kosong menghasilkan snapshot 0 baris tanpa membuat data sintetis.');
+console.log('LULUS: pembentuk snapshot menolak rekaman tidak valid meskipun dikirim langsung oleh pemanggil.');
 console.log('LULUS: filter produksi, preview dataset, dan sumber analisis sepakat pada satu baris valid; kedua rekaman uji tetap dikecualikan.');
 console.log('LULUS: ID sumber/investigasi/penyakit dan jawaban JSON tetap dipertahankan.');
 console.log('AMAN: pengujian hanya menjalankan fungsi murni di memori; tidak menyentuh localStorage, Supabase, atau data operasional.');
