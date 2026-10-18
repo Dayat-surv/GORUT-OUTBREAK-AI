@@ -93,7 +93,20 @@ form.addEventListener('submit',async e=>{
  form.innerHTML='<div class="notice"><b>Respons berhasil tersimpan di server.</b><p>ID respons: <code>'+esc(responseId)+'</code></p><p>Kode referensi kasus: <code>'+esc(caseId)+'</code></p><p>Simpan kode ini untuk penelusuran. Respons ini terhubung ke investigasi pada tautan kuesioner.</p></div>';
  setStatus('Server mengonfirmasi penyimpanan respons pada '+new Date().toLocaleString('id-ID')+'.');
 });
-async function flushOffline(){if(!sb||!navigator.onLine)return;const q=readQueue(),remain=[];for(const item of q){const r=await sb.rpc('submit_public_survey',{p_token:item.token,p_payload:item.payload,p_respondent_device:String(item.device||'offline-queue').slice(0,180),p_submission_id:item.submissionId});if(r.error)remain.push(item);}writeQueue(remain);if(q.length&&!remain.length)setStatus('Antrian offline berhasil dikirim ke server.');else if(remain.length)setStatus('Sebagian respons masih menunggu koneksi atau validasi server.');}
+async function flushOffline(){
+ if(!sb||!navigator.onLine)return;
+ const q=readQueue(),remain=[];
+ for(const item of q){
+  try{
+   const r=await sb.rpc('submit_public_survey',{p_token:item.token,p_payload:item.payload,p_respondent_device:String(item.device||'offline-queue').slice(0,180),p_submission_id:item.submissionId});
+   if(r.error||!r.data||r.data.success!==true)remain.push(item);
+  }catch(error){remain.push(item);}
+ }
+ try{writeQueue(remain);}
+ catch(error){setStatus('Antrean lokal tidak dapat diperbarui. Jangan hapus data browser; catat ID pengiriman dan hubungi administrator.');return;}
+ if(q.length&&!remain.length)setStatus('Antrian offline berhasil dikirim dan dikonfirmasi server.');
+ else if(remain.length)setStatus(remain.length+' respons masih menunggu koneksi atau validasi server; data tetap di antrean lokal.');
+}
 async function init(){const c=window.GORUT_BACKEND||{};if(!(c.publicSurveyEnabled===true||c.enabled)||!window.supabase){setStatus('Formulir online belum tersedia karena backend belum dikonfigurasi.');form.innerHTML='';return;}if(!token){setStatus('Token survei tidak ditemukan pada tautan.');form.innerHTML='';return;}sb=window.supabase.createClient(c.url,c.anonKey);const r=await sb.rpc('get_public_survey',{p_token:token});if(r.error||!r.data){setStatus('Kuesioner tidak ditemukan, tidak aktif, atau sudah kedaluwarsa.');form.innerHTML='';return;}survey=r.data;questionnaire={name:survey.name,version:survey.version,schema_json:survey.schema_json};titleEl.textContent=survey.title||'Kuesioner Penyelidikan Epidemiologi';setStatus('Instrumen: '+(questionnaire.name||'Kuesioner')+' · Versi: '+(questionnaire.version||'-'));render();await flushOffline();}
 window.addEventListener('online',flushOffline);init().catch(()=>setStatus('Terjadi kesalahan saat memuat kuesioner. Silakan coba kembali.'));
 </script></body></html>
