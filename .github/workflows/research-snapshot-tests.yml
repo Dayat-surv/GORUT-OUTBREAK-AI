@@ -1,9 +1,15 @@
-name: Research snapshot regression tests
+name: Research snapshot and release smoke tests
 
 on:
   pull_request:
     paths:
       - 'app.js'
+      - 'index.html'
+      - 'premium.css'
+      - 'favicon.svg'
+      - 'manifest.webmanifest'
+      - 'sw.js'
+      - 'backend-config.js'
       - 'tests/**'
       - '.github/workflows/research-snapshot-tests.yml'
   push:
@@ -11,6 +17,12 @@ on:
       - main
     paths:
       - 'app.js'
+      - 'index.html'
+      - 'premium.css'
+      - 'favicon.svg'
+      - 'manifest.webmanifest'
+      - 'sw.js'
+      - 'backend-config.js'
       - 'tests/**'
       - '.github/workflows/research-snapshot-tests.yml'
   workflow_dispatch:
@@ -19,7 +31,7 @@ permissions:
   contents: read
 
 jobs:
-  research-snapshot-tests:
+  release-checks:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -28,5 +40,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Run research snapshot regression test
+      - name: Check JavaScript syntax
+        run: node --check app.js
+      - name: Run research snapshot regression tests
         run: node tests/research-snapshot-valid-case.test.js
+      - name: Run release smoke tests
+        run: node tests/release-smoke.test.js
