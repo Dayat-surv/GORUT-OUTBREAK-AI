@@ -20,6 +20,20 @@ const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
 assert.match(appJs, /Inisial nama \(tanpa nama lengkap\)/, 'master questionnaire must request initials rather than full names');
 assert.match(publicSurvey, /Isi inisial saja, jangan tuliskan nama lengkap\./, 'public questionnaire must guide respondents to enter initials');
+assert.match(publicSurvey, /submit_public_survey/,'each public questionnaire submission must call the server persistence RPC');
+assert.match(publicSurvey, /submissionId=newSubmissionId\(\)/,'each send attempt must have a stable unique submission ID');
+assert.match(publicSurvey, /result\.data\.success!==true/,'the UI must not report success without explicit server confirmation');
+assert.match(publicSurvey, /ID respons:/,'the respondent must receive a server response reference after successful save');
+assert.match(publicSurvey, /readQueue\(\)/,'failed submissions must be queued locally for retry');
+const publicSurveyScripts = [...publicSurvey.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
+  .filter(match => !/\\bsrc\\s*=/i.test(match[1]))
+  .map(match => match[2].trim()).filter(Boolean);
+assert.ok(publicSurveyScripts.length > 0, 'public questionnaire must include its submission handler');
+for (const [i, script] of publicSurveyScripts.entries()) {
+  try { new Function(script); } catch (error) {
+    throw new Error('Inline script #' + (i + 1) + ' in public_survey.html has a syntax error: ' + error.message);
+  }
+}
 assert.match(manifest.name, /GORUT-OUTBREAK AI/, 'PWA manifest must name the application');
 assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'PWA manifest must declare at least one icon');
 
