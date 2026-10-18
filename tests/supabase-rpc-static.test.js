@@ -43,6 +43,7 @@ assert.match(normalizedPersistence, /input_key\.key = 'disease_module'/,
   'disease module metadata must be recognized separately from question IDs');
 assert.match(normalizedPersistence, /module\.item ->> 'id' = p_payload ->> 'disease_module'/,
   'only a disease module declared in the questionnaire schema may be submitted');
+assert.match(normalizedPersistence, /s\.investigation_id not like 'test-%' and s\.investigation_id not like 'sim-%'/, 'public submission RPC must reject both test and simulation investigations');
 assert.match(normalizedPersistence, /create unique index if not exists survey_responses_survey_submission_uidx/,
   'submission retries must be idempotent and not duplicate a response');
 
