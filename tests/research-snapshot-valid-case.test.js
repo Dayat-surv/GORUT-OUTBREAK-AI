@@ -49,7 +49,7 @@ const declarations = names.map(name => extractFunction(appSource, name)).join('\
 const windowStub = { diseases: { campak: { name: 'Tersangka Campak' } } };
 let activeResearchState = { dataSource: 'dataset', dataset: { rows: [] } };
 let currentCasesCalls = 0;
-const api = new Function('window', 'researchState', 'currentCases', declarations + '\\nreturn {' + names.join(',') + '};')(windowStub, activeResearchState, () => { currentCasesCalls++; return [{ id: 'LIVE-OPERATIONAL-CASE' }]; });
+const api = new Function('window', 'researchState', 'currentCases', declarations + '\nreturn {' + names.join(',') + '};')(windowStub, activeResearchState, () => { currentCasesCalls++; return [{ id: 'LIVE-OPERATIONAL-CASE' }]; });
 
 const valid = fixture.validRecord;
 const invalid = fixture.invalidRecords;
