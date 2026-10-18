@@ -12,6 +12,7 @@ on:
       - 'backend-config.js'
       - 'public-survey-integration.js'
       - 'supabase/migrations/**'
+      - 'supabase/validation/**'
       - 'tests/**'
       - '.github/workflows/research-snapshot-tests.yml'
   push:
@@ -55,3 +56,5 @@ jobs:
         run: node tests/release-smoke.test.js
       - name: Run Supabase RPC static security checks
         run: node tests/supabase-rpc-static.test.js
+      - name: Run Supabase validation SQL safety checks
+        run: node tests/validation-sql-static.test.js
