@@ -39,6 +39,10 @@ const names = [
   'buildResearchSnapshotRows126',
   'excludedResearchRecord126',
   'eligibleUniqueCaseCount126',
+  'isInvalidTestCaseForDashboard128',
+  'isInvalidResearchRow128',
+  'researchDatasetRows',
+  'researchDatasetExcludedCount128',
   'researchCases'
 ];
 const declarations = names.map(name => extractFunction(appSource, name)).join('\n');
@@ -95,6 +99,6 @@ assert.equal(jsonRow['Keracunan pangan: makanan'], 'NASI_SIMULASI');
 assert.equal(jsonRow['Prioritas: tingkat'], 'TINGGI_SIMULASI');
 
 console.log('LULUS: fixture valid lolos filter dan menghasilkan 1 baris snapshot.');
-console.log('LULUS: dua rekaman uji tetap dikecualikan; jawaban antarsumber tidak tercampur.');
+console.log('LULUS: filter produksi, preview dataset, dan sumber analisis sepakat pada satu baris valid; kedua rekaman uji tetap dikecualikan.');
 console.log('LULUS: ID sumber/investigasi/penyakit dan jawaban JSON tetap dipertahankan.');
 console.log('AMAN: pengujian hanya menjalankan fungsi murni di memori; tidak menyentuh localStorage, Supabase, atau data operasional.');
