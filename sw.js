@@ -1,7 +1,9 @@
 const CACHE='gorut-outbreak-ai-final-v157';
 const ASSETS=[
   './',
-  './index.html',\n  './premium.css?v=157',\n  './favicon.svg',
+  './index.html',
+  './premium.css?v=157',
+  './favicon.svg',
   './app.js?v=157',
   './backend-config.js',
   './manifest.webmanifest',
