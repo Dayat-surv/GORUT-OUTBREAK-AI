@@ -494,10 +494,12 @@ async function loadServerOperationalData(){
      This restores Q_* fields after reload without merging answers across source records. */
   const surveyAnswerByResponseId=new Map();
   try {
-    const surveyResult=await sb.from('survey_responses').select('response_id,payload');
+    const surveyResult=await sb.from('survey_responses').select('id,payload');
     if(!surveyResult.error) (surveyResult.data||[]).forEach(function(response){
-      if(response&&response.response_id!==undefined&&response.response_id!==null&&response.payload&&typeof response.payload==='object'&&!Array.isArray(response.payload)){
-        surveyAnswerByResponseId.set(String(response.response_id),response.payload);
+      /* survey_responses primary key is id; map it to the corresponding case ID
+         only when the identifiers match exactly. Never merge payloads by name. */
+      if(response&&response.id!==undefined&&response.id!==null&&response.payload&&typeof response.payload==='object'&&!Array.isArray(response.payload)){
+        surveyAnswerByResponseId.set(String(response.id),response.payload);
       }
     });
     else console.warn('Jawaban survei tambahan tidak dapat dibaca; kolom questionnaire_response tetap digunakan.',surveyResult.error.message);
