@@ -6,7 +6,8 @@ Dokumen ini adalah panduan konfigurasi, bukan bukti bahwa backend aman. Pada ver
 
 - Website statis telah dipublikasikan melalui GitHub Pages.
 - Mode browser lokal menyimpan data pada perangkat masing-masing; ini bukan basis data bersama.
-- Konfigurasi frontend Supabase saat ini aktif dan menggunakan publishable key. Kode login dan sinkronisasi tersedia, tetapi konfigurasi aktif bukan bukti bahwa akses aman.
+- Konfigurasi frontend Supabase utama aktif dan menggunakan publishable key. Kode login dan sinkronisasi tersedia, tetapi konfigurasi aktif bukan bukti bahwa akses aman.
+- Formulir publik dinonaktifkan secara fail-closed (`publicSurveyEnabled: false`) sampai relasi respons-kasus, RLS, dan alur antrean/retry lulus pengujian langsung.
 - Sinkronisasi yang tersedia menggunakan jalur upsert; jangan menganggapnya sinkronisasi dua arah atau database bersama yang tervalidasi.
 - Skema database aktual, kebijakan RLS, pengujian lintas-peran, dan uji browser end-to-end belum dikonfirmasi.
 - **Jangan gunakan identitas pasien nyata sebelum semua pemeriksaan keamanan dan uji penerimaan selesai.**

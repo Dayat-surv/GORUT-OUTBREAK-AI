@@ -10,12 +10,12 @@ const index = read('index.html');
 const manifest = JSON.parse(read('manifest.webmanifest'));
 const sw = read('sw.js');
 
-assert.match(index, /premium\.css\?v=157/, 'main page must load the premium release stylesheet');
+assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=157/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v157/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=157/, 'service worker must precache the release application script');
-assert.match(sw, /premium\.css\?v=157/, 'service worker must precache premium styling');
+assert.match(index, /app\.js\?v=158/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v158/, 'service worker cache version must match the release');
+assert.match(sw, /app\.js\?v=158/, 'service worker must precache the release application script');
+assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 assert.match(manifest.name, /GORUT-OUTBREAK AI/, 'PWA manifest must name the application');
 assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'PWA manifest must declare at least one icon');
 
@@ -61,4 +61,5 @@ for (const m of sw.matchAll(/['"]\.\/([^'"]+)['"]/g)) {
 }
 const backend = read('backend-config.js').replace(/\/\/.*$/gm, '');
 assert.doesNotMatch(backend, /(?:service_role|sb_secret_[A-Za-z0-9_-]+)/i, 'browser config must not contain a service-role or secret key');
+assert.match(backend, /publicSurveyEnabled:\s*false/, 'public questionnaire must stay disabled until live Supabase authorization and schema checks pass');
 console.log('Release smoke checks passed: HTML references, local assets, PWA manifest/icons, service-worker cache, and frontend key hygiene.');

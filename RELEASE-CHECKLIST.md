@@ -1,5 +1,7 @@
 # Checklist Finalisasi dan Rilis — GORUT-OUTBREAK AI
 
+> **Status rilis:** dapat dipublikasikan sebagai tampilan/demo premium dengan data sintetis; belum disetujui untuk data kesehatan nyata. Formulir publik dinonaktifkan sampai relasi RPC, RLS, dan alur retry diverifikasi pada proyek Supabase aktif. Jangan mengaktifkannya hanya dengan mengubah flag.
+
 ## Otomatis
 - [ ] JavaScript lolos pemeriksaan sintaks.
 - [ ] Uji regresi snapshot penelitian lulus.
@@ -15,6 +17,7 @@
 - [ ] Uji sinkronisasi, duplikasi, konflik, offline/retry, dan relasi kasus-kontak-spesimen.
 - [ ] Pastikan dashboard, rantai penularan, laporan, dan penelitian konsisten.
 - [ ] Pastikan tidak ada data pasien nyata di repository, fixture, log, atau screenshot.
+- [ ] Pastikan `publicSurveyEnabled` tetap `false` sampai pengujian Supabase langsung dan persetujuan penanggung jawab selesai.
 - [ ] Simpan bukti PASS/FAIL dan persetujuan penanggung jawab sebelum data nyata digunakan.
 
 ## Perlindungan data
