@@ -117,7 +117,46 @@ assert.equal(jsonRow.jawabanJson, 'JAWABAN_JSON_SIMULASI');
 assert.equal(jsonRow['Keracunan pangan: makanan'], 'NASI_SIMULASI');
 assert.equal(jsonRow['Prioritas: tingkat'], 'TINGGI_SIMULASI');
 
+const aliasBuilt = api.buildResearchSnapshotRows126([{
+  record: {
+    id: '',
+    serverId: 'SIM-ALIAS-SOURCE-001',
+    answers: {
+      Q_umur: 7,
+      Q_id_kasus: 'SIM-ALIAS-001',
+      Q_provinsi: 'Gorontalo_SIMULASI',
+      Q_kabupaten: 'Gorontalo Utara_SIMULASI',
+      Q_penyakit: 'Campak_SIMULASI',
+      Q_nama: 'Inisial SIM',
+      Q_jenis_kelamin: 'Perempuan',
+      Q_alamat: 'Alamat SIMULASI',
+      Q_desa: 'Desa SIMULASI',
+      Q_kecamatan: 'Kwandang SIMULASI',
+      Q_tanggal_onset: '2026-10-01',
+      Q_status_kasus: 'Suspek'
+    }
+  },
+  index: 0,
+  caseId: 'SIM-ALIAS-001'
+}], { id: 'SIM-INV-ALIAS-001', name: 'Uji alias Q_*', disease: '' }).rows[0];
+assert.equal(aliasBuilt['ID Kasus'], 'SIM-ALIAS-001');
+assert.equal(aliasBuilt['Umur'], 7);
+assert.equal(aliasBuilt['Provinsi'], 'Gorontalo_SIMULASI');
+assert.equal(aliasBuilt['Kabupaten'], 'Gorontalo Utara_SIMULASI');
+assert.equal(aliasBuilt['Penyakit'], 'Campak_SIMULASI');
+assert.equal(aliasBuilt['Nama'], 'Inisial SIM');
+assert.equal(aliasBuilt['Jenis kelamin'], 'Perempuan');
+assert.equal(aliasBuilt['Alamat'], 'Alamat SIMULASI');
+assert.equal(aliasBuilt['Desa/Kelurahan'], 'Desa SIMULASI');
+assert.equal(aliasBuilt['Kecamatan'], 'Kwandang SIMULASI');
+assert.equal(aliasBuilt['Tanggal onset'], '2026-10-01');
+assert.equal(aliasBuilt['Status kasus'], 'Suspek');
+assert.equal('Q_umur' in aliasBuilt, false, 'raw Q_* columns must not leak into research output');
+assert.equal('Q_jenis_kelamin' in aliasBuilt, false, 'raw Q_* columns must not leak into research output');
+assert.equal(aliasBuilt['Outcome'], '', 'missing outcome must remain blank, not be fabricated');
+
 console.log('LULUS: fixture valid lolos filter dan menghasilkan 1 baris snapshot.');
+console.log('LULUS: alias Q_* dipetakan ke kolom penelitian; nilai kosong tidak direkayasa.');
 console.log('LULUS: pilihan kosong menghasilkan snapshot 0 baris tanpa membuat data sintetis.');
 console.log('LULUS: pembentuk snapshot menolak rekaman tidak valid meskipun dikirim langsung oleh pemanggil.');
 console.log('LULUS: filter produksi, preview dataset, dan sumber analisis sepakat pada satu baris valid; kedua rekaman uji tetap dikecualikan.');
