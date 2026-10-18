@@ -12,9 +12,9 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\\.js\\?v=162/, 'main page must use the release cache-busted application script');
+assert.match(index, /app\.js\?v=162/, 'main page must use the release cache-busted application script');
 assert.match(sw, /gorut-outbreak-ai-final-v162/, 'service worker cache version must match the release');
-assert.match(sw, /app\\.js\\?v=162/, 'service worker must precache the release application script');
+assert.match(sw, /app\.js\?v=162/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
@@ -25,8 +25,8 @@ assert.match(publicSurvey, /submissionId=newSubmissionId\(\)/,'each send attempt
 assert.match(publicSurvey, /result\.data\.success!==true/,'the UI must not report success without explicit server confirmation');
 assert.match(publicSurvey, /ID respons:/,'the respondent must receive a server response reference after successful save');
 assert.match(publicSurvey, /readQueue\(\)/,'failed submissions must be queued locally for retry');
-const publicSurveyScripts = [...publicSurvey.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
-  .filter(match => !/\\bsrc\\s*=/i.test(match[1]))
+const publicSurveyScripts = [...publicSurvey.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+  .filter(match => !/\bsrc\s*=/i.test(match[1]))
   .map(match => match[2].trim()).filter(Boolean);
 assert.ok(publicSurveyScripts.length > 0, 'public questionnaire must include its submission handler');
 for (const [i, script] of publicSurveyScripts.entries()) {
