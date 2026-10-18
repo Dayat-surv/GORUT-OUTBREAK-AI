@@ -43,7 +43,8 @@ const names = [
 ];
 const declarations = names.map(name => extractFunction(appSource, name)).join('\n');
 const windowStub = { diseases: { campak: { name: 'Tersangka Campak' } } };
-let activeResearchState = { dataSource: 'dataset' };\nlet activeDatasetRows = [];\nlet currentCasesCalls = 0;\nconst api = new Function('window', 'researchState', 'researchDatasetRows', 'currentCases', declarations + '\nreturn {' + names.join(',') + '};')(windowStub, activeResearchState, () => activeDatasetRows, () => { currentCasesCalls++; return [{ id: 'LIVE-OPERATIONAL-CASE' }]; });
+let activeResearchState = { dataSource: 'dataset' };
+let activeDatasetRows = [];\nlet currentCasesCalls = 0;\nconst api = new Function('window', 'researchState', 'researchDatasetRows', 'currentCases', declarations + '\nreturn {' + names.join(',') + '};')(windowStub, activeResearchState, () => activeDatasetRows, () => { currentCasesCalls++; return [{ id: 'LIVE-OPERATIONAL-CASE' }]; });
 
 const valid = fixture.validRecord;
 const invalid = fixture.invalidRecords;
