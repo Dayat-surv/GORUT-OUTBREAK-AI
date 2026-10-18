@@ -38,7 +38,8 @@ const names = [
   'snapshotObject126',
   'buildResearchSnapshotRows126',
   'excludedResearchRecord126',
-  'eligibleUniqueCaseCount126'
+  'eligibleUniqueCaseCount126',
+  'researchCases'
 ];
 const declarations = names.map(name => extractFunction(appSource, name)).join('\n');
 const windowStub = { diseases: { campak: { name: 'Tersangka Campak' } } };
@@ -49,6 +50,13 @@ const invalid = fixture.invalidRecords;
 assert.equal(api.excludedResearchRecord126(valid), false, 'valid synthetic record must not be excluded');
 assert.equal(api.excludedResearchRecord126(invalid[0]), true, 'known invalid source record 1 must remain excluded');
 assert.equal(api.excludedResearchRecord126(invalid[1]), true, 'known invalid source record 2 must remain excluded');
+assert.deepEqual(api.researchCases(), [], 'explicitly selected empty dataset must remain empty and must not fall back to operational cases');
+assert.equal(currentCasesCalls, 0, 'empty selected dataset must not call currentCases');
+activeDatasetRows = [valid];
+assert.deepEqual(api.researchCases(), [valid], 'selected dataset must return its valid selected rows');
+activeResearchState.dataSource = 'operational';
+assert.deepEqual(api.researchCases(), [{ id: 'LIVE-OPERATIONAL-CASE' }], 'operational source must continue to return operational cases');
+assert.equal(currentCasesCalls, 1, 'operational source should call currentCases exactly once');
 assert.equal(api.eligibleUniqueCaseCount126([...invalid, valid]), 1, 'one valid unique case should be counted');
 
 const built = api.buildResearchSnapshotRows126(
