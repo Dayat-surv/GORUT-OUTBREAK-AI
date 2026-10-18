@@ -10,6 +10,8 @@ on:
       - 'manifest.webmanifest'
       - 'sw.js'
       - 'backend-config.js'
+      - 'public-survey-integration.js'
+      - 'supabase/migrations/**'
       - 'tests/**'
       - '.github/workflows/research-snapshot-tests.yml'
   push:
@@ -23,6 +25,8 @@ on:
       - 'manifest.webmanifest'
       - 'sw.js'
       - 'backend-config.js'
+      - 'public-survey-integration.js'
+      - 'supabase/migrations/**'
       - 'tests/**'
       - '.github/workflows/research-snapshot-tests.yml'
   workflow_dispatch:
@@ -49,3 +53,5 @@ jobs:
         run: node tests/research-snapshot-valid-case.test.js
       - name: Run release smoke tests
         run: node tests/release-smoke.test.js
+      - name: Run Supabase RPC static security checks
+        run: node tests/supabase-rpc-static.test.js
