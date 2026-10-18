@@ -86,4 +86,5 @@ for (const m of sw.matchAll(/['"]\.\/([^'"]+)['"]/g)) {
 const backend = read('backend-config.js').replace(/\/\/.*$/gm, '');
 assert.doesNotMatch(backend, /(?:service_role|sb_secret_[A-Za-z0-9_-]+)/i, 'browser config must not contain a service-role or secret key');
 assert.match(backend, /publicSurveyEnabled:\s*false/, 'public questionnaire must stay disabled until live Supabase authorization and schema checks pass');
+assert.match(publicSurvey, /if\(c\.enabled!==true\|\|c\.publicSurveyEnabled!==true\|\|!window\.supabase\)/, 'public questionnaire must require both backend and explicit public-survey enablement; backend enabled alone must not bypass the fail-closed switch');
 console.log('Release smoke checks passed: HTML references, local assets, PWA manifest/icons, service-worker cache, and frontend key hygiene.');
