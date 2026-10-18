@@ -4994,7 +4994,7 @@ try{installBrandingV67();}catch(e){}
       row['Nama/Label Sumber']=c.sourceName||c.source||c.sourceType||c.questionnaireSource||c.formName||c.origin||c.recordSource||('Rekaman '+(sel.index+1));
       row['ID Investigasi']=activeInv.id;row['Nama Investigasi']=activeInv.name||'';
       var diseaseValue=activeInv.disease||activeInv.diseaseId||c.disease||c.diseaseId||'';
-      row['Penyakit']=diseaseName126(diseaseValue);
+      row['Penyakit']=diseaseValue?diseaseName126(diseaseValue):'';
       /* Read only this selected source record. Parse JSON answers and support common nested questionnaire wrappers. */
       var ans=snapshotObject126(c.answers);
       if(ans.answers&&typeof ans.answers==='object')ans=snapshotObject126(ans.answers);
