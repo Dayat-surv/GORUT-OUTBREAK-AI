@@ -494,6 +494,7 @@ async function loadServerOperationalData(){
      This restores Q_* fields after reload without merging answers across source records. */
   const surveyAnswerByResponseId=new Map();
   try {
+    // Read the actual primary key from survey_responses; it is not named response_id.
     const surveyResult=await sb.from('survey_responses').select('id,payload');
     if(!surveyResult.error) (surveyResult.data||[]).forEach(function(response){
       /* survey_responses primary key is id; map it to the corresponding case ID
