@@ -37,6 +37,7 @@ const names = [
   'diseaseName126',
   'snapshotObject126',
   'buildResearchSnapshotRows126',
+  'selectInvestigationSnapshot126',
   'excludedResearchRecord126',
   'eligibleUniqueCaseCount126',
   'isInvalidTestCaseForDashboard128',
@@ -50,6 +51,27 @@ const windowStub = { diseases: { campak: { name: 'Tersangka Campak' } } };
 let activeResearchState = { dataSource: 'dataset', dataset: { rows: [] } };
 let currentCasesCalls = 0;
 const api = new Function('window', 'researchState', 'currentCases', declarations + '\nreturn {' + names.join(',') + '};')(windowStub, activeResearchState, () => { currentCasesCalls++; return [{ id: 'LIVE-OPERATIONAL-CASE' }]; });
+
+const snapshotA = { name: 'Investigasi A', sourceInvestigationId: 'INV-A', rows: [{ 'ID Kasus': 'CASE-A' }] };
+const snapshotB = { name: 'Investigasi B', sourceInvestigationId: 'INV-B', rows: [{ 'ID Kasus': 'CASE-B' }] };
+let scopedState = { dataSource: 'dataset', dataset: snapshotA };
+scopedState = api.selectInvestigationSnapshot126(scopedState, 'INV-A');
+assert.equal(scopedState.dataset, snapshotA, 'active investigation should keep its own snapshot');
+scopedState.dataset = snapshotB;
+scopedState = api.selectInvestigationSnapshot126(scopedState, 'INV-B');
+assert.equal(scopedState.dataset, snapshotB, 'switching to investigation B should show B snapshot');
+scopedState = api.selectInvestigationSnapshot126(scopedState, 'INV-A');
+assert.equal(scopedState.dataset, snapshotA, 'switching back to A should restore A snapshot, not B');
+scopedState = api.selectInvestigationSnapshot126(scopedState, 'INV-C');
+assert.equal(scopedState.dataset, null, 'investigation with no snapshot must not inherit another investigation snapshot');
+assert.equal(scopedState.investigationSnapshots['INV-A'], snapshotA, 'A snapshot remains preserved separately');
+assert.equal(scopedState.investigationSnapshots['INV-B'], snapshotB, 'B snapshot remains preserved separately');
+const noActiveState = { dataSource: 'dataset', dataset: snapshotA };
+noActiveState = api.selectInvestigationSnapshot126(noActiveState, null);
+assert.equal(noActiveState.dataset, null, 'no active investigation must not expose a linked snapshot as active');
+const manualDataset = { name: 'Impor manual', rows: [{ id: 'MANUAL-1' }] };
+const manualState = api.selectInvestigationSnapshot126({ dataSource: 'dataset', dataset: manualDataset }, 'INV-A');
+assert.equal(manualState.dataset, manualDataset, 'manual/import dataset remains independent of investigation snapshots');
 
 const valid = fixture.validRecord;
 const invalid = fixture.invalidRecords;
@@ -158,6 +180,7 @@ assert.equal('Q_umur' in aliasBuilt, false, 'raw Q_* columns must not leak into 
 assert.equal('Q_jenis_kelamin' in aliasBuilt, false, 'raw Q_* columns must not leak into research output');
 assert.equal(aliasBuilt['Outcome'], '', 'missing outcome must remain blank, not be fabricated');
 
+console.log('LULUS: snapshot terisolasi berdasarkan ID investigasi; perpindahan A/B tidak mencampur snapshot dan dataset manual tetap independen.');
 console.log('LULUS: fixture valid lolos filter dan menghasilkan 1 baris snapshot.');
 console.log('LULUS: alias Q_* dipetakan ke kolom penelitian; nilai kosong tidak direkayasa.');
 console.log('LULUS: pilihan kosong menghasilkan snapshot 0 baris tanpa membuat data sintetis.');
