@@ -66,8 +66,8 @@ BEGIN
     AND (s.expires_at IS NULL OR s.expires_at > now())
     AND q.status = 'published'
     -- Never accept public submissions for test/simulation-only investigations.
-    AND s.investigation_id NOT LIKE 'TEST-%'
-    AND s.investigation_id NOT LIKE 'SIM-%';
+    AND upper(s.investigation_id) NOT LIKE 'TEST-%'
+    AND upper(s.investigation_id) NOT LIKE 'SIM-%';
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Survei tidak valid atau investigasi tidak ditemukan';
