@@ -28,15 +28,15 @@ ORDER BY p.oid::regprocedure::text;
 -- 3) Inspect grants for all submit_public_survey overloads.
 SELECT
   p.oid::regprocedure AS function_signature,
-  grantee.rolname AS grantee,
+  CASE WHEN privilege.grantee = 0 THEN 'PUBLIC' ELSE grantee.rolname END AS grantee,
   privilege.privilege_type
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
 CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) AS privilege
-JOIN pg_roles grantee ON grantee.oid = privilege.grantee
+LEFT JOIN pg_roles grantee ON grantee.oid = privilege.grantee
 WHERE n.nspname = 'public'
   AND p.proname = 'submit_public_survey'
-ORDER BY p.oid::regprocedure::text, grantee.rolname, privilege.privilege_type;
+ORDER BY p.oid::regprocedure::text, grantee, privilege.privilege_type;
 
 -- 4) Inspect RLS enabled/forced status for relevant tables.
 SELECT
