@@ -36,7 +36,7 @@ CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) A
 JOIN pg_roles grantee ON grantee.oid = privilege.grantee
 WHERE n.nspname = 'public'
   AND p.proname = 'submit_public_survey'
-ORDER BY function_signature::text, grantee.rolname, privilege.privilege_type;
+ORDER BY p.oid::regprocedure::text, grantee.rolname, privilege.privilege_type;
 
 -- 4) Inspect RLS enabled/forced status for relevant tables.
 SELECT
