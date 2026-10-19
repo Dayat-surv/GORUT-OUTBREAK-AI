@@ -21,6 +21,8 @@ assertReadOnly(postflight, 'Supabase postflight');
 assert.match(preflight, /information_schema\.columns/, 'preflight must inspect schema columns');
 assert.match(preflight, /pg_policies/, 'preflight must inspect RLS policies');
 assert.match(preflight, /submit_public_survey/, 'preflight must inspect submission RPC');
+assert.match(preflight, /case when privilege\.grantee = 0 then 'public'/, 'preflight must explicitly report PUBLIC function grants');
+assert.match(preflight, /left join pg_roles grantee/, 'preflight must preserve PUBLIC ACL rows without a matching role');
 assert.match(postflight, /submission_id_uuid_column_exists/, 'postflight must check submission_id column');
 assert.match(postflight, /idempotency_index_exists/, 'postflight must check idempotency index');
 assert.match(postflight, /duplicate_survey_submission_groups/, 'postflight must check duplicate submission groups');
