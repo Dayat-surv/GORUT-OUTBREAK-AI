@@ -1,11 +1,11 @@
-// STAGING ONLY — replace these placeholders only with values from the separate
-// GORUT-OUTBREAK-AI-STAGING Supabase project.
+// STAGING ONLY — values from the separate GORUT-OUTBREAK-AI-STAGING project.
 // Never use a production URL/key here and NEVER use service_role/secret keys.
-// Keep both flags false until the isolated staging page and E2E checks are ready.
+// Keep both flags false until isolated staging schema and E2E checks are ready.
 window.GORUT_BACKEND = {
   provider: 'supabase',
-  url: 'https://YOUR-STAGING-PROJECT.supabase.co',
-  anonKey: 'YOUR_STAGING_PUBLIC_ANON_OR_PUBLISHABLE_KEY',
+  // Use the project root URL, not the /rest/v1 endpoint. Supabase client adds API paths itself.
+  url: 'https://xeqdhwqylutntphlkmqe.supabase.co',
+  anonKey: 'sb_publishable_y2Sc8AOuQ0AqLDWMxRVlXA_0OIo1P54',
   enabled: false,
   publicSurveyEnabled: false
 };
