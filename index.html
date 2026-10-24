@@ -396,19 +396,9 @@ window.gorutHandleLogin = async function () {
 /* Pemulihan kata sandi via Supabase Auth; tidak mengubah tabel/data aplikasi. */
 (function(){
   function backendConfig(){
-    var cfg=window.GORUT_BACKEND||{};
-    /* Fallback aman: hanya URL proyek dan publishable key yang memang digunakan frontend. */
-    if(!cfg.url||!cfg.anonKey||cfg.enabled!==true){
-      cfg={
-        provider:'supabase',
-        url:'https://lheuszdhprwmtajhdukc.supabase.co',
-        anonKey:'sb_publishable_avKj9iO9b_VMaOPNvPB9_g_TyMoKotr',
-        enabled:true,
-        publicSurveyEnabled:true
-      };
-      window.GORUT_BACKEND=cfg;
-    }
-    return cfg;
+    /* STAGING/PRODUCTION SAFETY: never replace a disabled or missing config
+       with a hard-coded Supabase project or automatically enable public features. */
+    return window.GORUT_BACKEND||{};
   }
   function loadSupabaseFrom(url){
     return new Promise(function(resolve,reject){
