@@ -682,7 +682,7 @@ async function publicQ(){
  const schema={questions:db.questions||[],meta:db.questionMeta||{}};
  const qr=await sb.from('questionnaires').insert({disease_id:disease,name:`PE ${diseases[disease]?.name||disease}`,version:instrumentMeta.release,status:'published',schema_json:schema,source_reference:instrumentMeta.diseaseSpecificBasis,created_by:user.id}).select('id').single();
  if(qr.error){alert('Gagal membuat instrumen publik: '+qr.error.message);return;}
- const sr=await sb.from('public_surveys').insert({questionnaire_id:qr.data.id,investigation_id:ir.data.id,title:`Kuesioner PE ${diseases[disease]?.name||disease} — ${inv.name||inv.id}`,created_by:user.id}).select('public_token').single();
+ const sr=await sb.from('public_surveys').insert({questionnaire_id:qr.data.id,investigation_id:ir.data.id,title:`Kuesioner PE ${diseases[disease]?.name||disease} — ${inv.name||inv.id}`,created_by:user.id,is_active:true}).select('public_token').single();
  if(sr.error){console.error('Gagal membuat public survey',sr.error);alert('Gagal membuat public survey: '+sr.error.message);return;}
  const base=new URL('public_survey.html',location.href);base.searchParams.set('survey',sr.data.public_token);const url=base.toString();
  modal(`<h2>Kuesioner Publik Aktif</h2><div class="notice"><b>Investigasi:</b> ${esc(inv.name||inv.id)}<br><b>Instrumen:</b> ${esc(diseases[disease]?.name||disease)}<br>Setiap respons akan dibuat menjadi <b>kasus awal</b> dan terhubung ke line listing melalui trigger database.</div><input value="${esc(url)}" readonly onclick="this.select()"><div id="qrBox" style="text-align:center;margin:15px"></div><button class="primary" onclick="copyText('${esc(url)}')">Salin URL</button> <button onclick="closeAppModal()">Tutup</button>`); makeQR(url);
