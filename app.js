@@ -467,6 +467,17 @@ async function syncNow(){
   const sb=await backendClient(); if(!sb){alert('Backend belum dikonfigurasi. Mode offline tetap aktif.');return;}
   const user=(await sb.auth.getUser()).data.user;
   if(!user){alert('Silakan login melalui Supabase Auth terlebih dahulu.');return;}
+  // Preflight every operational table before the first write. This prevents partial sync when staging schema is incomplete.
+  const requiredTables=['investigations','alerts','cases','contacts','specimens','field_visits'];
+  const preflight=await Promise.all(requiredTables.map(async name=>({name,...await sb.from(name).select('id').limit(0)})));
+  const unavailable=preflight.filter(x=>x.error);
+  if(unavailable.length){
+    const message='Sinkronisasi dibatalkan sebelum menulis data karena skema server belum lengkap/akses ditolak: '+unavailable.map(x=>x.name+' ('+x.error.message+')').join('; ')+'. Tidak ada perubahan yang dilakukan oleh proses sinkronisasi ini.';
+    document.getElementById('backendBadge').textContent='Backend: skema belum siap';
+    document.getElementById('backendDetail').textContent=message;
+    alert(message);
+    return;
+  }
   let ok=0,fail=0;
   for(const x of db.investigations){const row={id:x.serverId||uuidFrom(x.id),owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',disease_id:x.disease||null,province:x.prov||'Gorontalo',district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,status:x.status||'Berjalan',metadata:{local_id:x.id}};const r=await sb.from('investigations').upsert(row,{onConflict:'id'});if(!r.error){x.serverId=row.id;ok++;}else fail++;}
   for(const a of (db.alerts||[])){const row={id:a.serverId||uuidFrom(a.id),owner_id:user.id,disease_id:a.disease||null,epi_week:a.week||null,alert_date:a.date||null,reporting_facility:a.facility||null,count:a.count||0,verification_result:a.result||null,metadata:{local_id:a.id}};const r=await sb.from('alerts').upsert(row,{onConflict:'id'});if(!r.error){a.serverId=row.id;ok++;}else fail++;}
