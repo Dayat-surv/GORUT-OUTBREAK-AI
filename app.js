@@ -467,6 +467,22 @@ async function syncNow(){
   const sb=await backendClient(); if(!sb){alert('Backend belum dikonfigurasi. Mode offline tetap aktif.');return;}
   const user=(await sb.auth.getUser()).data.user;
   if(!user){alert('Silakan login melalui Supabase Auth terlebih dahulu.');return;}
+  // Fail closed before any write: the staging schema must contain every table
+  // touched below. This prevents partial sync when only some tables exist.
+  const requiredTables=['investigations','alerts','cases','contacts','specimens','field_visits'];
+  const preflight=await Promise.all(requiredTables.map(async name=>{
+    const result=await sb.from(name).select('id').limit(0);
+    return {name,error:result.error};
+  }));
+  const unavailable=preflight.filter(x=>x.error);
+  if(unavailable.length){
+    const detail=unavailable.map(x=>x.name+': '+x.error.message).join('; ');
+    const badge=document.getElementById('backendBadge'),info=document.getElementById('backendDetail');
+    if(badge)badge.textContent='Backend: prasyarat belum terpenuhi';
+    if(info)info.textContent='Sinkronisasi dibatalkan sebelum penulisan karena tabel/akses belum siap: '+detail;
+    alert('Sinkronisasi dibatalkan sebelum ada penulisan. Lengkapi skema dan kebijakan akses staging terlebih dahulu. '+detail);
+    return;
+  }
   let ok=0,fail=0;
   for(const x of db.investigations){const row={id:x.serverId||uuidFrom(x.id),owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',disease_id:x.disease||null,province:x.prov||'Gorontalo',district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,status:x.status||'Berjalan',metadata:{local_id:x.id}};const r=await sb.from('investigations').upsert(row,{onConflict:'id'});if(!r.error){x.serverId=row.id;ok++;}else fail++;}
   for(const a of (db.alerts||[])){const row={id:a.serverId||uuidFrom(a.id),owner_id:user.id,disease_id:a.disease||null,epi_week:a.week||null,alert_date:a.date||null,reporting_facility:a.facility||null,count:a.count||0,verification_result:a.result||null,metadata:{local_id:a.id}};const r=await sb.from('alerts').upsert(row,{onConflict:'id'});if(!r.error){a.serverId=row.id;ok++;}else fail++;}
@@ -656,6 +672,12 @@ function exportChain(){const payload={investigation:act(),cases:chainCases(),con
 async function publicQ(){
  const inv=act(), disease=db.selectedDisease||'campak', sb=await backendClient();
  if(!inv){alert('Pilih investigasi terlebih dahulu.');return;}
+ // Do not create a public survey for records clearly marked as test/simulation.
+ const invText=[inv.id,inv.name,inv.type,inv.metadata?.record_type].filter(Boolean).join(' ');
+ if(inv.isSimulation===true||inv.isTest===true||/\b(simulasi|simulation|uji sistem|fixture|test-only)\b/i.test(invText)){
+   alert('Pembuatan survei publik diblokir untuk investigasi uji/simulasi. Gunakan investigasi operasional yang sudah diverifikasi.');
+   return;
+ }
  if(!sb){const base=new URL('public_survey.html',location.href);base.searchParams.set('investigation',String(inv.id));base.searchParams.set('disease',disease);const url=base.toString();
    modal(`<h2>Kuesioner Publik — Mode Offline</h2><div class="notice">Backend belum aktif. URL ini hanya untuk preview lokal.</div><input value="${esc(url)}" readonly onclick="this.select()"><div id="qrBox" style="text-align:center;margin:15px"></div><button class="primary" onclick="copyText('${esc(url)}')">Salin URL</button> <button onclick="closeAppModal()">Tutup</button>`); makeQR(url); return;}
  const user=(await sb.auth.getUser()).data.user;if(!user){alert('Login online diperlukan untuk membuat public survey.');return;}
@@ -669,7 +691,7 @@ async function publicQ(){
  const schema={questions:db.questions||[],meta:db.questionMeta||{}};
  const qr=await sb.from('questionnaires').insert({disease_id:disease,name:`PE ${diseases[disease]?.name||disease}`,version:instrumentMeta.release,status:'published',schema_json:schema,source_reference:instrumentMeta.diseaseSpecificBasis,created_by:user.id}).select('id').single();
  if(qr.error){alert('Gagal membuat instrumen publik: '+qr.error.message);return;}
- const sr=await sb.from('public_surveys').insert({questionnaire_id:qr.data.id,investigation_id:ir.data.id,title:`Kuesioner PE ${diseases[disease]?.name||disease} — ${inv.name||inv.id}`,created_by:user.id}).select('public_token').single();
+ const sr=await sb.from('public_surveys').insert({questionnaire_id:qr.data.id,investigation_id:ir.data.id,title:`Kuesioner PE ${diseases[disease]?.name||disease} — ${inv.name||inv.id}`,created_by:user.id,is_active:true}).select('public_token').single();
  if(sr.error){console.error('Gagal membuat public survey',sr.error);alert('Gagal membuat public survey: '+sr.error.message);return;}
  const base=new URL('public_survey.html',location.href);base.searchParams.set('survey',sr.data.public_token);const url=base.toString();
  modal(`<h2>Kuesioner Publik Aktif</h2><div class="notice"><b>Investigasi:</b> ${esc(inv.name||inv.id)}<br><b>Instrumen:</b> ${esc(diseases[disease]?.name||disease)}<br>Setiap respons akan dibuat menjadi <b>kasus awal</b> dan terhubung ke line listing melalui trigger database.</div><input value="${esc(url)}" readonly onclick="this.select()"><div id="qrBox" style="text-align:center;margin:15px"></div><button class="primary" onclick="copyText('${esc(url)}')">Salin URL</button> <button onclick="closeAppModal()">Tutup</button>`); makeQR(url);
