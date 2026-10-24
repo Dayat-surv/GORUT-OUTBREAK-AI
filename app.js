@@ -669,6 +669,10 @@ function exportChain(){const payload={investigation:act(),cases:chainCases(),con
 async function publicQ(){
  const inv=act(), disease=db.selectedDisease||'campak', sb=await backendClient();
  if(!inv){alert('Pilih investigasi terlebih dahulu.');return;}
+ if(typeof isSimulationInvestigationForOps==='function' && isSimulationInvestigationForOps(inv)){
+   alert('Pembuatan survei publik diblokir untuk investigasi simulasi/uji sistem. Gunakan investigasi operasional yang sudah diverifikasi.');
+   return;
+ }
  if(!sb){const base=new URL('public_survey.html',location.href);base.searchParams.set('investigation',String(inv.id));base.searchParams.set('disease',disease);const url=base.toString();
    modal(`<h2>Kuesioner Publik — Mode Offline</h2><div class="notice">Backend belum aktif. URL ini hanya untuk preview lokal.</div><input value="${esc(url)}" readonly onclick="this.select()"><div id="qrBox" style="text-align:center;margin:15px"></div><button class="primary" onclick="copyText('${esc(url)}')">Salin URL</button> <button onclick="closeAppModal()">Tutup</button>`); makeQR(url); return;}
  const user=(await sb.auth.getUser()).data.user;if(!user){alert('Login online diperlukan untuk membuat public survey.');return;}
