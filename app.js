@@ -466,6 +466,15 @@ async function testBackend(){
 async function syncNow(){
   const sb=await backendClient(); if(!sb){alert('Backend belum dikonfigurasi. Mode offline tetap aktif.');return;}
   const user=(await sb.auth.getUser()).data.user;
+  // Fail closed before any writes: this build references all six operational tables.
+  // This prevents partial synchronization when the staging schema is incomplete.
+  const requiredTables=['investigations','alerts','cases','contacts','specimens','field_visits'];
+  const probes=await Promise.all(requiredTables.map(async name=>({name,...await sb.from(name).select('id').limit(1)})));
+  const unavailable=probes.filter(x=>x.error);
+  if(unavailable.length){
+    alert('Sinkronisasi dibatalkan sebelum menulis data. Tabel/akses staging belum siap: '+unavailable.map(x=>x.name+': '+x.error.message).join('; ')+'. Tidak ada perubahan dari proses sinkronisasi ini.');
+    return;
+  }
   if(!user){alert('Silakan login melalui Supabase Auth terlebih dahulu.');return;}
   let ok=0,fail=0;
   for(const x of db.investigations){const row={id:x.serverId||uuidFrom(x.id),owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',disease_id:x.disease||null,province:x.prov||'Gorontalo',district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,status:x.status||'Berjalan',metadata:{local_id:x.id}};const r=await sb.from('investigations').upsert(row,{onConflict:'id'});if(!r.error){x.serverId=row.id;ok++;}else fail++;}
@@ -672,7 +681,7 @@ async function publicQ(){
  const sr=await sb.from('public_surveys').insert({questionnaire_id:qr.data.id,investigation_id:ir.data.id,title:`Kuesioner PE ${diseases[disease]?.name||disease} — ${inv.name||inv.id}`,created_by:user.id}).select('public_token').single();
  if(sr.error){console.error('Gagal membuat public survey',sr.error);alert('Gagal membuat public survey: '+sr.error.message);return;}
  const base=new URL('public_survey.html',location.href);base.searchParams.set('survey',sr.data.public_token);const url=base.toString();
- modal(`<h2>Kuesioner Publik Aktif</h2><div class="notice"><b>Investigasi:</b> ${esc(inv.name||inv.id)}<br><b>Instrumen:</b> ${esc(diseases[disease]?.name||disease)}<br>Setiap respons akan dibuat menjadi <b>kasus awal</b> dan terhubung ke line listing melalui trigger database.</div><input value="${esc(url)}" readonly onclick="this.select()"><div id="qrBox" style="text-align:center;margin:15px"></div><button class="primary" onclick="copyText('${esc(url)}')">Salin URL</button> <button onclick="closeAppModal()">Tutup</button>`); makeQR(url);
+ modal(`<h2>Kuesioner Publik Dibuat</h2><div class="notice"><b>Status aktivasi belum diverifikasi.</b> Jangan bagikan tautan ini untuk pengumpulan data sampai pengujian keamanan staging selesai.<br><b>Investigasi:</b> ${esc(inv.name||inv.id)}<br><b>Instrumen:</b> ${esc(diseases[disease]?.name||disease)}<br>Setiap respons akan dibuat menjadi <b>kasus awal</b> dan terhubung ke line listing melalui trigger database.</div><input value="${esc(url)}" readonly onclick="this.select()"><div id="qrBox" style="text-align:center;margin:15px"></div><button class="primary" onclick="copyText('${esc(url)}')">Salin URL</button> <button onclick="closeAppModal()">Tutup</button>`); makeQR(url);
 }
 function copyText(u){navigator.clipboard?.writeText(u);alert('URL disalin');}
 function makeQR(url){const box=document.getElementById('qrBox');if(!box)return;box.innerHTML=`<div style="font-size:12px;margin-bottom:6px">QR Survey</div><img alt="QR Survey" width="220" height="220" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}"><div style="font-size:11px;color:#666;margin-top:5px">QR membutuhkan internet saat dibuat.</div>`}
