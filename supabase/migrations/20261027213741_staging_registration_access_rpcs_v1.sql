@@ -5,7 +5,7 @@ returns uuid language plpgsql security definer set search_path=''
 as $function$
 declare v_email text:=lower(trim(coalesce(p_email,''))); v_name text:=trim(coalesce(p_full_name,'')); v_user_id uuid:=auth.uid(); v_id uuid;
 begin
- if v_email !~* '^[A-Z0-9._%+\\-]+@[A-Z0-9.\\-]+\\.[A-Z]{2,}$' then raise exception 'Format email tidak valid'; end if;
+ if v_email !~* '^[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}$' then raise exception 'Format email tidak valid'; end if;
  if length(v_name)<2 or length(v_name)>160 then raise exception 'Nama wajib diisi (2-160 karakter)'; end if;
  if length(coalesce(p_whatsapp,''))>40 or length(coalesce(p_institution,''))>200 or length(coalesce(p_payment_reference,''))>200 or length(coalesce(p_note,''))>2000 then raise exception 'Salah satu kolom melebihi batas panjang'; end if;
  if v_user_id is not null and lower(coalesce(auth.jwt()->>'email',''))<>v_email then raise exception 'Email permintaan harus sama dengan email akun yang sedang masuk'; end if;
