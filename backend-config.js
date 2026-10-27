@@ -6,6 +6,6 @@ window.GORUT_BACKEND = {
   // Use the project root URL, not the /rest/v1 endpoint. Supabase client adds API paths itself.
   url: 'https://xeqdhwqylutntphlkmqe.supabase.co',
   anonKey: 'sb_publishable_y2Sc8AOuQ0AqLDWMxRVlXA_0OIo1P54',
-  enabled: false,
+  enabled: true,
   publicSurveyEnabled: false
 };
