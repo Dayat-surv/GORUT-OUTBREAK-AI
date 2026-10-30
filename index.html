@@ -223,7 +223,21 @@ aside nav button{flex:none!important}
 <div id="epi"><h2>Kurva Epidemi</h2><canvas id="chart"></canvas></div>
 <div class="card" id="v52AdvancedCard" style="margin-top:14px"><div class="toolbar" style="justify-content:space-between"><div><h2 style="margin:0">🔬 v52 — Advanced Epidemiological Analytics</h2><div class="small">Deskriptif, ukuran dampak, distribusi umur/jenis kelamin, CFR, Attack Rate dan sinyal temporal dari data kasus investigasi aktif.</div></div><button class="primary" onclick="runAdvancedEpiV52()">🔄 Jalankan Analisis</button></div><div id="v52AdvancedResult"><div class="notice">Klik “Jalankan Analisis” untuk menghitung indikator dari data investigasi aktif.</div></div></div><div id="demo" style="display:none"></div><div id="biv" style="display:none"><h2>Analisis Epidemiologi</h2><div class="grid2"><div class="field"><label>Outcome (Y)</label><select id="statOutcome"><option value="status">Status kasus: Konfirmasi</option><option value="outcome">Outcome: Meninggal</option></select></div><div class="field"><label>Paparan (X)</label><select id="statExposure"><option value="contact">Riwayat kontak</option><option value="male">Jenis kelamin laki-laki</option></select></div></div><button class="primary" onclick="runStats()">Hitung RR, OR, CI 95%, p-value</button><button onclick="exportStats()">Ekspor Analisis JSON</button><div id="statResult" class="notice">Pilih investigasi dan data kasus terlebih dahulu.</div></div><div id="ai" style="display:none"><h2>Analisis Berbantuan AI</h2><div class="notice">AI hanya membantu interpretasi; keputusan epidemiologis tetap perlu validasi petugas.</div><textarea id="aiContext" rows="5" placeholder="Konteks tambahan"></textarea><button class="primary" onclick="ai()">Analisis</button><div id="aiResult" class="card"></div></div></div></section>
 
-<section id="gis" class="page"><div class="card"><h2>Peta GIS Kasus</h2><div class="toolbar"><button class="primary" onclick="locateMe()">📍 Ambil Lokasi Perangkat</button><button onclick="renderMap()">Muat Peta</button><button onclick="toggleRBI()">🗺️ Tampilkan/Sembunyikan Batas RBI</button><span class="badge" id="syncBadge">Offline-first: lokal</span></div><div class="notice">Koordinat kasus harus berasal dari perangkat/petugas atau diinput secara sah. Peta menggunakan OpenStreetMap melalui Leaflet. Batas administrasi dan fitur RBI dihubungkan ke layanan resmi <b>Badan Informasi Geospasial (BIG)</b>; hasil identifikasi wilayah dari koordinat disimpan bersama kasus.</div><div id="map" style="height:430px;border-radius:10px"></div><div id="geoTable" style="margin-top:15px"></div><div id="rbiStatus" class="notice" style="margin-top:12px">RBI: siap terhubung ke layanan batas administrasi BIG.</div><div id="v39GISCard" class="card" style="margin-top:14px"><div class="toolbar" style="justify-content:space-between"><div><h3 style="margin:0">🧭 v39 — GIS Epidemiological Intelligence</h3><div class="small">Analisis konsentrasi spasial, cakupan koordinat, dan Attack Rate wilayah bila denominator populasi tersedia.</div></div><button class="primary" onclick="runGISIntelligence()">🔄 Analisis Spasial</button></div><div id="v39GISSummary" class="grid"></div><div class="grid2"><div><h4>📍 Konsentrasi Kasus</h4><div id="v39Clusters"></div></div><div><h4>🏘️ Attack Rate per Wilayah</h4><div id="v39AreaRates"></div></div></div><div class="notice">Konsentrasi spasial pada modul ini adalah <b>sinyal eksploratif</b> berbasis kedekatan koordinat, bukan uji cluster statistik. Attack Rate hanya dihitung jika denominator populasi dimasukkan secara eksplisit.</div></div></div></section>
+<section id="gis" class="page"><div class="card"><h2>Peta GIS Kasus</h2><div class="toolbar"><button class="primary" onclick="locateMe()">📍 Ambil Lokasi Perangkat</button><button onclick="renderMap()">Muat Peta</button><button onclick="toggleRBI()">🗺️ Tampilkan/Sembunyikan Batas RBI</button><span class="badge" id="syncBadge">Offline-first: lokal</span></div><div class="notice">Koordinat kasus harus berasal dari perangkat/petugas atau diinput secara sah. Peta menggunakan OpenStreetMap melalui Leaflet. Batas administrasi dan fitur RBI dihubungkan ke layanan resmi <b>Badan Informasi Geospasial (BIG)</b>; hasil identifikasi wilayah dari koordinat disimpan bersama kasus.</div><div id="map" style="height:430px;border-radius:10px"></div><div id="geoTable" style="margin-top:15px"></div><div id="rbiStatus" class="notice" style="margin-top:12px">RBI: siap terhubung ke layanan batas administrasi BIG.</div><div id="v39GISCard" class="card" style="margin-top:14px"><div class="toolbar" style="justify-content:space-between"><div><h3 style="margin:0">🧭 v39 — GIS Epidemiological Intelligence</h3><div class="small">Analisis konsentrasi spasial, cakupan koordinat, dan Attack Rate wilayah bila denominator populasi tersedia.</div></div><button class="primary" onclick="runGISIntelligence()">🔄 Analisis Spasial</button></div><div id="v39GISSummary" class="grid"></div><div class="grid2"><div><h4>📍 Konsentrasi Kasus</h4><div id="v39Clusters"></div></div><div><h4>🏘️ Attack Rate per Wilayah</h4><div id="v39AreaRates"></div></div></div><div class="notice">Konsentrasi spasial pada modul ini adalah <b>sinyal eksploratif</b> berbasis kedekatan koordinat, bukan uji cluster statistik. Attack Rate hanya dihitung jika denominator populasi dimasukkan secara eksplisit.</div>
+<div class="card" id="gisTestModeCard" style="margin-top:14px;border:2px dashed #b7791f">
+  <div class="toolbar" style="justify-content:space-between">
+    <div><h3 style="margin:0">🧪 GIS Test Mode — STAGING ONLY</h3><div class="small">Titik sintetis sementara untuk menguji marker, radius konsentrasi 1 km, dan tampilan layer RBI. Tidak disimpan ke Supabase atau localStorage.</div></div>
+    <span class="badge" style="background:#fff3cd;color:#795400">DATA UJI · BUKAN KASUS NYATA</span>
+  </div>
+  <div class="notice"><b>Pemisahan data:</b> simulasi hanya digambar pada layer Leaflet terpisah. Data ini tidak ditambahkan ke db.cases/db.fieldVisits, tidak masuk dashboard, tren, statistik, laporan, penelitian, atau Attack Rate operasional.</div>
+  <div class="toolbar">
+    <button class="primary" id="gisTestEnable" type="button" onclick="window.GIS_TEST_MODE&&window.GIS_TEST_MODE.enable()">▶ Aktifkan marker simulasi</button>
+    <button id="gisTestClear" type="button" onclick="window.GIS_TEST_MODE&&window.GIS_TEST_MODE.clear()">Hapus layer simulasi</button>
+    <span class="badge" id="gisTestStatus">Mode uji nonaktif</span>
+  </div>
+  <div id="gisTestSummary" class="grid"><div class="notice">Aktifkan mode uji untuk menampilkan hasil pemeriksaan terpisah.</div></div>
+</div>
+</div></div></section>
 
 <section id="penelitian" class="page">
 <div class="card"><div class="toolbar" style="justify-content:space-between"><div><h2 style="margin:0">🔬 Research Analysis Engine</h2><div class="small">Rancang penelitian, tetapkan desain, variabel, metode analisis, dan hasil laporan. Sistem membedakan desain case-control, cohort, cross-sectional, outbreak retrospective cohort, dan desain deskriptif/observasional lainnya.</div></div><span class="badge">Research mode · v41</span></div>
@@ -564,6 +578,84 @@ window.gorutHandleLogin = async function () {
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyGuard);
   else applyGuard();
   window.addEventListener('load',applyGuard,{once:true});
+})();
+</script>
+
+
+<script id="gisTestModeStaging">
+/* GIS TEST MODE — STAGING ONLY. Synthetic points are ephemeral and never enter operational db arrays. */
+(function(){
+  'use strict';
+  var layer=null, active=false;
+  var sample=[
+    {id:'GIS-UJI-01',lat:0.84000,lng:122.90000},
+    {id:'GIS-UJI-02',lat:0.84200,lng:122.90100},
+    {id:'GIS-UJI-03',lat:0.84100,lng:122.90300},
+    {id:'GIS-UJI-04',lat:0.87000,lng:122.94000}
+  ];
+  function distanceKm(a,b){
+    var rad=Math.PI/180, dLat=(b.lat-a.lat)*rad, dLng=(b.lng-a.lng)*rad;
+    var h=Math.sin(dLat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLng/2)**2;
+    return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+  }
+  function clusters(points,radius){
+    var seen=new Set(), result=[];
+    points.forEach(function(p,i){
+      if(seen.has(i))return;
+      var group=[i];seen.add(i);var changed=true;
+      while(changed){
+        changed=false;
+        points.forEach(function(q,j){
+          if(seen.has(j))return;
+          if(group.some(function(k){return distanceKm(points[k],q)<=radius;})){
+            group.push(j);seen.add(j);changed=true;
+          }
+        });
+      }
+      if(group.length>=2)result.push(group.map(function(k){return points[k];}));
+    });
+    return result;
+  }
+  function summary(){
+    var cs=clusters(sample,1);
+    var box=document.getElementById('gisTestSummary');
+    if(!box)return;
+    box.innerHTML='<div class="stat"><small>Titik sintetis</small><b>'+sample.length+'</b></div>'+
+      '<div class="stat"><small>Koordinat valid</small><b>'+sample.filter(function(p){return Number.isFinite(p.lat)&&Number.isFinite(p.lng);}).length+'</b></div>'+
+      '<div class="stat"><small>Cluster ≥2 (radius 1 km)</small><b>'+cs.length+'</b></div>'+
+      '<div class="stat"><small>Titik dalam cluster</small><b>'+cs.reduce(function(n,g){return n+g.length;},0)+'</b></div>'+
+      '<div class="notice" style="grid-column:1/-1">Hasil uji: '+cs.map(function(g,i){return 'Cluster '+(i+1)+': '+g.length+' titik';}).join('; ')+'. Satu titik terpisah digunakan untuk memeriksa bahwa algoritme tidak menggabungkan lokasi berjauhan. Ini simulasi teknis, bukan analisis epidemiologi.</div>';
+  }
+  function clear(){
+    if(layer){try{layer.remove();}catch(e){}layer=null;}
+    active=false;
+    var status=document.getElementById('gisTestStatus');
+    if(status)status.textContent='Mode uji nonaktif — layer dibersihkan';
+    var box=document.getElementById('gisTestSummary');
+    if(box)box.innerHTML='<div class="notice">Layer simulasi telah dihapus dari peta. Tidak ada data operasional yang berubah.</div>';
+  }
+  function enable(){
+    if(typeof mapObj==='undefined'||!mapObj||typeof L==='undefined'){
+      alert('Muat Peta GIS terlebih dahulu, lalu aktifkan kembali GIS Test Mode.');
+      return;
+    }
+    clear();
+    layer=L.layerGroup();
+    sample.forEach(function(p,i){
+      L.circleMarker([p.lat,p.lng],{
+        radius:9,color:'#8a4b08',weight:2,fillColor:'#f6ad55',fillOpacity:.9
+      }).bindPopup('<b>'+p.id+'</b><br>DATA SINTETIS — BUKAN KASUS NYATA<br>'+p.lat.toFixed(5)+', '+p.lng.toFixed(5))
+        .addTo(layer);
+    });
+    layer.addTo(mapObj);
+    mapObj.setView([0.845,122.907],11);
+    active=true;
+    var status=document.getElementById('gisTestStatus');
+    if(status)status.textContent='Aktif — '+sample.length+' marker sintetis';
+    summary();
+  }
+  window.GIS_TEST_MODE={enable:enable,clear:clear,isActive:function(){return active;},sampleCount:sample.length};
+  window.addEventListener('beforeunload',clear);
 })();
 </script>
 
