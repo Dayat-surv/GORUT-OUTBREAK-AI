@@ -1676,7 +1676,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       return;
     }
     try{
-      const layer=window.L.esri.dynamicMapLayer({url:RBI_URL,layers:[12,13,10,11],opacity:.55,useCors:true});
+      const layer=window.L.esri.dynamicMapLayer({url:RBI_URL,layers:[12,13,10,11],opacity:.85,useCors:true,dynamicLayers:[{id:11,source:{type:'mapLayer',mapLayerId:11},drawingInfo:{renderer:{type:'simple',symbol:{type:'esriSLS',style:'esriSLSSolid',color:[25,75,135,255],width:2.5}}}}]});
       layer.on('loading',()=>status('RBI: sedang memuat batas administrasi dari BIG…'));
       layer.on('load',()=>status('RBI: layer batas administrasi BIG berhasil dimuat.'));
       layer.on('requesterror',e=>{console.warn('RBI BIG request error',e);status('RBI: permintaan ke layanan BIG gagal. Periksa koneksi atau layanan BIG.');});
