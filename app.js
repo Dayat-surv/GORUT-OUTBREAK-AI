@@ -1660,8 +1660,37 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   window.editCase=function(id){let c=db.cases.find(x=>String(x.id)===String(id));if(!c)return;const food=act()?.disease==='keracunan-pangan',diseaseId=act()?.disease,fc=c.foodCase||{},extraPriority=priorityExtra(diseaseId,c.priority||{}),foodExtra=food?`<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>${f('Makanan/minuman dikonsumsi','caseFood','text',fc.food||'')}${f('Waktu konsumsi','caseConsumedAt','datetime-local',fc.consumedAt||'')}${f('Waktu onset','caseOnsetTime','datetime-local',fc.onsetAt||'')}${f('Masa inkubasi (jam)','caseIncubation','number',fc.incubationHours??'')}${f('Gejala utama','caseSymptoms','text',fc.symptoms||'')}${f('Sumber pangan','caseFoodSource','text',fc.foodSource||'')}${f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')}${f('Spesimen klinis','caseClinicalSpecimen','text',fc.clinicalSpecimen||'')}</div>`:'';modal(`<h2>Edit ${esc(c.id)}</h2>${f('Nama','en','text',c.name)}${f('Umur','ea','number',c.age)}${f('Jenis kelamin','es','select','Laki-laki|Perempuan')}${f('Onset','eo',food?'datetime-local':'date',c.onset)}${f('Status','et','select','Suspek|Probable|Konfirmasi')}${f('Outcome','eu','select','Rawat jalan|Dirawat|Sembuh|Meninggal')}${f('Gejala Utama','editMainSymptoms','text',c.symptoms||c.answers?.symptoms||'')}${addressFields(c)}${foodExtra}${extraPriority}<button class="primary" onclick="upd('${esc(c.id)}')">Simpan</button>`);es.value=c.sex||'';et.value=c.status||'Suspek';eu.value=c.outcome||'';if(food)caseHospitalized.value=fc.hospitalized||'Tidak';};
   window.upd=async function(id){let c=db.cases.find(x=>String(x.id)===String(id));if(!c)return;Object.assign(c,{name:val('en'),age:+val('ea')||0,sex:val('es')||c.sex,onset:val('eo'),status:val('et'),outcome:val('eu'),symptoms:val('editMainSymptoms'),address:val('caddress'),prov:val('cprov'),kab:val('ckab'),kec:val('ckec'),desa:val('cdesa'),lat:n(val('clat')),lng:n(val('clng'))});if(act()?.disease==='keracunan-pangan')c.foodCase={food:val('caseFood'),consumedAt:val('caseConsumedAt'),onsetAt:val('caseOnsetTime'),incubationHours:+val('caseIncubation')||null,symptoms:(val('editMainSymptoms')||val('caseSymptoms')),foodSource:val('caseFoodSource'),hospitalized:val('caseHospitalized'),clinicalSpecimen:val('caseClinicalSpecimen')};const priority=collectPriority(act()?.disease);if(priority)c.priority=priority;if(c.lat!==null&&c.lng!==null){try{c.admin=await lookupAdmin(c.lat,c.lng);c.prov=c.admin.prov||c.prov;c.kab=c.admin.kab||c.kab;c.kec=c.admin.kec||c.kec;c.desa=c.admin.desa||c.desa}catch(e){console.warn('RBI lookup gagal saat update',e)}}save();close();render();};
   window.cases=function(){let q=(val('caseSearch')||'').toLowerCase(),r=db.cases.filter(c=>(!db.active||c.investigationId===db.active)&&(!q||`${c.id} ${c.name} ${c.address||''} ${c.desa||''} ${c.kec||''}`.toLowerCase().includes(q)));caseRows.innerHTML=r.map(c=>`<tr><td>${esc(c.id)}</td><td>${esc(c.name)}</td><td>${esc(c.address||'-')}</td><td>${esc(c.desa||c.admin?.desa||'-')}</td><td>${esc(c.kec||c.admin?.kec||'-')}</td><td>${esc(c.age)}</td><td>${esc(c.sex)}</td><td>${esc(c.onset||'-')}</td><td><span class="badge">${esc(c.status)}</span></td><td>${esc(c.outcome||'-')}</td><td><button onclick="editCase('${esc(c.id)}')">Edit</button> <button class="danger" data-v30-delete onclick="deleteRecord('cases','${esc(c.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="11">Belum ada kasus.</td></tr>'};
-  window.toggleRBI=function(){if(!mapObj)return alert('Muat peta terlebih dahulu.');if(window.__rbiLayer){window.__rbiLayer.remove();window.__rbiLayer=null;const s=document.getElementById('rbiStatus');if(s)s.textContent='RBI: layer batas disembunyikan.';return}if(!window.L?.esri)return alert('Modul RBI belum termuat. Periksa koneksi internet.');window.__rbiLayer=L.esri.dynamicMapLayer({url:RBI_URL,layers:[12,13,10,11],opacity:.55,useCors:true}).addTo(mapObj);const s=document.getElementById('rbiStatus');if(s)s.innerHTML='<b>RBI aktif:</b> batas provinsi, kabupaten/kota, kecamatan, dan desa/kelurahan dari layanan BIG.'};
-  const oldRenderMap=window.renderMap;window.renderMap=function(){oldRenderMap();setTimeout(()=>{if(window.mapObj&&window.L?.esri&&!window.__rbiLayer){window.__rbiLayer=L.esri.dynamicMapLayer({url:RBI_URL,layers:[12,13,10,11],opacity:.5,useCors:true}).addTo(mapObj);const s=document.getElementById('rbiStatus');if(s)s.innerHTML='<b>RBI aktif:</b> batas administrasi ditampilkan dari layanan BIG.'}},350)};
+  window.toggleRBI=function(){
+    const s=document.getElementById('rbiStatus');
+    const status=(msg)=>{if(s)s.textContent=msg;};
+    if(!mapObj){status('RBI: peta belum dimuat. Klik “Muat Peta” terlebih dahulu.');return;}
+    if(window.__rbiLayer){
+      try{mapObj.removeLayer(window.__rbiLayer);}catch(e){}
+      window.__rbiLayer=null;
+      status('RBI: layer batas disembunyikan.');
+      return;
+    }
+    status('RBI: menghubungkan ke layanan batas wilayah BIG…');
+    if(!window.L||!window.L.esri||typeof window.L.esri.dynamicMapLayer!=='function'){
+      status('RBI: modul tampilan BIG belum termuat. Periksa koneksi internet lalu muat ulang halaman.');
+      return;
+    }
+    try{
+      const layer=window.L.esri.dynamicMapLayer({url:RBI_URL,layers:[12,13,10,11],opacity:.55,useCors:true});
+      layer.on('loading',()=>status('RBI: sedang memuat batas administrasi dari BIG…'));
+      layer.on('load',()=>status('RBI: layer batas administrasi BIG berhasil dimuat.'));
+      layer.on('requesterror',e=>{console.warn('RBI BIG request error',e);status('RBI: permintaan ke layanan BIG gagal. Periksa koneksi atau layanan BIG.');});
+      window.__rbiLayer=layer;
+      layer.addTo(mapObj);
+      status('RBI: permintaan layer dikirim ke BIG; menunggu respons…');
+    }catch(e){
+      console.error('RBI BIG layer gagal dibuat',e);
+      window.__rbiLayer=null;
+      status('RBI: gagal menampilkan layer. '+(e&&e.message?e.message:'Terjadi kesalahan pada peta.'));
+    }
+  };
+  const oldRenderMap=window.renderMap;
+  window.renderMap=function(){oldRenderMap();};
   window.exportCSV=function(){const cs=db.cases.filter(c=>c.investigationId===db.active);const cols=['ID','Nama','Alamat','Provinsi','Kabupaten/Kota','Kecamatan','Desa/Kelurahan','Latitude','Longitude','Onset','Status','Outcome','Sumber Wilayah'];const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;const lines=[cols.join(','),...cs.map(c=>[c.id,c.name,c.address,c.prov,c.kab,c.kec,c.desa,c.lat,c.lng,c.onset,c.status,c.outcome,c.admin?.source||''].map(q).join(','))];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}));a.download='kasus-KLB-dengan-alamat-RBI.csv';a.click()};
   window.V40_RBI={service:RBI_URL,layers:LAYERS,source:'Badan Informasi Geospasial — RBI/Batas Wilayah'};
 })();
