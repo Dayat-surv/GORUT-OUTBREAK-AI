@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 const html = fs.readFileSync(require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
-const match = html.match(/<script id="gisTestModeStaging">([\\s\\S]*?)<\\/script>/);
+const match = html.match(/<script id="gisTestModeStaging">([\s\S]*?)<\/script>/);
 assert.ok(match, 'staging GIS test-mode script must exist');
 
 const elements = {
@@ -52,11 +52,11 @@ window.GIS_TEST_MODE.enable();
 
 assert.equal(markers.length, 4, 'enabling GIS test mode must add exactly four synthetic markers');
 assert.ok(markers.every(marker => marker.popup.includes('DATA SINTETIS — BUKAN KASUS NYATA')));
-assert.deepEqual(view, { coords: [0.845, 122.907], zoom: 11 });
+assert.equal(JSON.stringify(view), JSON.stringify({ coords: [0.845, 122.907], zoom: 11 }));
 assert.match(elements.gisTestStatus.textContent, /Aktif/);
 assert.match(elements.gisTestSummary.innerHTML, /Titik sintetis/);
-assert.match(elements.gisTestSummary.innerHTML, /<b>1<\\/b>/, 'three nearby points must form one cluster');
-assert.match(elements.gisTestSummary.innerHTML, /<b>3<\\/b>/, 'the cluster must contain three points');
+assert.match(elements.gisTestSummary.innerHTML, /<b>1<\/b>/, 'three nearby points must form one cluster');
+assert.match(elements.gisTestSummary.innerHTML, /<b>3<\/b>/, 'the cluster must contain three points');
 assert.equal(JSON.stringify(database), before, 'synthetic GIS points must not modify operational data');
 
 window.GIS_TEST_MODE.clear();
