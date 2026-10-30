@@ -3054,8 +3054,8 @@ window.renderDemographyV49=function(){
     removePayment56();
   }
   /* Restore valid Supabase sessions after the v45 login UI has been initialized. */
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(restoreSession56,0),{once:true});
-  else setTimeout(restoreSession56,0);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(restoreSession56,100),{once:true});
+  else setTimeout(restoreSession56,120);
   document.addEventListener('DOMContentLoaded',()=>setTimeout(removePayment56,100));
   setTimeout(removePayment56,1800);
 })();
