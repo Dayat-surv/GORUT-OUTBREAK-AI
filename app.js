@@ -185,18 +185,31 @@ function renderBivControls(){const r=document.getElementById('statResult');if(r)
 function isSimulationInvestigationForOps(inv) {
   if (!inv || typeof inv !== 'object') return false;
   var meta = inv.metadata && typeof inv.metadata === 'object' ? inv.metadata : {};
-  var name = String(inv.name || '');
-  var status = String(inv.status || '');
+  var identity = [
+    inv.name, inv.status, inv.id, inv.code, inv.title,
+    meta.dataset_type, meta.source, meta.label, meta.name
+  ].filter(Boolean).join(' ');
   return inv.simulation === true || meta.simulation === true ||
-    String(meta.dataset_type || '').toLowerCase() === 'simulation' ||
-    /SIMULASI UJI SISTEM|BUKAN KASUS NYATA/i.test(name) ||
-    /^uji sistem$/i.test(status);
+    /^(simulation|synthetic)$/i.test(String(meta.dataset_type || '').trim()) ||
+    /\\b(simulasi|simulation|sintetis|synthetic|testing|test|uji(?:an)?|bukan\\s+kasus\\s+nyata)\\b/i.test(identity);
 }
 function isSimulationCaseForOps(c) {
   if (!c || typeof c !== 'object') return false;
   var investigations = window.db && Array.isArray(window.db.investigations) ? window.db.investigations : [];
   var inv = investigations.find(function(x) { return String(x.id) === String(c.investigationId); });
-  return isSimulationInvestigationForOps(inv);
+  if (isSimulationInvestigationForOps(inv)) return true;
+  var marker = [c.investigationName, c.investigation_name, c.sourceName, c.source,
+    c.sourceType, c.recordSource, c.datasetType, c.label].filter(Boolean).join(' ');
+  var id = String(c.id || c.caseId || c.case_id || '').trim();
+  return /\\b(simulasi|simulation|sintetis|synthetic|testing|test|uji(?:an)?|bukan\\s+kasus\\s+nyata)\\b/i.test(marker) ||
+    /^(SIM|TEST|UJI)[-_]/i.test(id);
+}
+function isSimulationLinkedRecordForOps(row) {
+  if (!row || typeof row !== 'object') return false;
+  var investigations = window.db && Array.isArray(window.db.investigations) ? window.db.investigations : [];
+  var inv = investigations.find(function(x) { return String(x.id) === String(row.investigationId); });
+  if (isSimulationInvestigationForOps(inv)) return true;
+  return isSimulationCaseForOps(row);
 }
 /* v137: non-destructive case-level analysis view; original records remain unchanged. */
 function uniqueCaseRowsForAnalysis(rows) {
@@ -900,13 +913,21 @@ const INVALID_RESEARCH_SOURCE_IDS_128=new Set(['1468d9f8-e408-4fee-9da2-760e6a0b
 const INVALID_RESEARCH_CASE_IDS_128=new Set(['pub-1468d9f8-e40','pub-191b33fd-032']);
 function isInvalidTestCaseForDashboard128(row){
   if(!row||typeof row!=='object')return false;
+  if(isSimulationCaseForOps(row))return true;
   /* Inline constants keep this guard safe even when an earlier dashboard runs before research setup initializes. */
   const sourceKeys=['ID Rekaman Sumber','sourceRecordId','source_record_id','serverId','recordId','uuid','__sourceRecordId'];
   if(sourceKeys.some(k=>row[k]!==undefined&&row[k]!==null&&['1468d9f8-e408-4fee-9da2-760e6a0bfcc6','b1468d9f-8e40-0000-0000-000000000000','191b33fd-032f-4220-9dac-711f274cfc6a'].includes(String(row[k]).trim().toLowerCase())))return true;
   const caseKeys=['ID Kasus','caseId','case_id','__caseId','id'];
   return caseKeys.some(k=>row[k]!==undefined&&row[k]!==null&&['pub-1468d9f8-e40','pub-191b33fd-032'].includes(String(row[k]).trim().toLowerCase()));
 }
-function isInvalidResearchRow128(row){return isInvalidTestCaseForDashboard128(row)}
+function isInvalidResearchRow128(row){
+  if(isInvalidTestCaseForDashboard128(row))return true;
+  if(!row||typeof row!=='object')return false;
+  var invName=row['Nama Investigasi']||row.investigationName||row.investigation_name||'';
+  var invId=row['ID Investigasi']||row.investigationId||row.investigation_id||'';
+  var caseId=row['ID Kasus']||row.id||row.caseId||'';
+  return isSimulationInvestigationForOps({name:String(invName),id:String(invId)})||/^(SIM|TEST|UJI)[-_]/i.test(String(caseId).trim());
+}
 function ensureInvalidTestRecordNotice128(){
   const app=document.getElementById('app'),title=document.getElementById('title');
   if(!app||!title)return;
@@ -1085,10 +1106,10 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
   /* Dashboard investigation delete action. */
   const oldDash=window.dash; window.dash=function(){
     const q=val('search').toLowerCase(),t=val('typeFilter'),r=db.investigations.filter(x=>(!q||x.name.toLowerCase().includes(q))&&(!t||x.type===t));
-    const validRows=(db.cases||[]).filter(c=>!isInvalidTestCaseForDashboard128(c));
+    const validRows=(db.cases||[]).filter(c=>!isInvalidTestCaseForDashboard128(c)&&!isSimulationCaseForOps(c));
     const uniqueFor=rows=>{const m=new Map();rows.forEach((c,i)=>{const id=String(c.id??'').trim(),key=String(c.investigationId??'')+'::'+(id||'__record_'+i);m.set(key,c)});return [...m.values()]};
     const el=document.getElementById('klbRows');if(el)el.innerHTML=r.map(x=>{const validCases=uniqueFor(validRows.filter(c=>String(c.investigationId)===String(x.id)));return `<tr><td><b>${esc0(x.name)}</b></td><td>${esc0(diseaseLabel(x.disease))}</td><td>${esc0(x.desa||'-')}, ${esc0(x.kec||'-')}</td><td>${validCases.length}</td><td>${esc0(x.status)}</td><td>${esc0(x.date||'-')}</td><td><button onclick="openKlb(${x.id})">Buka</button><button class="btn-danger" onclick="deleteInvestigation('${esc0(x.id)}')">Hapus</button></td></tr>`}).join('')||'<tr><td colspan="7">Belum ada investigasi.</td></tr>';
-    const cs=uniqueFor(validRows);const st=document.getElementById('stats');if(st)st.innerHTML=[['Investigasi',db.investigations.length],['Kasus valid unik',cs.length],['Konfirmasi valid',cs.filter(c=>c.status==='Konfirmasi').length],['Meninggal valid',cs.filter(c=>c.outcome==='Meninggal').length]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('');
+    const cs=uniqueFor(validRows);const st=document.getElementById('stats');if(st)st.innerHTML=[['Investigasi',db.investigations.filter(x=>!isSimulationInvestigationForOps(x)).length],['Kasus valid unik',cs.length],['Konfirmasi valid',cs.filter(c=>c.status==='Konfirmasi').length],['Meninggal valid',cs.filter(c=>c.outcome==='Meninggal').length]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('');
   }
 
   /* Disease-specific report renderer layered over the existing formal report. */
@@ -1344,21 +1365,19 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
   }
   async function paintAccess(){
     const bar=document.getElementById('v29Topbar');if(!bar)return;
-    const a=await accessV();
     if(!window.GORUT_USER){bar.style.display='none';return}
     bar.style.display='flex';
     const pill=document.getElementById('v29AccessPill'),label=document.getElementById('v29UserLabel'),body=document.getElementById('v29ProfileBody');
-    const email=window.GORUT_USER.email||'-'; label.textContent=email.length>24?email.slice(0,22)+'…':email;
-    pill.className='access-pill '+(a.isAdmin?'admin':(!a.allowed?'expired':''));
-    pill.innerHTML=a.isAdmin?'♛ ADMIN · AKSES PENUH':a.allowed?`✦ PREMIUM · <span class="countdown-v29">${countdown(a.expires_at)}</span>`:'⚠ AKSES BERAKHIR';
-    body.innerHTML=`<div style="font-weight:800">${escV(email)}</div><div class="small" style="margin-top:3px">Role: ${escV(window.GORUT_USER.role||'petugas')}</div><hr style="border:0;border-top:1px solid #e5e7eb;margin:10px 0"><div><b>Status:</b> ${a.isAdmin?'Admin — gratis & tanpa batas':a.allowed?'Akses aktif':'Tidak aktif'}</div><div style="margin-top:6px"><b>Berlaku sampai:</b> ${a.isAdmin?'Tidak terbatas':fmtV(a.expires_at)}</div><div style="margin-top:6px"><b>Status:</b> akses gratis</div><div class="security-note-v29" style="margin-top:10px">Mode: ${a.source==='server'?'server-side production':'offline/demo'}. Pada mode production, tanggal kedaluwarsa ditentukan server.</div>`;
-    if(V29.timer)clearInterval(V29.timer);V29.timer=setInterval(()=>{if(!a.isAdmin&&a.expires_at){const el=document.querySelector('.countdown-v29');if(el)el.textContent=countdown(a.expires_at)}},1000);
+    const email=window.GORUT_USER.email||'-';
+    if(label)label.textContent=email.length>24?email.slice(0,22)+'…':email;
+    const role=String(window.GORUT_USER.role||'petugas');
+    if(pill){pill.className='access-pill';pill.textContent='ROLE: '+role.toUpperCase();}
+    if(body)body.innerHTML=`<div style="font-weight:800">${escV(email)}</div><div class="small" style="margin-top:3px">Role Supabase: ${escV(role)}</div><hr style="border:0;border-top:1px solid #e5e7eb;margin:10px 0"><div><b>Status autentikasi:</b> Sesi Supabase aktif</div><div style="margin-top:6px"><b>Otorisasi:</b> Berdasarkan role profil dan kebijakan RLS</div><div class="security-note-v29" style="margin-top:10px">Status langganan/premium tidak digunakan untuk menentukan akses operasional STAGING.</div>`;
+    if(V29.timer)clearInterval(V29.timer);
   }
   window.showV29AccessDashboard=function(){
-    const id='v29-access-card'; if(document.getElementById(id)){document.getElementById(id).scrollIntoView({behavior:'smooth'});return;}
-    const sec=document.getElementById('dashboard');if(!sec)return;
-    const c=document.createElement('div');c.id=id;c.className='card premium-hero-v29';c.style.marginBottom='16px';c.innerHTML='<div class="eyebrow">PREMIUM ACCESS</div><h2 style="margin:5px 0">Akses GORUT-OUTBREAK AI</h2><p>Kelola investigasi, PE/KLB, analisis epidemiologi dan Research Studio dalam satu platform.</p><div id="v29DashAccess"></div>';
-    sec.insertBefore(c,sec.firstElementChild); paintDashAccess();
+    const card=document.getElementById('v29-access-card');
+    if(card)card.remove();
   }
   async function paintDashAccess(){
     const el=document.getElementById('v29DashAccess');if(!el)return;const a=await accessV();
@@ -2062,7 +2081,7 @@ function installLogin(){
   function days44(n){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-n);return d}
   function validDate44(v){const d=new Date(v);return Number.isNaN(d.getTime())?null:d}
   function calc44(){
-    const cases=(Array.isArray(db.cases)?db.cases:[]).filter(c=>!isInvalidTestCaseForDashboard128(c)), inv=Array.isArray(db.investigations)?db.investigations:[], alerts=Array.isArray(db.alerts)?db.alerts:[], specs=Array.isArray(db.specimens)?db.specimens:[], contacts=Array.isArray(db.contacts)?db.contacts:[], visits=Array.isArray(db.fieldVisits)?db.fieldVisits:[];
+    const cases=(Array.isArray(db.cases)?db.cases:[]).filter(c=>!isInvalidTestCaseForDashboard128(c)&&!isSimulationCaseForOps(c)), inv=(Array.isArray(db.investigations)?db.investigations:[]).filter(x=>!isSimulationInvestigationForOps(x)), alerts=(Array.isArray(db.alerts)?db.alerts:[]).filter(x=>!isSimulationLinkedRecordForOps(x)), specs=(Array.isArray(db.specimens)?db.specimens:[]).filter(x=>!isSimulationLinkedRecordForOps(x)), contacts=(Array.isArray(db.contacts)?db.contacts:[]).filter(x=>!isSimulationLinkedRecordForOps(x)), visits=(Array.isArray(db.fieldVisits)?db.fieldVisits:[]).filter(x=>!isSimulationLinkedRecordForOps(x));
     const onset=cases.map(c=>validDate44(c.onset)).filter(Boolean);
     const recentStart=days44(6), prevStart=days44(13), recent=onset.filter(d=>d>=recentStart).length, prev=onset.filter(d=>d>=prevStart&&d<recentStart).length;
     const trend=prev?Math.round((recent-prev)/prev*100):recent?100:0;
@@ -5170,7 +5189,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     host.innerHTML='<div class="v126-registry-head"><div><h3 style="margin:0">Integrasi Data Penelitian</h3><div class="small">Sumber operasional aktif: '+esc126(inv?inv.name:'investigasi aktif belum dipilih')+' · '+(inv?countLabel126(inv).cases:0)+' kasus unik operasional · '+(inv?countLabel126(inv).sources:0)+' rekaman sumber</div><div class="small"><b>Dataset penelitian tersimpan:</b> '+esc126(savedDatasetLabel)+'. Snapshot tersimpan terpisah di perangkat dan tidak sama dengan jumlah kasus operasional.</div></div><button class="primary" type="button" id="v126UseCases">Buat / perbarui snapshot dataset</button></div><div class="notice">Dataset penelitian adalah snapshot terpisah. Pembaruan kasus, jawaban kuesioner, atau pergantian investigasi tidak mengubah snapshot secara otomatis. Gunakan tombol ini untuk memperbarui snapshot dari investigasi aktif. Rekaman operasional tidak dihapus, digabung, atau ditimpa. Periksa status kesesuaian di bawah sebelum mengganti snapshot yang sudah ada.</div><div id="v126ResearchLinkStatus" class="small">'+sourceStatus+'</div><div style="margin-top:10px"><button type="button" id="v126RunSafetyTest">Jalankan uji keamanan (simulasi lokal)</button><div id="v126SafetyTestStatus" class="small" style="margin-top:8px" aria-live="polite">Uji ini memakai data simulasi sementara dan tidak menyimpan atau mengubah data operasional.</div></div>';
     var testBtn=E('v126RunSafetyTest');if(testBtn)testBtn.onclick=function(){runResearchSafetySelfTest126()};
     var btn=E('v126UseCases');if(btn)btn.onclick=function(){
-      var activeInv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)});if(!activeInv){alert('Pilih investigasi terlebih dahulu.');return}
+      var activeInv=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)});if(!activeInv){alert('Pilih investigasi terlebih dahulu.');return}if(isSimulationInvestigationForOps(activeInv)){alert('Investigasi simulasi STAGING tidak dapat dijadikan sumber dataset penelitian operasional. Rekaman tetap dipertahankan untuk pengujian.');return}
       var records=caseRows126(activeInv.id),status=E('v126ResearchLinkStatus');
       if(!records.length&&status)status.textContent='Investigasi ini belum memiliki rekaman kasus. Anda tetap dapat membuat snapshot kosong secara eksplisit, tetapi pastikan investigasi yang aktif sudah benar.';
       var groups=[],groupMap={};
