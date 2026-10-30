@@ -53,6 +53,8 @@ jobs:
           node --check public-survey-integration.js
       - name: Run research snapshot regression tests
         run: node tests/research-snapshot-valid-case.test.js
+      - name: Run isolated GIS test-mode regression tests
+        run: node tests/gis-test-mode.test.js
       - name: Run release smoke tests
         run: node tests/release-smoke.test.js
       - name: Run Supabase RPC static security checks

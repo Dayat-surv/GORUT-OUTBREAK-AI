@@ -40,6 +40,8 @@ const names = [
   'selectInvestigationSnapshot126',
   'excludedResearchRecord126',
   'eligibleUniqueCaseCount126',
+  'isSimulationInvestigationForOps',
+  'isSimulationCaseForOps',
   'isInvalidTestCaseForDashboard128',
   'isInvalidResearchRow128',
   'researchDatasetRows',
@@ -47,7 +49,7 @@ const names = [
   'researchCases'
 ];
 const declarations = names.map(name => extractFunction(appSource, name)).join('\n');
-const windowStub = { diseases: { campak: { name: 'Tersangka Campak' } } };
+const windowStub = { db: { investigations: [] }, diseases: { campak: { name: 'Tersangka Campak' } } };
 let activeResearchState = { dataSource: 'dataset', dataset: { rows: [] } };
 let currentCasesCalls = 0;
 const api = new Function('window', 'researchState', 'currentCases', declarations + '\nreturn {' + names.join(',') + '};')(windowStub, activeResearchState, () => { currentCasesCalls++; return [{ id: 'LIVE-OPERATIONAL-CASE' }]; });
@@ -119,7 +121,7 @@ assert.equal(row['Nama Investigasi'], fixture.investigation.name);
 assert.equal(row['Penyakit'], 'Tersangka Campak');
 assert.equal(row['Nama'], valid.name);
 assert.equal(row['Tanggal onset demam'], '2026-01-05');
-assert.equal(row['variabelValid'], 'JAWABAN_VALID_SIMULASI');
+assert.equal(row['variabelValid'], 'JAWABAN_VALID');
 assert.equal('jawabanSumber1' in row, false, 'source 1 test answers must not leak into snapshot');
 assert.equal('jawabanSumber2' in row, false, 'source 2 test answers must not leak into snapshot');
 
