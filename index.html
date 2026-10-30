@@ -543,6 +543,10 @@ window.gorutHandleLogin = async function () {
     if(box)box.innerHTML='<div class="notice"><b>Manajemen registrasi dan aktivasi akses sementara dinonaktifkan.</b><br>'+notice+'<br><br>Informasi pengguna dan audit akses akan ditinjau melalui prosedur audit terpisah. Tidak ada tindakan aktivasi atau penolakan akun yang dapat dilakukan dari panel ini.</div>';
   };
   function applyGuard(){
+    var backendBadge=document.getElementById('backendBadge');
+    if(backendBadge)backendBadge.textContent=window.GORUT_BACKEND&&window.GORUT_BACKEND.enabled?'Mode: Supabase STAGING':'Mode lokal — tanpa autentikasi server';
+    var roleBadge=document.getElementById('roleBadge');
+    if(roleBadge&&!window.GORUT_USER)roleBadge.textContent='Login diperlukan';
     var style=document.getElementById('v169StagingGuardStyle');
     if(!style){style=document.createElement('style');style.id='v169StagingGuardStyle';style.textContent='#v45UserAdmin{display:none!important}';document.head.appendChild(style);}
     var modal=document.getElementById('registerModal');
