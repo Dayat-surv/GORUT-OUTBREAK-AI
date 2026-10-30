@@ -1103,14 +1103,31 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
   };
 
   /* v28 Production/SaaS layer: Supabase-backed registration and server-side subscription access. */
+  /* v167 staging/auth fix: Supabase Auth + profiles role are the access authority.
+     Retired my_access_status subscription state must never hide an authenticated
+     operational dashboard. A valid session and a non-empty server-side profile
+     role are required; RLS remains responsible for row-level data access. */
   async function v28BackendAccess(){
     const sb=await backendClient();
     if(!sb||!GORUT_USER||GORUT_USER.id==='offline') return {configured:false,allowed:true,admin:true};
-    const {data:status,error}=await sb.from('my_access_status').select('*').maybeSingle();
-    if(error) return {configured:true,allowed:false,error:error.message};
-    const admin=!!status?.is_admin;
-    const allowed=admin||!!status?.has_access;
-    return {configured:true,allowed,admin,expiresAt:status?.expires_at||null};
+    try{
+      const authResult=await sb.auth.getUser();
+      const authUser=authResult?.data?.user;
+      if(authResult?.error||!authUser||authUser.id!==GORUT_USER.id){
+        return {configured:true,allowed:false,admin:false,error:authResult?.error?.message||'Sesi Supabase tidak valid.'};
+      }
+      const {data:profile,error}=await sb.from('profiles')
+        .select('role,full_name,facility')
+        .eq('id',authUser.id)
+        .maybeSingle();
+      if(error) return {configured:true,allowed:false,admin:false,error:error.message};
+      const role=String(profile?.role||'').trim();
+      if(!role) return {configured:true,allowed:false,admin:false,error:'Profil atau peran pengguna belum tersedia.'};
+      const admin=/^(admin|admin_kabupaten|super_admin|administrator)$/i.test(role);
+      return {configured:true,allowed:true,admin,role,expiresAt:null};
+    }catch(error){
+      return {configured:true,allowed:false,admin:false,error:error?.message||'Pemeriksaan profil gagal.'};
+    }
   }
   async function v28ShowAccessGate(reason){
     const msg=document.getElementById('loginMsg');
