@@ -2079,7 +2079,8 @@ function installLogin(){
     return c?.disease || db.investigations?.find(i=>String(i.id)===String(c?.investigationId))?.disease || 'tidak-teridentifikasi';
   }
   function days44(n){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-n);return d}
-  function validDate44(v){const d=new Date(v);return Number.isNaN(d.getTime())?null:d}
+  function key44(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
+  function validDate44(v){if(typeof v==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(v)){const [y,m,day]=v.split('-').map(Number);const local=new Date(y,m-1,day);return Number.isNaN(local.getTime())?null:local;}const d=new Date(v);return Number.isNaN(d.getTime())?null:d}
   function calc44(){
     const cases=(Array.isArray(db.cases)?db.cases:[]).filter(c=>!isInvalidTestCaseForDashboard128(c)&&!isSimulationCaseForOps(c)), inv=(Array.isArray(db.investigations)?db.investigations:[]).filter(x=>!isSimulationInvestigationForOps(x)), alerts=(Array.isArray(db.alerts)?db.alerts:[]).filter(x=>!isSimulationLinkedRecordForOps(x)), specs=(Array.isArray(db.specimens)?db.specimens:[]).filter(x=>!isSimulationLinkedRecordForOps(x)), contacts=(Array.isArray(db.contacts)?db.contacts:[]).filter(x=>!isSimulationLinkedRecordForOps(x)), visits=(Array.isArray(db.fieldVisits)?db.fieldVisits:[]).filter(x=>!isSimulationLinkedRecordForOps(x));
     const onset=cases.map(c=>validDate44(c.onset)).filter(Boolean);
@@ -2093,7 +2094,7 @@ function installLogin(){
     const missingOnset=cases.filter(c=>!String(c.onset||'').trim()).length;
     const missingGeo=cases.filter(c=>!Number.isFinite(Number(c.lat))||!Number.isFinite(Number(c.lng))).length;
     const missingStatus=cases.filter(c=>!String(c.status||'').trim()).length;
-    const completeness=cases.length?Math.round(100*(1-(missingAddress+missingOnset+missingGeo+missingStatus)/(cases.length*4))):100;
+    const completeness=cases.length?Math.round(100*(1-(missingAddress+missingOnset+missingGeo+missingStatus)/(cases.length*4))):null;
     const byDisease={};cases.forEach(c=>{const id=activeDisease44(c);byDisease[id]??={n:0,death:0,last:null};byDisease[id].n++;if(/meninggal/i.test(c.outcome||''))byDisease[id].death++;const d=validDate44(c.onset);if(d&&(!byDisease[id].last||d>byDisease[id].last))byDisease[id].last=d});
     const priority=Object.entries(byDisease).map(([id,x])=>{let score=Math.min(6,x.n)+Math.min(4,x.death*2)+(x.last&&x.last>=recentStart?2:0);let level=score>=9?'TINGGI':score>=5?'PERHATIAN':'RENDAH';return{id,x,score,level,name:diseaseName44(id)}}).sort((a,b)=>b.score-a.score);
     const actions=[];
@@ -2102,9 +2103,9 @@ function installLogin(){
     if(pendingSpecs)actions.push({level:'PERHATIAN',text:`${pendingSpecs} spesimen berstatus pending/menunggu.`,go:'spesimen'});
     if(missingGeo)actions.push({level:'PERHATIAN',text:`${missingGeo} kasus belum memiliki koordinat lengkap.`,go:'kasus'});
     if(missingAddress)actions.push({level:'PERHATIAN',text:`${missingAddress} kasus belum memiliki alamat lengkap.`,go:'kasus'});
-    if(completeness<80)actions.push({level:'PERHATIAN',text:`Kelengkapan data kasus baru ${completeness}%.`,go:'kasus'});
-    if(!actions.length)actions.push({level:'RENDAH',text:'Tidak ada kesenjangan prioritas yang terdeteksi dari data lokal saat ini.',go:'dashboard'});
-    const daily=[];for(let i=13;i>=0;i--){const day=days44(i);const key=day.toISOString().slice(0,10);daily.push({key,n:onset.filter(d=>d.toISOString().slice(0,10)===key).length});}
+    if(cases.length&&completeness<80)actions.push({level:'PERHATIAN',text:`Kelengkapan data kasus baru ${completeness}%.`,go:'kasus'});
+    if(!actions.length)actions.push({level:'RENDAH',text:cases.length?'Tidak ada kesenjangan prioritas yang terdeteksi dari data lokal saat ini.':'Belum ada kasus operasional untuk dinilai; data simulasi tidak dihitung.',go:'dashboard'});
+    const daily=[];for(let i=13;i>=0;i--){const day=days44(i);const key=key44(day);daily.push({key,n:onset.filter(d=>key44(d)===key).length});}
     return{cases,inv,alerts,specs,contacts,visits,recent,prev,trend,deaths,pendingSpecs,openInv,unresolvedAlerts,missingAddress,missingOnset,missingGeo,missingStatus,completeness,priority,actions,daily};
   }
   function card44(label,value,sub){return `<div class="stat"><small>${esc44(label)}</small><b>${esc44(value)}</b><span class="small">${esc44(sub||'')}</span></div>`}
@@ -2118,7 +2119,7 @@ function installLogin(){
     const top=a.priority.slice(0,8).map(r=>`<tr><td><b>${esc44(r.name)}</b></td><td>${r.x.n}</td><td>${r.x.death}</td><td>${r.score}</td><td><span class="badge">${r.level}</span></td><td>${esc44(r.x.last?`Onset terakhir ${r.x.last.toISOString().slice(0,10)}`:'Tanggal onset belum tersedia')}</td></tr>`).join('');
     const acts=a.actions.map(x=>`<div class="readiness-item ${x.level==='TINGGI'?'risk-high':x.level==='PERHATIAN'?'risk-medium':'risk-low'}"><b>${esc44(x.level)}</b><span>${esc44(x.text)}</span><br><button class="btn-ghost" style="margin-top:7px" onclick="page('${esc44(x.go)}')">Buka modul</button></div>`).join('');
     el.innerHTML=`<div class="card command-hero" style="margin:-17px -17px 16px;border-radius:16px 16px 0 0"><div><div class="eyebrow">V44 · EPIDEMIOLOGICAL COMMAND CENTER</div><h2 style="margin:5px 0">🎯 Pusat Komando Epidemiologi</h2><p style="margin:4px 0">Satu panel untuk memprioritaskan alert, investigasi, kasus, laboratorium, GIS dan kualitas data.</p></div><div><button class="primary" id="v44Refresh">🔄 Perbarui</button></div></div>
-      <div class="grid command-stats">${card44('Kasus',a.cases.length,'seluruh investigasi lokal')}${card44('7 hari terakhir',a.recent,trendLabel)}${card44('Meninggal',a.deaths,'berdasarkan outcome kasus')}${card44('Kelengkapan data',a.completeness+'%','alamat, onset, koordinat, status')}</div>
+      <div class="grid command-stats">${card44('Kasus',a.cases.length,'kasus operasional valid')}${card44('7 hari terakhir',a.recent,trendLabel)}${card44('Meninggal',a.deaths,'berdasarkan outcome kasus')}${card44('Kelengkapan data',a.completeness==null?'—':a.completeness+'%',a.completeness==null?'belum ada kasus operasional':'alamat, onset, koordinat, status')}</div>
       <div class="grid2"><div class="card"><h3>⏱️ Tren 14 Hari</h3><div class="command-mini-chart">${chart}</div><div class="small">Kurva menggunakan tanggal onset yang valid; kasus tanpa onset tidak masuk grafik.</div></div>
       <div class="card"><h3>🧭 Kesiapan Respons</h3><div class="readiness-list">${card44('Investigasi terbuka',a.openInv,'perlu tindak lanjut/penutupan')}${card44('Alert terbuka',a.unresolvedAlerts,'perlu verifikasi')}${card44('Spesimen pending',a.pendingSpecs,'status belum selesai')}${card44('Tanpa koordinat',a.missingGeo,'perlu geolokasi/RBI')}</div></div></div>
       <div class="card"><h3>🚨 Antrean Tindakan</h3><div class="readiness-list">${acts}</div></div>
