@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const migrationPath = path.join(__dirname, '..', 'supabase', 'migrations', '20261010_public_survey_dashboard_rpc.sql');
+const migrationPath = path.join(__dirname, '..', 'supabase', 'migrations', '20261030054310_staging_public_survey_dashboard_case_link_fix_v1.sql');
 const submitMigrationPath = path.join(__dirname, '..', 'supabase', 'migrations', '20261010_submit_public_survey_idempotency.sql');
 const sql = fs.readFileSync(migrationPath, 'utf8');
 const submitSql = fs.readFileSync(submitMigrationPath, 'utf8');
