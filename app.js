@@ -1810,89 +1810,13 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   const oldInit=window.initResearch; window.initResearch=function(){if(oldInit)oldInit();diseaseList()};
 })();
 
-/* =========================================================
-   GORUT-OUTBREAK AI v43 — Open Access + Epidemiological Command Center
-   Registration, payment verification and time-limited access are retired.
-   ========================================================= */
-(function(){
-  'use strict';
-  const esc = x => String(x ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-
-  // Open operational mode: no registration, payment, subscription or expiry gate.
-  window.GORUT_USER={id:'open-access',email:'',role:'admin_kabupaten'};
-  window.GORUT_OPEN_ACCESS=true;
-  // Preserve explicit backend configuration; production login must use Supabase when enabled.
-  window.enforceAccess=function(){return true};
-  window.showRegister=function(){};
-  window.closeRegister=function(){};
-  window.submitRegistration=function(){return false};
-  window.activateRegistration=function(){return false};
-  window.activateRegistrationV28=function(){return false};
-  window.v30RejectRegistration=function(){return false};
-  window.v29Logout=function(){location.reload()};
-  window.logout=function(){location.reload()};
-  window.v28BackendAccess=async()=>({configured:false,allowed:true,admin:true,expiresAt:null});
-  window.accessV=async()=>({allowed:true,isAdmin:true,expires_at:null,source:'open'});
-  window.access=async()=>({has_access:true,is_admin:true,source:'open'});
-
-  function removeLegacyAccessUI(){
-    ['login','registerModal','v27AccessAdmin','v28AccessAdmin','v29-access-card','v30AdminPanel'].forEach(id=>{
-      const e=document.getElementById(id); if(e) e.remove();
-    });
-    const top=document.getElementById('v29Topbar'); if(top) top.remove();
-    const rb=document.getElementById('roleBadge'); if(rb){rb.textContent='Akses: penuh';rb.className='badge'}
-    const bb=document.getElementById('backendBadge'); if(bb){bb.textContent='Mode: lokal';bb.className='badge'}
-    document.querySelectorAll('button').forEach(b=>{
-      const t=(b.textContent||'').toLowerCase();
-      if(/registrasi|pembayaran|subscription|premium 7|aktifkan 7 hari|konfirmasi whatsapp/.test(t)) b.remove();
-    });
-  }
-
-  function commandCenterCard(){
-    const sec=document.getElementById('dashboard'); if(!sec||document.getElementById('v43CommandCard'))return;
-    const c=document.createElement('div'); c.id='v43CommandCard'; c.className='card';
-    c.innerHTML=`<div class="toolbar" style="justify-content:space-between"><div><div class="eyebrow">V43 · EPIDEMIOLOGICAL COMMAND CENTER</div><h3 style="margin:4px 0">🎯 Prioritas Respons Epidemiologi</h3><div class="small">Ringkasan otomatis dari alert, investigasi, kasus, kematian, spesimen, GIS dan kelengkapan data. Ini adalah decision-support, bukan penetapan KLB.</div></div><button class="primary" id="v43Refresh">🔄 Perbarui</button></div><div id="v43PriorityGrid" class="grid"></div><div id="v43PriorityList" style="margin-top:12px"></div>`;
-    const anchor=sec.querySelector('#stats');
-    if(anchor) anchor.parentNode.insertBefore(c,anchor.nextSibling); else sec.prepend(c);
-    document.getElementById('v43Refresh').onclick=renderCommandCenter;
-  }
-
-  function renderCommandCenter(){
-    const grid=document.getElementById('v43PriorityGrid'), list=document.getElementById('v43PriorityList'); if(!grid||!list)return;
-    const cases=(Array.isArray(db.cases)?db.cases:[]).filter(c=>!isInvalidTestCaseForDashboard128(c)), inv=Array.isArray(db.investigations)?db.investigations:[], alerts=Array.isArray(db.alerts)?db.alerts:[], specs=Array.isArray(db.specimens)?db.specimens:[];
-    const deaths=cases.filter(c=>String(c.outcome||'').toLowerCase().includes('meninggal')).length;
-    const pendingSpecs=specs.filter(s=>/pending|menunggu|belum/i.test(String(s.status||''))).length;
-    const geo=cases.filter(c=>Number.isFinite(Number(c.lat))&&Number.isFinite(Number(c.lng))).length;
-    const unverified=alerts.filter(a=>/belum|perlu/i.test(String(a.result||''))).length;
-    grid.innerHTML=[['Investigasi aktif',inv.filter(x=>x.status!=='Selesai').length],['Kasus',cases.length],['Meninggal',deaths],['Spesimen pending',pendingSpecs],['Alert perlu tindak lanjut',unverified],['Koordinat kasus',`${geo}/${cases.length||0}`]].map(x=>`<div class="stat"><small>${esc(x[0])}</small><b>${esc(x[1])}</b></div>`).join('');
-    const byDisease={}; cases.forEach(c=>{const id=c.disease||db.investigations.find(i=>String(i.id)===String(c.investigationId))?.disease||'tidak-teridentifikasi'; byDisease[id]??={n:0,death:0,last:null};byDisease[id].n++;if(String(c.outcome||'').toLowerCase().includes('meninggal'))byDisease[id].death++;const d=String(c.onset||'');if(d&&(!byDisease[id].last||d>byDisease[id].last))byDisease[id].last=d});
-    const rows=Object.entries(byDisease).map(([id,x])=>{let score=Math.min(10,x.n)+Math.min(3,x.death*2);const priority=score>=9?'TINGGI':score>=5?'PERHATIAN':'RENDAH';return {id,x,score,priority,name:(window.diseases?.[id]?.name||id)}}).sort((a,b)=>b.score-a.score);
-    list.innerHTML=rows.length?`<table><thead><tr><th>Penyakit</th><th>Kasus</th><th>Meninggal</th><th>Skor sinyal</th><th>Prioritas</th><th>Tindakan awal</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${r.x.n}</td><td>${r.x.death}</td><td>${r.score}</td><td><span class="badge">${r.priority}</span></td><td>${esc(r.x.death?'Tinjau severity, lab dan respons segera.':'Verifikasi tren, definisi kasus dan kelengkapan data.')}</td></tr>`).join('')}</tbody></table>`:'<div class="notice">Belum ada kasus untuk membentuk prioritas penyakit.</div>';
-  }
-
-  const oldRenderV43=window.render;
-  window.render=async function(){
-    // Disable any legacy access gate by running the existing renderer in open-access context.
-    const result=await oldRenderV43.apply(this,arguments);
-    removeLegacyAccessUI();
-    commandCenterCard();
-    renderCommandCenter();
-    const rb=document.getElementById('roleBadge');if(rb)rb.textContent='Akses: penuh';
-    return result;
-  };
-
-  function startOpen(){
-    if(window.GORUT_BACKEND?.enabled)return; // Do not auto-open the app when server authentication is configured.
-    removeLegacyAccessUI();
-    const app=document.getElementById('app'); if(app)app.style.display='block';
-    window.GORUT_USER={id:'open-access',email:'',role:'admin_kabupaten'};
-    try{setRoleUI();}catch(e){}
-    try{initDiseaseSelectors();}catch(e){}
-    try{window.render();}catch(e){console.error('v43 startup',e)}
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startOpen);else setTimeout(startOpen,0);
-})();
-
+/* ============================================================
+   STAGING SECURITY PATCH v169
+   The legacy v43 Open Access shim has been removed.
+   Authentication, role resolution and access checks must be handled
+   by Supabase Auth + server-side profiles/RLS only.
+   No synthetic user, admin role, access override, or local auto-login.
+   ============================================================ */
 
 /* ============================================================
    GORUT-OUTBREAK AI v45 — LOGIN/REGISTRATION + QUESTIONNAIRE INTEGRATION
