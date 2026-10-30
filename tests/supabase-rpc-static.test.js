@@ -30,7 +30,7 @@ assert.match(ownerReadSql, /create policy survey_responses_owner_select on publi
   'SECURITY INVOKER dashboard RPC must have an authenticated owner-scoped RLS policy');
 assert.match(ownerReadSql, /grant select on public\.survey_responses to authenticated/,
   'SECURITY INVOKER dashboard RPC must rely on explicit authenticated table grants');
-assert.match(normalized, /left join public\.cases c on c\.id\s*=\s*sr\.id::text/,
+assert.match(normalized, /left join public\.cases as c on c\.id\s*=\s*sr\.id::text/,
   'dashboard RPC must retain the documented response-ID-to-case-ID join convention');
 assert.match(normalizedSubmit, /v_case_id\s*:=\s*v_response_id::text/,
   'submission RPC must derive the case ID from the newly inserted response ID');
