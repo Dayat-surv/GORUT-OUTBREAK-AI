@@ -334,7 +334,7 @@ paparan → outcome"></textarea></div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="backend-config.js" onerror="window.GORUT_BACKEND={enabled:false}"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://unpkg.com/esri-leaflet@3.0.16/dist/esri-leaflet.js"></script>
-<script src="app.js?v=167"></script>
+<script src="app.js?v=168"></script>
 <script>
 /* v149: clarify research snapshot behavior for records explicitly excluded as invalid test data. */
 (function(){
@@ -506,4 +506,53 @@ window.gorutHandleLogin = async function () {
   })();
 })();
 </script>
+
+<script>
+/* v168-staging-access-guard: temporarily retire legacy registration/payment access flows.
+   STAGING UI only. No auth account, database, case, or operational data is modified. */
+(function(){
+  'use strict';
+  var notice='Registrasi baru dan pengelolaan aktivasi akses sementara dinonaktifkan selama penyiapan keamanan STAGING. Akun petugas yang sudah terdaftar tetap dapat masuk seperti biasa.';
+  function inform(){
+    var el=document.getElementById('loginMsg');
+    if(el){el.style.display='block';el.textContent=notice;}
+    else window.alert(notice);
+  }
+  window.showRegister=function(){inform();};
+  window.closeRegister=function(){var m=document.getElementById('registerModal');if(m)m.classList.remove('show');};
+  window.submitRegistration=async function(){inform();return false;};
+  window.activateRegistration= function(){inform();return false;};
+  window.activateRegistrationV28=async function(){inform();return false;};
+  window.v30RejectRegistration=async function(){inform();return false;};
+  window.renderAdminV27=function(){
+    var el=document.getElementById('v27RegList');
+    if(el)el.innerHTML='<tr><td colspan="7">Pengelolaan registrasi sementara dinonaktifkan pada STAGING.</td></tr>';
+  };
+  window.renderAdminV28=async function(){
+    var el=document.getElementById('v28RegList');
+    if(el)el.innerHTML='<tr><td colspan="8">Pengelolaan aktivasi akses sementara dinonaktifkan pada STAGING.</td></tr>';
+  };
+  window.v30RefreshAdmin=async function(){
+    var box=document.getElementById('v30AdminContent');
+    if(box)box.innerHTML='<div class="notice"><b>Manajemen registrasi dan aktivasi akses sementara dinonaktifkan.</b><br>'+notice+'<br><br>Informasi pengguna dan audit akses akan ditinjau melalui prosedur audit terpisah. Tidak ada tindakan aktivasi atau penolakan akun yang dapat dilakukan dari panel ini.</div>';
+  };
+  function applyGuard(){
+    var modal=document.getElementById('registerModal');
+    if(modal){modal.classList.remove('show');modal.style.display='none';}
+    document.querySelectorAll('[onclick*="showRegister"],[onclick*="submitRegistration"],[data-action="register"]').forEach(function(el){
+      el.style.display='none';
+      el.setAttribute('aria-hidden','true');
+    });
+    var old27=document.getElementById('v27AccessAdmin');if(old27)old27.remove();
+    var old28=document.getElementById('v28AccessAdmin');if(old28)old28.remove();
+    window.renderAdminV27();
+    window.renderAdminV28();
+    window.v30RefreshAdmin();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyGuard);
+  else applyGuard();
+  window.addEventListener('load',applyGuard,{once:true});
+})();
+</script>
+
 </body></html>
