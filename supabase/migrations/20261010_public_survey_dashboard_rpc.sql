@@ -1,6 +1,6 @@
 
--- Owner-scoped dashboard read RPC for public questionnaire responses.
--- SECURITY INVOKER is intentional: table grants and RLS remain in force.
+-- Correct response-to-case linkage: submit_public_survey creates the case row
+-- with id = survey_responses.id::text. Keep this function SECURITY INVOKER.
 CREATE OR REPLACE FUNCTION public.get_my_public_survey_submissions()
 RETURNS TABLE (
   response_id uuid,
@@ -31,7 +31,7 @@ AS $function$
     i.id AS investigation_id,
     i.name AS investigation_name,
     COALESCE(NULLIF(sr.payload ->> 'disease_module', ''), '') AS disease_module,
-    COALESCE(c.id, NULLIF(sr.payload ->> 'case_id', '')) AS case_id,
+    c.id AS case_id,
     COALESCE(c.case_code, NULLIF(sr.payload ->> 'case_code', ''), NULLIF(sr.payload ->> 'inisial', '')) AS case_code,
     COALESCE(c.full_name, NULLIF(sr.payload ->> 'nama_lengkap', ''), NULLIF(sr.payload ->> 'nama', ''), NULLIF(sr.payload ->> 'inisial', '')) AS full_name,
     COALESCE(
@@ -52,7 +52,7 @@ AS $function$
   JOIN public.public_surveys AS ps ON ps.id = sr.survey_id
   JOIN public.investigations AS i ON i.id = ps.investigation_id
   LEFT JOIN public.cases AS c
-    ON c.id = NULLIF(sr.payload ->> 'case_id', '')
+    ON c.id = sr.id::text
    AND c.owner_id = (SELECT auth.uid())
   WHERE (SELECT auth.uid()) IS NOT NULL
     AND i.owner_id = (SELECT auth.uid())
