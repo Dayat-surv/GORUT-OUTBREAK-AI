@@ -1925,6 +1925,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       '</div>';
     v45RoleChanged();
   }
+  window.v45ShowLogin=showLogin;
   window.v45RoleChanged=function(){
     const role=document.getElementById('v45Role')?.value; const wa=document.getElementById('v45LoginWaWrap'); const setup=document.getElementById('v45AdminSetup');
     if(window.GORUT_BACKEND?.enabled){if(wa)wa.style.display='none';if(setup)setup.style.display='none';const hint=document.getElementById('v45LoginHint');if(hint)hint.textContent='Login dikelola oleh Supabase Auth. Jenis peran diambil dari profil server.';return;}
@@ -2008,7 +2009,17 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     const rb=document.getElementById('roleBadge');if(rb)rb.textContent='User: '+roleLabel[u.role]+' · Mode lokal';
     try{setRoleUI()}catch(e){} try{await window.render()}catch(e){}
   };
-  window.v45Logout=function(){localStorage.removeItem(SESSION_KEY);window.GORUT_USER=null;GORUT_USER=null;showLogin();const app=document.getElementById('app');if(app)app.style.display='none'};
+  window.v45Logout=async function(){
+    const cfg=window.GORUT_BACKEND||{};
+    if(cfg.enabled){
+      try{const sb=await backendClient();if(sb){const result=await sb.auth.signOut();if(result.error){showLogin('Tidak dapat mengakhiri sesi Supabase: '+result.error.message);return;}}}
+      catch(error){showLogin('Tidak dapat mengakhiri sesi Supabase: '+(error?.message||'kesalahan koneksi'));return;}
+    }
+    localStorage.removeItem(SESSION_KEY);
+    window.GORUT_USER=null;GORUT_USER=null;
+    const app=document.getElementById('app');if(app)app.style.display='none';
+    showLogin();
+  };
   window.v45Approve=function(id){const users=readUsers();const u=users.find(x=>x.id===id);if(!u)return alert('User tidak ditemukan.');u.status='aktif';u.approvedAt=new Date().toISOString();writeUsers(users);renderV45Admin();alert('Akun '+u.name+' sekarang DIIZINKAN login.');};
   window.v45Reject=function(id){const users=readUsers();const u=users.find(x=>x.id===id);if(!u)return;u.status='ditolak';writeUsers(users);renderV45Admin();};
   function renderV45Admin(){
@@ -2091,7 +2102,7 @@ function installLogin(){
     ['gorut-registrations','gorut-access','gorut-subscription','gorut-payment'].forEach(k=>localStorage.removeItem(k));
     // Kebijakan v57: setiap pembukaan/refresh aplikasi WAJIB kembali ke halaman login.
     // Session lama tidak dipakai untuk auto-login.
-    localStorage.removeItem(SESSION_KEY);
+    if(!window.GORUT_BACKEND?.enabled)localStorage.removeItem(SESSION_KEY);
     window.GORUT_USER=null; GORUT_USER=null;
     const app=document.getElementById('app');if(app)app.style.display='none';
     const l=document.getElementById('login');if(l)l.style.display='grid';
@@ -2979,16 +2990,72 @@ window.renderDemographyV49=function(){
     const txt=/pembayaran|konfirmasi pembayaran|verifikasi pembayaran|tarif|Rp30\.000|masa akses 7 hari|akses Premium/i;
     document.querySelectorAll('body *').forEach(e=>{if(e.children.length===0&&txt.test(e.textContent||''))e.style.display='none'});
   }
-  function forceLogin56(){
-    try{localStorage.removeItem(SESSION_KEY)}catch(e){}
-    try{const sb=window.GORUT_BACKEND?.enabled?backendClient():null;if(sb&&sb.then)sb.then(x=>x?.auth?.signOut?.()).catch(()=>{})}catch(e){}
-    window.GORUT_USER=null; if(typeof GORUT_USER!=='undefined')GORUT_USER=null;
+  function displayLogin56(message=''){
     const app=E56('app');if(app)app.style.display='none';
-    const login=E56('login');if(login){login.style.display='grid';if(typeof showLogin==='function')showLogin()}
+    if(typeof window.v45ShowLogin==='function')window.v45ShowLogin(message);
+    else {
+      let login=E56('login');
+      if(!login){login=document.createElement('div');login.id='login';login.className='login';document.body.insertBefore(login,document.body.firstElementChild);}
+      login.style.display='grid';
+    }
+    const badge=E56('roleBadge');if(badge)badge.textContent='Login diperlukan';
+  }
+  async function restoreSession56(){
+    const cfg=window.GORUT_BACKEND||{};
+    if(!cfg.enabled){
+      window.GORUT_USER=null;GORUT_USER=null;
+      displayLogin56();removePayment56();return;
+    }
+    try{
+      const sb=await backendClient();
+      if(!sb?.auth){displayLogin56('Supabase belum siap. Periksa koneksi dan konfigurasi backend staging.');removePayment56();return;}
+      const sessionResult=await sb.auth.getSession();
+      if(sessionResult.error){displayLogin56('Sesi belum dapat diperiksa: '+sessionResult.error.message);removePayment56();return;}
+      if(!sessionResult.data?.session?.user){
+        window.GORUT_USER=null;GORUT_USER=null;
+        displayLogin56();removePayment56();return;
+      }
+      const userResult=await sb.auth.getUser();
+      const user=userResult.data?.user;
+      if(userResult.error||!user){
+        window.GORUT_USER=null;GORUT_USER=null;
+        displayLogin56('Sesi Supabase tidak valid atau telah berakhir. Silakan login kembali.');removePayment56();return;
+      }
+      const profileResult=await sb.from('profiles').select('role,full_name,facility').eq('id',user.id).maybeSingle();
+      if(profileResult.error){
+        displayLogin56('Profil pengguna belum dapat diverifikasi: '+profileResult.error.message+'. Sesi tetap dipertahankan; coba muat ulang.');removePayment56();return;
+      }
+      if(!profileResult.data?.role){
+        try{await sb.auth.signOut()}catch(signOutError){console.warn('Auth cleanup after missing profile failed',signOutError)}
+        window.GORUT_USER=null;GORUT_USER=null;
+        displayLogin56('Profil dan peran pengguna belum tersedia. Akses dashboard ditolak; hubungi administrator.');removePayment56();return;
+      }
+      window.GORUT_USER={...user,id:user.id,email:user.email,role:profileResult.data.role,displayName:profileResult.data.full_name||user.email,facility:profileResult.data.facility||null};
+      GORUT_USER=window.GORUT_USER;
+      try{
+        const counts=await window.loadServerOperationalData();
+        const app=E56('app');if(app)app.style.display='block';
+        const login=E56('login');if(login)login.style.display='none';
+        const badge=E56('roleBadge');if(badge)badge.textContent='User: '+profileResult.data.role+' · Data Supabase';
+        try{if(typeof window.setRoleUI==='function')window.setRoleUI()}catch(roleError){console.warn('Role UI initialization failed',roleError)}
+        if(typeof window.render==='function')await window.render();
+        window.dispatchEvent(new Event('gorut:auth-changed'));
+        const detail=E56('backendDetail');
+        if(detail)detail.textContent='Sesi dipulihkan. Data Supabase berhasil dimuat: '+counts.investigations+' investigasi, '+counts.cases+' kasus, '+counts.contacts+' kontak, '+counts.specimens+' spesimen, '+counts.fieldVisits+' kunjungan, '+counts.alerts+' alert.';
+      }catch(loadError){
+        console.error('Supabase session restore/data load failed',loadError);
+        window.GORUT_USER=null;GORUT_USER=null;
+        displayLogin56('Sesi terdeteksi, tetapi data operasional belum dapat dimuat: '+(loadError?.message||'kesalahan tidak diketahui')+'. Sesi tidak dihapus; periksa RLS/koneksi lalu coba lagi.');
+      }
+    }catch(error){
+      console.error('Supabase session initialization failed',error);
+      displayLogin56('Aplikasi belum dapat memeriksa sesi Supabase: '+(error?.message||'kesalahan tidak diketahui'));
+    }
     removePayment56();
   }
-  /* Every full application load starts at the login gate. Successful login occurs later via the login form. */
-  setTimeout(forceLogin56,60)
+  /* Restore valid Supabase sessions after the v45 login UI has been initialized. */
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(restoreSession56,0),{once:true});
+  else setTimeout(restoreSession56,0);
   document.addEventListener('DOMContentLoaded',()=>setTimeout(removePayment56,100));
   setTimeout(removePayment56,1800);
 })();
@@ -3013,7 +3080,7 @@ window.renderDemographyV49=function(){
     }
     document.querySelectorAll('[id*=Payment],[id*=payment],[id*=Subscription],[id*=subscription],[id*=Premium],[id*=premium]').forEach(el=>el.remove());
   }
-  window.GORUT_V57={version:'v57',loginRequiredOnEveryOpen:true,paymentUiRetired:true};
+  window.GORUT_V57={version:'v57',loginRequiredOnEveryOpen:false,sessionRestoreEnabled:true,paymentUiRetired:true};
   document.addEventListener('DOMContentLoaded',()=>{purge();setTimeout(purge,100);setTimeout(purge,500)});
 })();
 
