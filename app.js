@@ -2100,8 +2100,8 @@ function installLogin(){
   function start45(){
     // Bersihkan state akses lama v27-v43 agar tidak ada sisa pembayaran/subscription/expiry yang dipakai.
     ['gorut-registrations','gorut-access','gorut-subscription','gorut-payment'].forEach(k=>localStorage.removeItem(k));
-    // Kebijakan v57: setiap pembukaan/refresh aplikasi WAJIB kembali ke halaman login.
-    // Session lama tidak dipakai untuk auto-login.
+    // Siapkan gerbang login; sesi Supabase valid dipulihkan oleh restoreSession56 setelah inisialisasi ini.
+    // Mode lokal tetap meminta login ulang karena tidak memiliki autentikasi server.
     if(!window.GORUT_BACKEND?.enabled)localStorage.removeItem(SESSION_KEY);
     window.GORUT_USER=null; GORUT_USER=null;
     const app=document.getElementById('app');if(app)app.style.display='none';
@@ -3080,7 +3080,7 @@ window.renderDemographyV49=function(){
     }
     document.querySelectorAll('[id*=Payment],[id*=payment],[id*=Subscription],[id*=subscription],[id*=Premium],[id*=premium]').forEach(el=>el.remove());
   }
-  window.GORUT_V57={version:'v57',loginRequiredOnEveryOpen:false,sessionRestoreEnabled:true,paymentUiRetired:true};
+  window.GORUT_V57={version:'v57',loginRequiredOnEveryOpen:!window.GORUT_BACKEND?.enabled,sessionRestoreEnabled:!!window.GORUT_BACKEND?.enabled,paymentUiRetired:true};
   document.addEventListener('DOMContentLoaded',()=>{purge();setTimeout(purge,100);setTimeout(purge,500)});
 })();
 
