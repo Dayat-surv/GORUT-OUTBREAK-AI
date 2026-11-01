@@ -28,7 +28,10 @@ assert.ok(signup.indexOf('if(!sign.data?.session') < signup.indexOf('v28ResumePe
   'signup without a session must defer the RPC until later login');
 assert.match(signup, /status:'waiting_session'/,
   'registration metadata must be retained while email confirmation is pending');
-assert.doesNotMatch(signup, /password\s*[:,]/,
+const pendingStart = signup.indexOf('const pending={');
+const pendingEnd = signup.indexOf('};', pendingStart);
+assert.ok(pendingStart >= 0 && pendingEnd > pendingStart, 'pending metadata object must exist');
+assert.doesNotMatch(signup.slice(pendingStart, pendingEnd), /password/i,
   'password must never be stored in pending registration metadata');
 assert.match(signup, /localStorage\.setItem\(V28_PENDING_REG_KEY/,
   'pending metadata must be retained on the same browser for post-confirmation login');
