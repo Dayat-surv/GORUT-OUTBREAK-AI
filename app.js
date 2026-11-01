@@ -2132,9 +2132,36 @@ function installLogin(){
   window.setRoleUI=function(){document.querySelectorAll('nav button').forEach(b=>{b.style.display='block'});const sec=document.getElementById('admin');if(sec)sec.style.display='block'};
   const oldLogout=window.logout;window.logout=v45Logout;
   const oldV29Logout=window.v29Logout;window.v29Logout=v45Logout;
-  const oldSubmit=window.submitRegistration;window.submitRegistration=window.v45Register;
-  const oldShow=window.showRegister;window.showRegister=window.v45ShowRegister;
-  const oldClose=window.closeRegister;window.closeRegister=window.v45CloseRegister;
+  // Route registration through Supabase Auth whenever the server backend is enabled.
+  // Keep the local/demo registration path only for explicitly offline mode.
+  const v45LocalSubmit=window.v45Register;
+  const v45SupabaseSubmit=window.submitRegistration;
+  const v45LocalShowRegister=window.v45ShowRegister;
+  window.v45ShowSupabaseRegister=function(){
+    let m=document.getElementById('registerModal');
+    if(!m){m=document.createElement('div');m.id='registerModal';document.body.appendChild(m);}
+    m.style.display='grid';m.className='modal show';
+    m.innerHTML='<div class="modalbox register-modal"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2 style="margin:0">Daftar Akun STAGING</h2><p class="small">Buat akun melalui Supabase Auth. Setelah konfirmasi email, login kembali dengan alamat email yang sama.</p></div><button type="button" onclick="window.closeRegister()">✕</button></div>'+
+      '<div class="field"><label for="regName">Nama lengkap *</label><input id="regName" autocomplete="name" required></div>'+
+      '<div class="field"><label for="regEmail">Email *</label><input id="regEmail" type="email" autocomplete="email" required></div>'+
+      '<div class="field"><label for="regPassword">Kata sandi *</label><input id="regPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="Minimal 8 karakter"></div>'+
+      '<div class="field"><label for="regWhatsapp">Nomor WhatsApp *</label><input id="regWhatsapp" inputmode="tel" autocomplete="tel" required></div>'+
+      '<div class="field"><label for="regInstitution">Instansi *</label><input id="regInstitution" required></div>'+
+      '<div class="field"><label for="regNote">Catatan (opsional)</label><textarea id="regNote" rows="2"></textarea></div>'+
+      '<input id="regPaymentRef" type="hidden" value="">'+
+      '<button type="button" class="primary" style="width:100%" onclick="window.submitRegistration()">Daftarkan akun</button>'+
+      '<div id="registerMsg" class="notice" style="display:none;margin-top:10px"></div></div>';
+  };
+  window.v45ShowRegister=function(){
+    if(window.GORUT_BACKEND?.enabled)return window.v45ShowSupabaseRegister();
+    return v45LocalShowRegister();
+  };
+  window.submitRegistration=async function(){
+    if(window.GORUT_BACKEND?.enabled)return v45SupabaseSubmit();
+    return v45LocalSubmit();
+  };
+  window.showRegister=window.v45ShowRegister;
+  window.closeRegister=window.v45CloseRegister;
   const oldRender=window.render;
   window.render=async function(){
     if(!window.GORUT_USER)return;
