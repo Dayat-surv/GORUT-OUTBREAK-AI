@@ -1,32 +1,32 @@
 {
-  "description": "FIXTURE SIMULASI — bukan pasien nyata; hanya untuk menguji pembentukan snapshot penelitian.",
+  "description": "Fixture otomatis untuk memeriksa pembentukan snapshot; bukan data pasien nyata.",
   "investigation": {
-    "id": "SIM-INV-CAMPAK-001",
-    "name": "Investigasi Simulasi Campak",
+    "id": "INV-CAMPAK-001",
+    "name": "Investigasi Campak",
     "disease": "campak"
   },
   "validRecord": {
-    "id": "SIM-VALID-CAMPAK-001",
-    "serverId": "SIM-SOURCE-VALID-001",
-    "sourceName": "Kuesioner simulasi valid",
-    "name": "KASUS SIMULASI A",
+    "id": "CASE-VALID-CAMPAK-001",
+    "serverId": "SOURCE-VALID-001",
+    "sourceName": "Kuesioner sumber",
+    "name": "KASUS CONTOH A",
     "age": 4,
     "sex": "Perempuan",
     "onset": "2026-01-05",
-    "status": "Simulasi untuk pengujian",
-    "outcome": "Tidak digunakan untuk keputusan klinis",
-    "address": "ALAMAT SIMULASI",
-    "desa": "DESA SIMULASI",
-    "kec": "KECAMATAN SIMULASI",
+    "status": "Suspek",
+    "outcome": "Belum diketahui",
+    "address": "ALAMAT CONTOH",
+    "desa": "DESA CONTOH",
+    "kec": "KECAMATAN CONTOH",
     "answers": {
       "Tanggal onset demam": "2026-01-05",
       "Tanggal onset ruam": "2026-01-07",
       "Demam": "Ya",
       "Ruam": "Ya",
       "Batuk": "Tidak",
-      "Status imunisasi MR/MMR": "Lengkap (simulasi)",
-      "Hasil laboratorium": "Belum diperiksa (simulasi)",
-      "variabelValid": "JAWABAN_VALID_SIMULASI"
+      "Status imunisasi MR/MMR": "Lengkap",
+      "Hasil laboratorium": "Belum diperiksa",
+      "variabelValid": "JAWABAN_VALID"
     }
   },
   "invalidRecords": [
