@@ -10,7 +10,7 @@ assert.match(worker, /environment === 'staging'/,
   'runtime backend config must require explicit staging environment');
 assert.match(worker, /https:\/\/xeqdhwqylutntphlkmqe\.supabase\.co/,
   'runtime config must be pinned to the staging Supabase project');
-assert.match(worker, /publishableKey\.startsWith\('sb_publishable_ '\)/,
+assert.match(worker, /publishableKey\\.startsWith\\('sb_publishable_'\\)/,
   'publishable key prefix must be validated');
 assert.match(worker, /publicSurveyEnabled: false/,
   'public survey must remain disabled');
