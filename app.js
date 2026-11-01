@@ -1333,6 +1333,7 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
       if(pendingRegistration.status==='success')v28ShowRegistrationResult(pendingRegistration.pending,pendingRegistration.requestId);
       else if(pendingRegistration.status==='error')alert('Login berhasil, tetapi permohonan registrasi belum tercatat: '+pendingRegistration.message);
       else if(pendingRegistration.status==='uncertain')alert('Status pengiriman permohonan registrasi belum dapat dipastikan. Jangan kirim ulang; hubungi administrator untuk pemeriksaan.');
+      else if(pendingRegistration.status==='storage-error')alert('Permohonan registrasi tertunda karena data lokal tidak dapat dibaca/disimpan. Hubungi administrator sebelum mencoba kembali.');
       const access=await v28BackendAccess();
       if(!access.allowed){try{await sb.auth.signOut()}catch(e){};loginEl.style.display='block';app.style.display='none';await v28ShowAccessGate(access.error||'Masa akses belum aktif atau sudah berakhir.');return;}
       loginEl.style.display='none';app.style.display='block';setRoleUI();await window.render();return;
