@@ -5429,7 +5429,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
 /* STAGING-ONLY password recovery flow. Uses the current runtime backend config;
    no password or recovery token is persisted by this feature. */
 (function installStagingPasswordRecovery(){
-  if(!window.GORUT_BACKEND?.enabled)return;
+  if(!window.GORUT_BACKEND?.enabled || window.GORUT_BACKEND.url!=='https://xeqdhwqylutntphlkmqe.supabase.co')return;
   const RECOVERY_FLAG='gorut-auth-recovery';
   let recoveryModal=null;
   function ensureRecoveryModal(){
