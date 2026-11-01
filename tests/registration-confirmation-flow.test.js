@@ -58,3 +58,25 @@ for (const field of ['regName','regEmail','regPassword','regWhatsapp','regInstit
 
 console.log('Confirmed-email registration flow static tests passed.');
 console.warn('LIVE CHECK REQUIRED: browser signup, email confirmation, and post-confirmation login must be tested with a dedicated non-operational account.');
+
+const recoveryStart = source.indexOf('/* STAGING-ONLY password recovery flow.');
+assert.ok(recoveryStart >= 0, 'STAGING password recovery feature must exist');
+const recovery = source.slice(recoveryStart);
+assert.match(recovery, /window\.GORUT_BACKEND\?\.enabled/,
+  'password recovery must be gated behind the enabled STAGING backend');
+assert.match(recovery, /resetPasswordForEmail\(email,\{redirectTo\}\)/,
+  'forgot-password action must call Supabase Auth resetPasswordForEmail with a redirect');
+assert.match(recovery, /onAuthStateChange\(function\(event\)[\s\S]*PASSWORD_RECOVERY/,
+  'recovery callback must be handled through the Supabase Auth event');
+assert.match(recovery, /updateUser\(\{password:p\}\)/,
+  'new password must be saved through Supabase Auth updateUser');
+assert.match(recovery, /publicSurveyEnabled/,
+  'recovery feature must not change public survey settings'); // guardrail assertion below also checks worker
+assert.match(recovery, /gorutForgotPassword/,
+  'login view must expose a Lupa Kata Sandi action');
+assert.doesNotMatch(recovery, /localStorage\.setItem\([^\n]*password/i,
+  'recovery feature must never persist a password in local storage');
+assert.match(source, /publicSurveyEnabled: false/,
+  'STAGING runtime backend must keep public survey disabled');
+assert.doesNotMatch(recovery, /service_role|sb_secret_/i,
+  'recovery feature must not introduce privileged server keys');
