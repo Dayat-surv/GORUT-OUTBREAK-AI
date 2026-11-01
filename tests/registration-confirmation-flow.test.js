@@ -43,5 +43,16 @@ const login = source.slice(loginStart, loginEnd);
 assert.ok(login.indexOf('v28ResumePendingRegistration(sb,r.data.user)') < login.indexOf('const access=await v28BackendAccess()'),
   'pending registration must be recorded immediately after login, before subscription/access gating');
 
+
+const finalRegistrationRouting = source.slice(source.lastIndexOf('/* Disable obsolete v43 open-access overrides'));
+assert.match(finalRegistrationRouting, /window\.v45ShowRegister=function\(\)[\s\S]*GORUT_BACKEND\?\.enabled[\s\S]*v45ShowSupabaseRegister/,
+  'registration button must open the Supabase registration form when backend is enabled');
+assert.match(finalRegistrationRouting, /window\.submitRegistration=async function\(\)[\s\S]*GORUT_BACKEND\?\.enabled[\s\S]*v45SupabaseSubmit/,
+  'registration submission must use the confirmed-email Supabase flow when backend is enabled');
+for (const field of ['regName','regEmail','regPassword','regWhatsapp','regInstitution','registerMsg']) {
+  assert.ok(finalRegistrationRouting.includes('id="' + field + '"'),
+    'Supabase registration form must render field ' + field);
+}
+
 console.log('Confirmed-email registration flow static tests passed.');
 console.warn('LIVE CHECK REQUIRED: browser signup, email confirmation, and post-confirmation login must be tested with a dedicated non-operational account.');
