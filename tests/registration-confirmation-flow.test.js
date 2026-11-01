@@ -44,7 +44,9 @@ assert.ok(login.indexOf('v28ResumePendingRegistration(sb,r.data.user)') < login.
   'pending registration must be recorded immediately after login, before subscription/access gating');
 
 
-const finalRegistrationRouting = source.slice(source.lastIndexOf('/* Disable obsolete v43 open-access overrides'));
+const finalRegistrationRoutingStart = source.lastIndexOf('const v45LocalSubmit=window.v45Register;');
+assert.ok(finalRegistrationRoutingStart >= 0, 'final registration routing override must exist');
+const finalRegistrationRouting = source.slice(finalRegistrationRoutingStart);
 assert.match(finalRegistrationRouting, /window\.v45ShowRegister=function\(\)[\s\S]*GORUT_BACKEND\?\.enabled[\s\S]*v45ShowSupabaseRegister/,
   'registration button must open the Supabase registration form when backend is enabled');
 assert.match(finalRegistrationRouting, /window\.submitRegistration=async function\(\)[\s\S]*GORUT_BACKEND\?\.enabled[\s\S]*v45SupabaseSubmit/,
