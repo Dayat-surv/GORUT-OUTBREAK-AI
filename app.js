@@ -1161,6 +1161,44 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
     else if(a.expiresAt){document.getElementById('roleBadge').textContent=`Role: Gratis · aktif s/d ${new Date(a.expiresAt).toLocaleString('id-ID')}`;}
     return true;
   }
+  // v176: defer authenticated registration-request RPC until a confirmed-email user has a session.
+  const V28_PENDING_REG_KEY='gorut-pending-registration-v1';
+  function v28ReadPendingRegistration(){
+    try{return JSON.parse(localStorage.getItem(V28_PENDING_REG_KEY)||'null')}catch(e){return null}
+  }
+  function v28ShowRegistrationResult(pending,requestId){
+    const box=document.getElementById('registerMsg');
+    const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(requestId)}%0ANama: ${encodeURIComponent(pending.name)}%0AEmail: ${encodeURIComponent(pending.email)}%0AWhatsApp: ${encodeURIComponent(pending.whatsapp)}%0AInstansi: ${encodeURIComponent(pending.institution)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(pending.paymentReference||'')}`;
+    if(box){
+      box.style.display='block';
+      box.innerHTML=`Permohonan akses <b>${esc0(requestId)}</b> berhasil dicatat dan menunggu verifikasi admin.<br><br><a href="https://wa.me/6282290150334?text=${msg}" target="_blank" rel="noopener"><button class="btn-whatsapp">Kirim Konfirmasi WhatsApp</button></a>`;
+    }
+  }
+  async function v28ResumePendingRegistration(sb,user){
+    const pending=v28ReadPendingRegistration();
+    if(!pending)return {status:'none'};
+    if(!user?.email||String(user.email).trim().toLowerCase()!==String(pending.email||'').trim().toLowerCase())return {status:'different-account'};
+    if(pending.status==='uncertain'||pending.status==='sending')return {status:'uncertain'};
+    pending.status='sending';
+    try{localStorage.setItem(V28_PENDING_REG_KEY,JSON.stringify(pending))}catch(e){return {status:'storage-error'};}
+    let rr;
+    try{
+      rr=await sb.rpc('create_registration_request',{
+        p_email:pending.email,p_full_name:pending.name,p_whatsapp:pending.whatsapp,
+        p_institution:pending.institution,p_payment_reference:pending.paymentReference||'',
+        p_note:pending.note||''
+      });
+    }catch(e){
+      pending.status='uncertain';try{localStorage.setItem(V28_PENDING_REG_KEY,JSON.stringify(pending))}catch(_){}
+      return {status:'uncertain'};
+    }
+    if(rr.error){
+      pending.status='retryable';try{localStorage.setItem(V28_PENDING_REG_KEY,JSON.stringify(pending))}catch(_){}
+      return {status:'error',message:rr.error.message||'Permohonan belum berhasil dicatat.'};
+    }
+    try{localStorage.removeItem(V28_PENDING_REG_KEY)}catch(e){}
+    return {status:'success',requestId:rr.data,pending};
+  }
   const v28OriginalSubmitRegistration=window.submitRegistration;
   window.submitRegistration=async function(){
     const sb=await backendClient();
@@ -1290,6 +1328,12 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
       const r=await sb.auth.signInWithPassword({email,password});
       if(r.error){const m=document.getElementById('loginMsg');m.style.display='block';m.textContent='Login gagal: '+r.error.message;return;}
       GORUT_USER=r.data.user; await authStatus();
+      // Record pending registration only after the matching user has an authenticated session.
+      const pendingRegistration=await v28ResumePendingRegistration(sb,r.data.user);
+      if(pendingRegistration.status==='success')v28ShowRegistrationResult(pendingRegistration.pending,pendingRegistration.requestId);
+      else if(pendingRegistration.status==='error')alert('Login berhasil, tetapi permohonan registrasi belum tercatat: '+pendingRegistration.message);
+      else if(pendingRegistration.status==='uncertain')alert('Status pengiriman permohonan registrasi belum dapat dipastikan. Jangan kirim ulang; hubungi administrator untuk pemeriksaan.');
+      else if(pendingRegistration.status==='storage-error')alert('Permohonan registrasi tertunda karena data lokal tidak dapat dibaca/disimpan. Hubungi administrator sebelum mencoba kembali.');
       const access=await v28BackendAccess();
       if(!access.allowed){try{await sb.auth.signOut()}catch(e){};loginEl.style.display='block';app.style.display='none';await v28ShowAccessGate(access.error||'Masa akses belum aktif atau sudah berakhir.');return;}
       loginEl.style.display='none';app.style.display='block';setRoleUI();await window.render();return;
@@ -1315,12 +1359,23 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
     const name=val('regName').trim(),wa=val('regWhatsapp').trim(),email=val('regEmail').trim().toLowerCase(),pw=val('regPassword'),inst=val('regInstitution').trim(),ref=val('regPaymentRef').trim(),note=val('regNote').trim();
     if(!name||!wa||!email||!pw)return alert('Nama, WhatsApp, email, dan kata sandi wajib diisi.');
     if(pw.length<8)return alert('Kata sandi minimal 8 karakter.');
+    const existing=v28ReadPendingRegistration();
+    if(existing)return alert('Masih ada permohonan registrasi yang belum selesai pada browser ini. Login dengan email yang sama untuk melanjutkannya; jangan mendaftar ulang.');
     const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
     if(sign.error)return alert('Registrasi akun gagal: '+sign.error.message);
-    const rr=await sb.rpc('create_registration_request',{p_email:email,p_full_name:name,p_whatsapp:wa,p_institution:inst,p_payment_reference:ref,p_note:note});
-    if(rr.error)return alert('Akun dibuat tetapi permintaan akses gagal dicatat: '+rr.error.message);
-    const rid=rr.data; const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(rid)}%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(wa)}%0AInstansi: ${encodeURIComponent(inst)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(ref)}`;
-    const box=document.getElementById('registerMsg');box.style.display='block';box.innerHTML=`Permintaan <b>${esc0(rid)}</b> tercatat di server dan menunggu verifikasi admin.<br><br><a href="https://wa.me/6282290150334?text=${msg}" target="_blank" rel="noopener"><button class="btn-whatsapp">Kirim Konfirmasi WhatsApp</button></a>`;
+    const pending={name,whatsapp:wa,email,institution:inst,paymentReference:ref,note,status:'waiting_session',createdAt:new Date().toISOString()};
+    try{localStorage.setItem(V28_PENDING_REG_KEY,JSON.stringify(pending))}
+    catch(e){return alert('Akun berhasil dibuat, tetapi data permohonan belum dapat disimpan di browser. Hubungi administrator untuk bantuan.');}
+    if(!sign.data?.session||!sign.data?.user){
+      const box=document.getElementById('registerMsg');
+      if(box){box.style.display='block';box.textContent='Akun berhasil dibuat. Konfirmasi email melalui tautan Supabase, lalu kembali ke browser/perangkat ini dan login dengan email yang sama. Permohonan akses akan dicatat otomatis setelah login.';}
+      return;
+    }
+    const result=await v28ResumePendingRegistration(sb,sign.data.user);
+    if(result.status==='success'){v28ShowRegistrationResult(result.pending,result.requestId);return;}
+    if(result.status==='error')return alert('Akun berhasil dibuat, tetapi permohonan akses belum tercatat: '+result.message);
+    if(result.status==='uncertain')return alert('Status pencatatan belum dapat dipastikan. Jangan mendaftar atau mengirim ulang; hubungi administrator untuk pemeriksaan.');
+    return alert('Akun berhasil dibuat. Login dengan email yang sama untuk melanjutkan pencatatan permohonan.');
   };
   /* Start selectors after DOM is ready. */
   setTimeout(()=>{try{initDiseaseSelectors();addV27Admin()}catch(e){console.warn(e)}},300);
