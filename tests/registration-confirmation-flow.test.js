@@ -74,7 +74,8 @@ assert.match(recovery, /gorutForgotPassword/,
   'login view must expose a Lupa Kata Sandi action');
 assert.doesNotMatch(recovery, /localStorage\.setItem\([^\n]*password/i,
   'recovery feature must never persist a password in local storage');
-assert.match(source, /publicSurveyEnabled: false/,
+const stagingWorker = fs.readFileSync(path.join(__dirname, '..', '_worker.js'), 'utf8');
+assert.match(stagingWorker, /publicSurveyEnabled: false/,
   'STAGING runtime backend must keep public survey disabled');
 assert.doesNotMatch(recovery, /service_role|sb_secret_/i,
   'recovery feature must not introduce privileged server keys');
