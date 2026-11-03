@@ -12,8 +12,8 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=177/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v178/, 'service worker cache version must match the release');
+assert.match(index, /app\.js\?v=179/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v179/, 'service worker cache version must match the release');
 assert.match(sw, /app\.js\?v=177/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
@@ -23,6 +23,11 @@ try { new Function(appJs); } catch (error) {
 const publicSurvey = read('public_survey.html');
 const deleteMigration = read('supabase/migrations/20261104_delete_investigation_bundle.sql');
 assert.match(appJs, /window\.deleteInvestigation=async function\(id\)/, 'investigation deletion must wait for server confirmation');
+assert.match(appJs, /countForServer\('cases'\)/, 'delete confirmation must use exact server-side linked case counts');
+assert.match(appJs, /countForServer\('contacts'\)/, 'delete confirmation must use exact server-side linked contact counts');
+assert.match(appJs, /public_surveys/, 'delete confirmation must include linked public survey counts');
+assert.match(appJs, /survey_responses/, 'delete confirmation must include linked survey response counts');
+assert.match(appJs, /ID investigasi server belum tersedia/, 'server deletion must fail closed when investigation ID mapping is missing');
 assert.match(appJs, /rpc\('delete_investigation_bundle'/, 'authenticated investigation deletion must call the atomic server RPC');
 assert.match(appJs, /if\(!serverSummary\|\|serverSummary\.deleted!==true\)/, 'local records must remain unless the server confirms deletion');
 assert.match(deleteMigration, /security definer/i, 'bundle deletion must execute atomically despite survey-response RLS');
