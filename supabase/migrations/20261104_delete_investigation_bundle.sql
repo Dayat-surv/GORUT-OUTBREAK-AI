@@ -4,7 +4,7 @@ create or replace function public.delete_investigation_bundle(p_investigation_id
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public, auth, private
+set search_path = pg_catalog, public, auth
 as $function$
 declare
   v_user_id uuid := auth.uid();
@@ -30,8 +30,7 @@ begin
     raise exception 'INVESTIGATION_NOT_FOUND';
   end if;
 
-  if v_owner_id is distinct from v_user_id
-     and not private.is_current_user_admin() then
+  if v_owner_id is distinct from v_user_id then
     raise exception 'NOT_AUTHORIZED';
   end if;
 
