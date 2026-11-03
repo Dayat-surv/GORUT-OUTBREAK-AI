@@ -18,6 +18,16 @@ assert.match(sw, /app\.js\?v=175/, 'service worker must precache the release app
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
+const deleteMigration = read('supabase/migrations/20261104_delete_investigation_bundle.sql');
+assert.match(appJs, /window\\.deleteInvestigation=async function\\(id\\)/, 'investigation deletion must wait for server confirmation');
+assert.match(appJs, /rpc\\('delete_investigation_bundle'/, 'authenticated investigation deletion must call the atomic server RPC');
+assert.match(appJs, /if\\(!serverSummary\\|\\|serverSummary\\.deleted!==true\\)/, 'local records must remain unless the server confirms deletion');
+assert.match(deleteMigration, /security definer/i, 'bundle deletion must execute atomically despite survey-response RLS');
+assert.match(deleteMigration, /auth\\.uid\\(\\)/, 'bundle deletion must require an authenticated user');
+assert.match(deleteMigration, /NOT_AUTHORIZED/, 'bundle deletion must enforce owner/admin authorization');
+assert.match(deleteMigration, /delete from public\\.survey_responses/i, 'linked survey responses must be deleted before their survey');
+assert.match(deleteMigration, /grant execute on function public\\.delete_investigation_bundle\\(text\\) to authenticated/i, 'only authenticated users may execute the deletion RPC');
+
 assert.match(appJs, /from\('survey_responses'\)\.select\('id,payload'\)/, 'survey response hydration must select the real survey_responses primary key');
 assert.match(appJs, /surveyAnswerByResponseId\.set\(String\(response\.id\),response\.payload\)/, 'stored questionnaire answers must be mapped to cases by exact response ID');
 assert.doesNotMatch(appJs, /from\('survey_responses'\)\.select\('response_id,payload'\)/, 'app must not query a nonexistent response_id table column');
