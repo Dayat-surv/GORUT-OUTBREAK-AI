@@ -5534,3 +5534,38 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     }catch(error){console.warn('Password recovery listener unavailable.',error);}
   })();
 })();
+
+
+/* GORUT_SYNC_PERMISSION_GATE_V1 — fail-closed separation of authentication and operational sync.
+   Authentication remains governed by GORUT_BACKEND.enabled.
+   Data writes require the separate explicit flag GORUT_BACKEND.syncEnabled === true.
+   This gate is installed last so earlier sync wrappers cannot bypass it.
+*/
+(function installGorutSyncPermissionGate(){
+  'use strict';
+  const previousSync = window.syncNow;
+  if (typeof previousSync !== 'function') {
+    console.error('GORUT sync permission gate: syncNow function not found; sync remains unavailable.');
+    return;
+  }
+  window.syncNow = async function(){
+    const cfg = window.GORUT_BACKEND || {};
+    if (cfg.syncEnabled !== true) {
+      const message = 'Sinkronisasi dinonaktifkan pada STAGING. Login tetap dapat digunakan. Tidak ada data yang dikirim ke server.';
+      const badge = document.getElementById('backendBadge');
+      const detail = document.getElementById('backendDetail');
+      if (badge) badge.textContent = 'Sinkronisasi: dinonaktifkan';
+      if (detail) detail.textContent = message;
+      if (typeof window.alert === 'function') window.alert(message);
+      console.info('GORUT_SYNC_PERMISSION_GATE_V1: blocked; syncEnabled is not explicitly true.');
+      return false;
+    }
+    return previousSync.apply(this, arguments);
+  };
+  window.GORUT_SYNC_PERMISSION_GATE = {
+    version: 'v1',
+    installed: true,
+    defaultPolicy: 'deny',
+    requires: 'GORUT_BACKEND.syncEnabled === true'
+  };
+})();
