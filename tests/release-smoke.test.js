@@ -27,6 +27,7 @@ assert.match(appJs, /countForServer\('cases'\)/, 'delete confirmation must use e
 assert.match(appJs, /countForServer\('contacts'\)/, 'delete confirmation must use exact server-side linked contact counts');
 assert.match(appJs, /public_surveys/, 'delete confirmation must include linked public survey counts');
 assert.match(appJs, /survey_responses/, 'delete confirmation must include linked survey response counts');
+assert.match(appJs, /Seluruh ID survei belum dapat diverifikasi/, 'delete confirmation must fail closed when survey ID pagination is incomplete');
 assert.match(appJs, /ID investigasi server belum tersedia/, 'server deletion must fail closed when investigation ID mapping is missing');
 assert.match(appJs, /rpc\('delete_investigation_bundle'/, 'authenticated investigation deletion must call the atomic server RPC');
 assert.match(appJs, /if\(!serverSummary\|\|serverSummary\.deleted!==true\)/, 'local records must remain unless the server confirms deletion');
