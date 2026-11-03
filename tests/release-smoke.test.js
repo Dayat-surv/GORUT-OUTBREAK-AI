@@ -12,9 +12,9 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=175/, 'main page must use the release cache-busted application script');
+assert.match(index, /app\.js\?v=176/, 'main page must use the release cache-busted application script');
 assert.match(sw, /gorut-outbreak-ai-final-v176/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=175/, 'service worker must precache the release application script');
+assert.match(sw, /app\.js\?v=176/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 try { new Function(appJs); } catch (error) {
@@ -22,14 +22,14 @@ try { new Function(appJs); } catch (error) {
 }
 const publicSurvey = read('public_survey.html');
 const deleteMigration = read('supabase/migrations/20261104_delete_investigation_bundle.sql');
-assert.match(appJs, /window\\.deleteInvestigation=async function\\(id\\)/, 'investigation deletion must wait for server confirmation');
-assert.match(appJs, /rpc\\('delete_investigation_bundle'/, 'authenticated investigation deletion must call the atomic server RPC');
-assert.match(appJs, /if\\(!serverSummary\\|\\|serverSummary\\.deleted!==true\\)/, 'local records must remain unless the server confirms deletion');
+assert.match(appJs, /window\.deleteInvestigation=async function\(id\)/, 'investigation deletion must wait for server confirmation');
+assert.match(appJs, /rpc\('delete_investigation_bundle'/, 'authenticated investigation deletion must call the atomic server RPC');
+assert.match(appJs, /if\(!serverSummary\|\|serverSummary\.deleted!==true\)/, 'local records must remain unless the server confirms deletion');
 assert.match(deleteMigration, /security definer/i, 'bundle deletion must execute atomically despite survey-response RLS');
-assert.match(deleteMigration, /auth\\.uid\\(\\)/, 'bundle deletion must require an authenticated user');
-assert.match(deleteMigration, /NOT_AUTHORIZED/, 'bundle deletion must enforce owner/admin authorization');
-assert.match(deleteMigration, /delete from public\\.survey_responses/i, 'linked survey responses must be deleted before their survey');
-assert.match(deleteMigration, /grant execute on function public\\.delete_investigation_bundle\\(text\\) to authenticated/i, 'only authenticated users may execute the deletion RPC');
+assert.match(deleteMigration, /auth\.uid\(\)/, 'bundle deletion must require an authenticated user');
+assert.match(deleteMigration, /NOT_AUTHORIZED/, 'bundle deletion must enforce strict ownership authorization');
+assert.match(deleteMigration, /delete from public\.survey_responses/i, 'linked survey responses must be deleted before their survey');
+assert.match(deleteMigration, /grant execute on function public\.delete_investigation_bundle\(text\) to authenticated/i, 'only authenticated users may execute the deletion RPC');
 
 assert.match(appJs, /from\('survey_responses'\)\.select\('id,payload'\)/, 'survey response hydration must select the real survey_responses primary key');
 assert.match(appJs, /surveyAnswerByResponseId\.set\(String\(response\.id\),response\.payload\)/, 'stored questionnaire answers must be mapped to cases by exact response ID');
