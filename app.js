@@ -1115,10 +1115,11 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
           countForServer('contacts'),
           countForServer('specimens'),
           countForServer('field_visits'),
-          sb.from('public_surveys').select('id').eq('investigation_id',serverId)
+          sb.from('public_surveys').select('id',{count:'exact'}).eq('investigation_id',serverId)
         ]);
         if(counts[4].error)throw counts[4].error;
         const surveyIds=(counts[4].data||[]).map(row=>row.id);
+        if(Number(counts[4].count||0)!==surveyIds.length)throw new Error('Seluruh ID survei belum dapat diverifikasi. Muat ulang data atau hubungi administrator; penghapusan dibatalkan.');
         let responseCount=0;
         if(surveyIds.length){
           const responses=await sb.from('survey_responses').select('id',{count:'exact',head:true}).in('survey_id',surveyIds);
