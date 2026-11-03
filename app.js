@@ -2132,9 +2132,36 @@ function installLogin(){
   window.setRoleUI=function(){document.querySelectorAll('nav button').forEach(b=>{b.style.display='block'});const sec=document.getElementById('admin');if(sec)sec.style.display='block'};
   const oldLogout=window.logout;window.logout=v45Logout;
   const oldV29Logout=window.v29Logout;window.v29Logout=v45Logout;
-  const oldSubmit=window.submitRegistration;window.submitRegistration=window.v45Register;
-  const oldShow=window.showRegister;window.showRegister=window.v45ShowRegister;
-  const oldClose=window.closeRegister;window.closeRegister=window.v45CloseRegister;
+  // Route registration through Supabase Auth whenever the server backend is enabled.
+  // Keep the local/demo registration path only for explicitly offline mode.
+  const v45LocalSubmit=window.v45Register;
+  const v45SupabaseSubmit=window.submitRegistration;
+  const v45LocalShowRegister=window.v45ShowRegister;
+  window.v45ShowSupabaseRegister=function(){
+    let m=document.getElementById('registerModal');
+    if(!m){m=document.createElement('div');m.id='registerModal';document.body.appendChild(m);}
+    m.style.display='grid';m.className='modal show';
+    m.innerHTML='<div class="modalbox register-modal"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2 style="margin:0">Daftar Akun STAGING</h2><p class="small">Buat akun melalui Supabase Auth. Setelah konfirmasi email, login kembali dengan alamat email yang sama.</p></div><button type="button" onclick="window.closeRegister()">✕</button></div>'+
+      '<div class="field"><label for="regName">Nama lengkap *</label><input id="regName" autocomplete="name" required></div>'+
+      '<div class="field"><label for="regEmail">Email *</label><input id="regEmail" type="email" autocomplete="email" required></div>'+
+      '<div class="field"><label for="regPassword">Kata sandi *</label><input id="regPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="Minimal 8 karakter"></div>'+
+      '<div class="field"><label for="regWhatsapp">Nomor WhatsApp *</label><input id="regWhatsapp" inputmode="tel" autocomplete="tel" required></div>'+
+      '<div class="field"><label for="regInstitution">Instansi *</label><input id="regInstitution" required></div>'+
+      '<div class="field"><label for="regNote">Catatan (opsional)</label><textarea id="regNote" rows="2"></textarea></div>'+
+      '<input id="regPaymentRef" type="hidden" value="">'+
+      '<button type="button" class="primary" style="width:100%" onclick="window.submitRegistration()">Daftarkan akun</button>'+
+      '<div id="registerMsg" class="notice" style="display:none;margin-top:10px"></div></div>';
+  };
+  window.v45ShowRegister=function(){
+    if(window.GORUT_BACKEND?.enabled)return window.v45ShowSupabaseRegister();
+    return v45LocalShowRegister();
+  };
+  window.submitRegistration=async function(){
+    if(window.GORUT_BACKEND?.enabled)return v45SupabaseSubmit();
+    return v45LocalSubmit();
+  };
+  window.showRegister=window.v45ShowRegister;
+  window.closeRegister=window.v45CloseRegister;
   const oldRender=window.render;
   window.render=async function(){
     if(!window.GORUT_USER)return;
@@ -5397,4 +5424,113 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   document.addEventListener('DOMContentLoaded',function(){setTimeout(install126,1000)});
   [1800,4000,7500].forEach(function(ms){setTimeout(install126,ms)});
   window.GORUT_V126={version:'v126',features:['KLB investigation registry','active investigation navigation to PE report/research/case dashboards','research dataset generation from active investigation answers','no operational case deletion or overwrite']};
+})();
+
+/* STAGING-ONLY password recovery flow. Uses the current runtime backend config;
+   no password or recovery token is persisted by this feature. */
+(function installStagingPasswordRecovery(){
+  if(!window.GORUT_BACKEND?.enabled || window.GORUT_BACKEND.url!=='https://xeqdhwqylutntphlkmqe.supabase.co')return;
+  const RECOVERY_FLAG='gorut-auth-recovery';
+  let recoveryModal=null;
+  function ensureRecoveryModal(){
+    if(recoveryModal&&document.body.contains(recoveryModal))return recoveryModal;
+    recoveryModal=document.createElement('div');
+    recoveryModal.id='gorutPasswordRecoveryModal';
+    recoveryModal.className='modal';
+    recoveryModal.style.zIndex='10050';
+    recoveryModal.innerHTML='<div class="modalbox" role="dialog" aria-modal="true" aria-labelledby="gorutRecoveryTitle">'+
+      '<h2 id="gorutRecoveryTitle">Atur Ulang Kata Sandi</h2>'+
+      '<p class="small">Masukkan kata sandi baru untuk akun Anda. Minimal 8 karakter.</p>'+
+      '<div class="field"><label for="gorutRecoveryPassword">Kata sandi baru</label><input id="gorutRecoveryPassword" type="password" minlength="8" autocomplete="new-password" required></div>'+
+      '<div class="field"><label for="gorutRecoveryConfirm">Ulangi kata sandi baru</label><input id="gorutRecoveryConfirm" type="password" minlength="8" autocomplete="new-password" required></div>'+
+      '<div id="gorutRecoveryMessage" class="notice" role="status" aria-live="polite"></div>'+
+      '<div class="toolbar"><button type="button" class="primary" id="gorutRecoverySave">Simpan kata sandi baru</button><button type="button" id="gorutRecoveryCancel">Batal</button></div></div>';
+    document.body.appendChild(recoveryModal);
+    document.getElementById('gorutRecoveryCancel').onclick=function(){
+      recoveryModal.classList.remove('show');
+      const sb=window.__gorutSupabase;
+      if(sb)sb.auth.signOut().catch(function(){});
+      if(location.search.includes(RECOVERY_FLAG))history.replaceState({},document.title,location.pathname);
+      if(typeof window.v45ShowLogin==='function')window.v45ShowLogin();
+    };
+    document.getElementById('gorutRecoverySave').onclick=async function(){
+      const p=document.getElementById('gorutRecoveryPassword').value;
+      const c=document.getElementById('gorutRecoveryConfirm').value;
+      const msg=document.getElementById('gorutRecoveryMessage');
+      const btn=document.getElementById('gorutRecoverySave');
+      if(p.length<8){msg.textContent='Kata sandi minimal 8 karakter.';return;}
+      if(p!==c){msg.textContent='Konfirmasi kata sandi belum sama.';return;}
+      btn.disabled=true;msg.textContent='Menyimpan kata sandi...';
+      try{
+        const sb=await backendClient();
+        if(!sb)throw new Error('Koneksi STAGING tidak tersedia. Muat ulang tautan pemulihan.');
+        const result=await sb.auth.updateUser({password:p});
+        if(result.error)throw result.error;
+        document.getElementById('gorutRecoveryPassword').value='';
+        document.getElementById('gorutRecoveryConfirm').value='';
+        await sb.auth.signOut();
+        recoveryModal.classList.remove('show');
+        if(location.search.includes(RECOVERY_FLAG))history.replaceState({},document.title,location.pathname);
+        if(typeof window.v45ShowLogin==='function')window.v45ShowLogin();
+        const login=document.getElementById('login');
+        if(login){
+          let note=document.getElementById('gorutRecoveryComplete');
+          if(!note){note=document.createElement('div');note.id='gorutRecoveryComplete';note.className='notice';login.querySelector('.v45-loginbox')?.appendChild(note);}
+          if(note)note.textContent='Kata sandi berhasil diperbarui. Silakan login menggunakan kata sandi baru.';
+        }
+      }catch(error){
+        msg.textContent='Kata sandi belum berhasil diperbarui: '+(error?.message||'Terjadi kesalahan.');
+      }finally{btn.disabled=false;}
+    };
+    return recoveryModal;
+  }
+  function openRecoveryModal(){
+    const modal=ensureRecoveryModal();
+    const msg=document.getElementById('gorutRecoveryMessage');
+    if(msg)msg.textContent='Tautan pemulihan terverifikasi. Silakan buat kata sandi baru.';
+    modal.classList.add('show');
+  }
+  window.gorutRequestPasswordReset=async function(){
+    const email=(document.getElementById('v45LoginName')?.value||'').trim().toLowerCase();
+    const hint=document.getElementById('v45LoginHint');
+    if(!email){if(hint)hint.textContent='Masukkan email akun pada kolom Email terlebih dahulu.';return;}
+    const sb=await backendClient();
+    if(!sb){if(hint)hint.textContent='Layanan pemulihan STAGING belum tersedia.';return;}
+    const redirectTo=location.origin+location.pathname+'?'+RECOVERY_FLAG+'=1';
+    if(hint)hint.textContent='Memproses permintaan pemulihan...';
+    const result=await sb.auth.resetPasswordForEmail(email,{redirectTo});
+    // Keep the same response for existing and unknown emails to avoid account enumeration.
+    if(hint)hint.textContent=result.error
+      ?'Permintaan belum dapat diproses. Periksa koneksi dan konfigurasi email STAGING, lalu coba kembali.'
+      :'Jika email tersebut terdaftar, tautan pemulihan akan dikirim. Periksa Inbox, Spam, dan Promotions.';
+  };
+  function installLoginLink(){
+    if(!window.GORUT_BACKEND?.enabled)return;
+    const hint=document.getElementById('v45LoginHint');
+    if(!hint||document.getElementById('gorutForgotPassword'))return;
+    const button=document.createElement('button');
+    button.type='button';button.id='gorutForgotPassword';button.className='btn-ghost';
+    button.style.cssText='width:100%;margin-top:8px';
+    button.textContent='Lupa Kata Sandi?';
+    button.onclick=window.gorutRequestPasswordReset;
+    hint.parentNode.insertBefore(button,hint.nextSibling);
+  }
+  const loginRoot=document.getElementById('login');
+  if(loginRoot){
+    new MutationObserver(installLoginLink).observe(loginRoot,{childList:true,subtree:true});
+    installLoginLink();
+  }
+  (async function watchRecoveryEvent(){
+    try{
+      const sb=await backendClient();
+      if(!sb)return;
+      sb.auth.onAuthStateChange(function(event){
+        if(event==='PASSWORD_RECOVERY')setTimeout(openRecoveryModal,0);
+      });
+      if(new URLSearchParams(location.search).get(RECOVERY_FLAG)==='1'){
+        // Supabase detects the recovery link during client initialization and emits PASSWORD_RECOVERY.
+        // If the event is delayed, leave the page ready for the auth callback rather than accepting a password unauthenticated.
+      }
+    }catch(error){console.warn('Password recovery listener unavailable.',error);}
+  })();
 })();

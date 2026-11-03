@@ -1,10 +1,10 @@
-const CACHE='gorut-outbreak-ai-final-v175';
+const CACHE='gorut-outbreak-ai-staging-preview-v178';
 const ASSETS=[
   './',
   './index.html',
   './premium.css?v=158',
   './favicon.svg',
-  './app.js?v=175',
+  './app.js?v=176',
   './backend-config.js',
   './manifest.webmanifest',
   './mobile.html',
@@ -23,6 +23,8 @@ self.addEventListener('activate',event=>event.waitUntil(
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
+  // Runtime backend config must never be cached; preview config is environment-specific.
+  if(url.pathname.endsWith('/backend-config.js'))return;
   // Cache only same-origin static site resources. Never cache Supabase/API/CDN responses,
   // which may contain confidential surveillance or patient data.
   if(url.origin!==self.location.origin)return;

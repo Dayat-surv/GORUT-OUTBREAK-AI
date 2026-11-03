@@ -43,5 +43,39 @@ const login = source.slice(loginStart, loginEnd);
 assert.ok(login.indexOf('v28ResumePendingRegistration(sb,r.data.user)') < login.indexOf('const access=await v28BackendAccess()'),
   'pending registration must be recorded immediately after login, before subscription/access gating');
 
+
+const finalRegistrationRoutingStart = source.lastIndexOf('const v45LocalSubmit=window.v45Register;');
+assert.ok(finalRegistrationRoutingStart >= 0, 'final registration routing override must exist');
+const finalRegistrationRouting = source.slice(finalRegistrationRoutingStart);
+assert.match(finalRegistrationRouting, /window\.v45ShowRegister=function\(\)[\s\S]*GORUT_BACKEND\?\.enabled[\s\S]*v45ShowSupabaseRegister/,
+  'registration button must open the Supabase registration form when backend is enabled');
+assert.match(finalRegistrationRouting, /window\.submitRegistration=async function\(\)[\s\S]*GORUT_BACKEND\?\.enabled[\s\S]*v45SupabaseSubmit/,
+  'registration submission must use the confirmed-email Supabase flow when backend is enabled');
+for (const field of ['regName','regEmail','regPassword','regWhatsapp','regInstitution','registerMsg']) {
+  assert.ok(finalRegistrationRouting.includes('id="' + field + '"'),
+    'Supabase registration form must render field ' + field);
+}
+
 console.log('Confirmed-email registration flow static tests passed.');
 console.warn('LIVE CHECK REQUIRED: browser signup, email confirmation, and post-confirmation login must be tested with a dedicated non-operational account.');
+
+const recoveryStart = source.indexOf('/* STAGING-ONLY password recovery flow.');
+assert.ok(recoveryStart >= 0, 'STAGING password recovery feature must exist');
+const recovery = source.slice(recoveryStart);
+assert.match(recovery, /window\.GORUT_BACKEND\?\.enabled[\s\S]*xeqdhwqylutntphlkmqe\.supabase\.co/,
+  'password recovery must be gated behind the enabled STAGING backend');
+assert.match(recovery, /resetPasswordForEmail\(email,\{redirectTo\}\)/,
+  'forgot-password action must call Supabase Auth resetPasswordForEmail with a redirect');
+assert.match(recovery, /onAuthStateChange\(function\(event\)[\s\S]*PASSWORD_RECOVERY/,
+  'recovery callback must be handled through the Supabase Auth event');
+assert.match(recovery, /updateUser\(\{password:p\}\)/,
+  'new password must be saved through Supabase Auth updateUser');
+assert.match(recovery, /gorutForgotPassword/,
+  'login view must expose a Lupa Kata Sandi action');
+assert.doesNotMatch(recovery, /localStorage\.setItem\([^\n]*password/i,
+  'recovery feature must never persist a password in local storage');
+const stagingWorker = fs.readFileSync(path.join(__dirname, '..', '_worker.js'), 'utf8');
+assert.match(stagingWorker, /publicSurveyEnabled: false/,
+  'STAGING runtime backend must keep public survey disabled');
+assert.doesNotMatch(recovery, /service_role|sb_secret_/i,
+  'recovery feature must not introduce privileged server keys');

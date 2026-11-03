@@ -59,5 +59,7 @@ jobs:
         run: node tests/supabase-rpc-static.test.js
       - name: Run confirmed-email registration flow tests
         run: node tests/registration-confirmation-flow.test.js
+      - name: Run Cloudflare staging preview isolation tests
+        run: node tests/cloudflare-staging-preview.test.js
       - name: Run Supabase validation SQL safety checks
         run: node tests/validation-sql-static.test.js
