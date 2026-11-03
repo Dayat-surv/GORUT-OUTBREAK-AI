@@ -1090,7 +1090,45 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
   window.deleteSpecimen=function(id){if(!confirmDelete('spesimen '+id))return;db.specimens=(db.specimens||[]).filter(x=>String(x.id)!==String(id));save();specimens();render()}
   window.deleteFieldVisit=function(id){if(!confirmDelete('kunjungan '+id))return;db.fieldVisits=(db.fieldVisits||[]).filter(x=>String(x.id)!==String(id));save();fieldVisits();render()}
   window.deleteAlert=function(id){if(!confirmDelete('alert '+id))return;db.alerts=(db.alerts||[]).filter(x=>String(x.id)!==String(id));save();alerts();render()}
-  window.deleteInvestigation=function(id){if(!confirmDelete('investigasi ini'))return;db.investigations=db.investigations.filter(x=>String(x.id)!==String(id));db.cases=db.cases.filter(x=>String(x.investigationId)!==String(id));db.contacts=(db.contacts||[]).filter(x=>String(x.investigationId)!==String(id));db.specimens=(db.specimens||[]).filter(x=>String(x.investigationId)!==String(id));db.fieldVisits=(db.fieldVisits||[]).filter(x=>String(x.investigationId)!==String(id));if(String(db.active)===String(id))db.active=db.investigations[0]?.id||null;save();render()}
+  window.deleteInvestigation=async function(id){
+    const inv=db.investigations.find(x=>String(x.id)===String(id));
+    if(!inv){alert('Investigasi tidak ditemukan atau daftar sudah diperbarui.');return;}
+    const linked={
+      cases:(db.cases||[]).filter(x=>String(x.investigationId)===String(id)).length,
+      contacts:(db.contacts||[]).filter(x=>String(x.investigationId)===String(id)).length,
+      specimens:(db.specimens||[]).filter(x=>String(x.investigationId)===String(id)).length,
+      fieldVisits:(db.fieldVisits||[]).filter(x=>String(x.investigationId)===String(id)).length
+    };
+    const label=String(inv.name||('Investigasi '+id));
+    const prompt='HAPUS INVESTIGASI: '+label+'?\\n\\nData terkait yang ikut dihapus dari server: kasus ('+linked.cases+'), kontak ('+linked.contacts+'), spesimen ('+linked.specimens+'), kunjungan lapangan ('+linked.fieldVisits+'), serta survei publik dan seluruh responsnya jika ada.\\n\\nPenghapusan permanen dan tidak dapat dibatalkan.';
+    if(!window.confirm(prompt))return;
+    try{
+      const sb=await backendClient();
+      let serverSummary=null;
+      if(sb){
+        const auth=await sb.auth.getUser();
+        if(auth.error||!auth.data?.user)throw new Error('Sesi login tidak valid. Silakan masuk kembali sebelum menghapus investigasi.');
+        const serverId=inv.serverId||uuidFrom(id);
+        const result=await sb.rpc('delete_investigation_bundle',{p_investigation_id:String(serverId)});
+        if(result.error)throw result.error;
+        serverSummary=result.data||null;
+        if(!serverSummary||serverSummary.deleted!==true)throw new Error('Server belum mengonfirmasi penghapusan. Data lokal tidak diubah.');
+      }
+      db.investigations=db.investigations.filter(x=>String(x.id)!==String(id));
+      db.cases=(db.cases||[]).filter(x=>String(x.investigationId)!==String(id));
+      db.contacts=(db.contacts||[]).filter(x=>String(x.investigationId)!==String(id));
+      db.specimens=(db.specimens||[]).filter(x=>String(x.investigationId)!==String(id));
+      db.fieldVisits=(db.fieldVisits||[]).filter(x=>String(x.investigationId)!==String(id));
+      if(String(db.active)===String(id))db.active=db.investigations[0]?.id||null;
+      save();
+      await render();
+      const summary=serverSummary?'\\nServer: '+(serverSummary.cases||0)+' kasus, '+(serverSummary.contacts||0)+' kontak, '+(serverSummary.specimens||0)+' spesimen, '+(serverSummary.field_visits||0)+' kunjungan, '+(serverSummary.public_surveys||0)+' survei dan '+(serverSummary.survey_responses||0)+' respons ikut dihapus.':'\\nMode lokal: penghapusan hanya berlaku pada perangkat ini.';
+      alert('Investigasi "'+label+'" berhasil dihapus.'+summary);
+    }catch(error){
+      console.error('Gagal menghapus investigasi:',error);
+      alert('Penghapusan gagal. Data lokal tidak diubah.\\n'+(error?.message||String(error)));
+    }
+  }
 
   /* Override list renderers to expose delete buttons. */
   const oldCases=window.cases; window.cases=function(){
