@@ -1126,7 +1126,7 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
           responseCount=Number(responses.count||0);
         }
         serverSummary={cases:counts[0],contacts:counts[1],specimens:counts[2],field_visits:counts[3],public_surveys:surveyIds.length,survey_responses:responseCount};
-        const prompt='HAPUS INVESTIGASI: '+label+'?\\n\\nJumlah data terkait yang diverifikasi langsung dari server dan akan ikut dihapus: kasus ('+serverSummary.cases+'), kontak ('+serverSummary.contacts+'), spesimen ('+serverSummary.specimens+'), kunjungan lapangan ('+serverSummary.field_visits+'), survei publik ('+serverSummary.public_surveys+'), respons survei ('+serverSummary.survey_responses+').\\n\\nCatatan: jumlah server mencakup rekaman yang mungkin tidak tampil pada daftar operasional karena penyaringan data simulasi/uji.\\n\\nPenghapusan permanen dan tidak dapat dibatalkan.';
+        const prompt='HAPUS INVESTIGASI: '+label+'?\n\nJumlah data terkait yang diverifikasi langsung dari server dan akan ikut dihapus: kasus ('+serverSummary.cases+'), kontak ('+serverSummary.contacts+'), spesimen ('+serverSummary.specimens+'), kunjungan lapangan ('+serverSummary.field_visits+'), survei publik ('+serverSummary.public_surveys+'), respons survei ('+serverSummary.survey_responses+').\n\nCatatan: jumlah server mencakup rekaman yang mungkin tidak tampil pada daftar operasional karena penyaringan data simulasi/uji.\n\nPenghapusan permanen dan tidak dapat dibatalkan.';
         if(!window.confirm(prompt))return;
         const result=await sb.rpc('delete_investigation_bundle',{p_investigation_id:serverId});
         if(result.error)throw result.error;
@@ -1139,7 +1139,7 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
           specimens:(db.specimens||[]).filter(x=>String(x.investigationId)===String(id)).length,
           fieldVisits:(db.fieldVisits||[]).filter(x=>String(x.investigationId)===String(id)).length
         };
-        const prompt='HAPUS INVESTIGASI LOKAL: '+label+'?\\n\\nData lokal yang ikut dihapus: kasus ('+linked.cases+'), kontak ('+linked.contacts+'), spesimen ('+linked.specimens+'), kunjungan lapangan ('+linked.fieldVisits+').\\n\\nMode lokal tidak menghapus data pada server.';
+        const prompt='HAPUS INVESTIGASI LOKAL: '+label+'?\n\nData lokal yang ikut dihapus: kasus ('+linked.cases+'), kontak ('+linked.contacts+'), spesimen ('+linked.specimens+'), kunjungan lapangan ('+linked.fieldVisits+').\n\nMode lokal tidak menghapus data pada server.';
         if(!window.confirm(prompt))return;
       }
       db.investigations=db.investigations.filter(x=>String(x.id)!==String(id));
@@ -1150,11 +1150,11 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
       if(String(db.active)===String(id))db.active=db.investigations[0]?.id||null;
       save();
       await render();
-      const summary=serverSummary?'\\nServer: '+(serverSummary.cases||0)+' kasus, '+(serverSummary.contacts||0)+' kontak, '+(serverSummary.specimens||0)+' spesimen, '+(serverSummary.field_visits||0)+' kunjungan, '+(serverSummary.public_surveys||0)+' survei dan '+(serverSummary.survey_responses||0)+' respons ikut dihapus.':'\\nMode lokal: penghapusan hanya berlaku pada perangkat ini.';
+      const summary=serverSummary?'\nServer: '+(serverSummary.cases||0)+' kasus, '+(serverSummary.contacts||0)+' kontak, '+(serverSummary.specimens||0)+' spesimen, '+(serverSummary.field_visits||0)+' kunjungan, '+(serverSummary.public_surveys||0)+' survei dan '+(serverSummary.survey_responses||0)+' respons ikut dihapus.':'\nMode lokal: penghapusan hanya berlaku pada perangkat ini.';
       alert('Investigasi "'+label+'" berhasil dihapus.'+summary);
     }catch(error){
       console.error('Gagal menghapus investigasi:',error);
-      alert('Penghapusan gagal. Data lokal tidak diubah.\\n'+(error?.message||String(error)));
+      alert('Penghapusan gagal. Data lokal tidak diubah.\n'+(error?.message||String(error)));
     }
   }
 
