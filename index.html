@@ -447,11 +447,11 @@ window.gorutHandleLogin = async function () {
     var newPass=document.getElementById('newPassword');if(newPass)newPass.focus();
   }
   window.gorutRequestPasswordReset=async function(){
-    var email=(document.getElementById('email')?.value||'').trim();
+    var email=(document.getElementById('v45LoginName')?.value||document.getElementById('email')?.value||'').trim().toLowerCase();
     if(!email){showMsg('Masukkan email akun terlebih dahulu, lalu pilih “Lupa kata sandi?”.',false);document.getElementById('email')?.focus();return;}
     try{
       var sb=await client();
-      var redirectTo=window.location.origin+window.location.pathname+'?password-recovery=1';
+      var redirectTo=window.location.origin+window.location.pathname+'?gorut-auth-recovery=1';
       var r=await sb.auth.resetPasswordForEmail(email,{redirectTo:redirectTo});
       if(r.error)throw r.error;
       showMsg('Jika email tersebut terdaftar, instruksi pemulihan akan dikirim. Periksa Kotak Masuk dan Spam. Tautan dapat kedaluwarsa; jangan bagikan tautan atau token kepada siapa pun.',true);
@@ -493,7 +493,7 @@ window.gorutHandleLogin = async function () {
     try{
       var sb=await client();
       sb.auth.onAuthStateChange(function(event){
-        if(event==='PASSWORD_RECOVERY')showRecovery();
+        if(event==='PASSWORD_RECOVERY'&&document.getElementById('passwordRecoveryPanel'))showRecovery();
       });
       /* Periksa lagi setelah client Supabase selesai diinisialisasi. */
       var hashNow=window.location.hash||'';
@@ -503,6 +503,23 @@ window.gorutHandleLogin = async function () {
       }
     }catch(e){console.warn('Password recovery initialization:',e.message||e);}
   })();
-})();
+  /* Ensure the Supabase login rendered by app.js always exposes recovery. */
+  function installV45RecoveryButton(){
+    var name=document.getElementById('v45LoginName');
+    var hint=document.getElementById('v45LoginHint');
+    if(!name||!hint||document.getElementById('gorutForgotPassword'))return;
+    var button=document.createElement('button');
+    button.type='button';
+    button.id='gorutForgotPassword';
+    button.className='btn-ghost';
+    button.style.cssText='width:100%;margin-top:8px';
+    button.textContent='Lupa Kata Sandi?';
+    button.onclick=window.gorutRequestPasswordReset;
+    hint.parentNode.insertBefore(button,hint);
+  }
+  var loginRoot=document.getElementById('login');
+  if(loginRoot)new MutationObserver(installV45RecoveryButton).observe(loginRoot,{childList:true,subtree:true});
+  [0,300,1000,2500].forEach(function(ms){setTimeout(installV45RecoveryButton,ms)});
+})(); 
 </script>
 </body></html>
