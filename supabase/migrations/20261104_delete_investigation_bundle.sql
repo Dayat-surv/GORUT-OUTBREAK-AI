@@ -77,21 +77,19 @@ begin
     raise exception 'INVESTIGATION_DELETE_FAILED';
   end if;
 
-  insert into public.audit_log(actor_id, action, entity_type, entity_id, details)
-  values (
-    v_user_id,
-    'delete_investigation_bundle',
-    'investigation',
-    p_investigation_id,
-    jsonb_build_object(
-      'cases', v_case_count,
-      'contacts', v_contact_count,
-      'specimens', v_specimen_count,
-      'field_visits', v_visit_count,
-      'public_surveys', v_survey_count,
-      'survey_responses', v_response_count
-    )
-  );
+  -- Audit schema differs slightly between existing staging and production projects.
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'audit_log' and column_name = 'details'
+  ) then
+    execute 'insert into public.audit_log(actor_id, action, entity_type, entity_id, details) values ($1,$2,$3,$4,$5)'
+      using v_user_id, 'delete_investigation_bundle', 'investigation', p_investigation_id,
+        jsonb_build_object('cases',v_case_count,'contacts',v_contact_count,'specimens',v_specimen_count,'field_visits',v_visit_count,'public_surveys',v_survey_count,'survey_responses',v_response_count);
+  else
+    execute 'insert into public.audit_log(actor_id, action, entity_type, entity_id, metadata) values ($1,$2,$3,$4,$5)'
+      using v_user_id, 'delete_investigation_bundle', 'investigation', p_investigation_id,
+        jsonb_build_object('cases',v_case_count,'contacts',v_contact_count,'specimens',v_specimen_count,'field_visits',v_visit_count,'public_surveys',v_survey_count,'survey_responses',v_response_count);
+  end if;
 
   return jsonb_build_object(
     'investigation_id', p_investigation_id,
