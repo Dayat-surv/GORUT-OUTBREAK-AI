@@ -17,6 +17,9 @@ assert.match(sw, /gorut-outbreak-ai-final-v176/, 'service worker cache version m
 assert.match(sw, /app\.js\?v=175/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
+try { new Function(appJs); } catch (error) {
+  throw new Error('app.js has a syntax error: ' + error.message);
+}
 const publicSurvey = read('public_survey.html');
 const deleteMigration = read('supabase/migrations/20261104_delete_investigation_bundle.sql');
 assert.match(appJs, /window\\.deleteInvestigation=async function\\(id\\)/, 'investigation deletion must wait for server confirmation');
