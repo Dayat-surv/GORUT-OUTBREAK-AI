@@ -1093,26 +1093,54 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
   window.deleteInvestigation=async function(id){
     const inv=db.investigations.find(x=>String(x.id)===String(id));
     if(!inv){alert('Investigasi tidak ditemukan atau daftar sudah diperbarui.');return;}
-    const linked={
-      cases:(db.cases||[]).filter(x=>String(x.investigationId)===String(id)).length,
-      contacts:(db.contacts||[]).filter(x=>String(x.investigationId)===String(id)).length,
-      specimens:(db.specimens||[]).filter(x=>String(x.investigationId)===String(id)).length,
-      fieldVisits:(db.fieldVisits||[]).filter(x=>String(x.investigationId)===String(id)).length
-    };
     const label=String(inv.name||('Investigasi '+id));
-    const prompt='HAPUS INVESTIGASI: '+label+'?\\n\\nData terkait yang ikut dihapus dari server: kasus ('+linked.cases+'), kontak ('+linked.contacts+'), spesimen ('+linked.specimens+'), kunjungan lapangan ('+linked.fieldVisits+'), serta survei publik dan seluruh responsnya jika ada.\\n\\nPenghapusan permanen dan tidak dapat dibatalkan.';
-    if(!window.confirm(prompt))return;
+    let sb=null,serverId=null,serverSummary=null;
     try{
-      const sb=await backendClient();
-      let serverSummary=null;
+      sb=await backendClient();
       if(sb){
         const auth=await sb.auth.getUser();
         if(auth.error||!auth.data?.user)throw new Error('Sesi login tidak valid. Silakan masuk kembali sebelum menghapus investigasi.');
-        const serverId=inv.serverId||uuidFrom(id);
-        const result=await sb.rpc('delete_investigation_bundle',{p_investigation_id:String(serverId)});
+        serverId=String(inv.serverId||'').trim();
+        if(!serverId)throw new Error('ID investigasi server belum tersedia. Muat ulang data dari server sebelum mencoba menghapus; tidak ada data yang diubah.');
+        const verify=await sb.from('investigations').select('id',{count:'exact',head:true}).eq('id',serverId);
+        if(verify.error)throw verify.error;
+        if(!verify.count)throw new Error('Investigasi tidak ditemukan pada server dengan ID yang dipetakan. Penghapusan dibatalkan.');
+        const countForServer=async function(table){
+          const result=await sb.from(table).select('id',{count:'exact',head:true}).eq('investigation_id',serverId);
+          if(result.error)throw result.error;
+          return Number(result.count||0);
+        };
+        const counts=await Promise.all([
+          countForServer('cases'),
+          countForServer('contacts'),
+          countForServer('specimens'),
+          countForServer('field_visits'),
+          sb.from('public_surveys').select('id').eq('investigation_id',serverId)
+        ]);
+        if(counts[4].error)throw counts[4].error;
+        const surveyIds=(counts[4].data||[]).map(row=>row.id);
+        let responseCount=0;
+        if(surveyIds.length){
+          const responses=await sb.from('survey_responses').select('id',{count:'exact',head:true}).in('survey_id',surveyIds);
+          if(responses.error)throw responses.error;
+          responseCount=Number(responses.count||0);
+        }
+        serverSummary={cases:counts[0],contacts:counts[1],specimens:counts[2],field_visits:counts[3],public_surveys:surveyIds.length,survey_responses:responseCount};
+        const prompt='HAPUS INVESTIGASI: '+label+'?\\n\\nJumlah data terkait yang diverifikasi langsung dari server dan akan ikut dihapus: kasus ('+serverSummary.cases+'), kontak ('+serverSummary.contacts+'), spesimen ('+serverSummary.specimens+'), kunjungan lapangan ('+serverSummary.field_visits+'), survei publik ('+serverSummary.public_surveys+'), respons survei ('+serverSummary.survey_responses+').\\n\\nCatatan: jumlah server mencakup rekaman yang mungkin tidak tampil pada daftar operasional karena penyaringan data simulasi/uji.\\n\\nPenghapusan permanen dan tidak dapat dibatalkan.';
+        if(!window.confirm(prompt))return;
+        const result=await sb.rpc('delete_investigation_bundle',{p_investigation_id:serverId});
         if(result.error)throw result.error;
         serverSummary=result.data||null;
         if(!serverSummary||serverSummary.deleted!==true)throw new Error('Server belum mengonfirmasi penghapusan. Data lokal tidak diubah.');
+      }else{
+        const linked={
+          cases:(db.cases||[]).filter(x=>String(x.investigationId)===String(id)).length,
+          contacts:(db.contacts||[]).filter(x=>String(x.investigationId)===String(id)).length,
+          specimens:(db.specimens||[]).filter(x=>String(x.investigationId)===String(id)).length,
+          fieldVisits:(db.fieldVisits||[]).filter(x=>String(x.investigationId)===String(id)).length
+        };
+        const prompt='HAPUS INVESTIGASI LOKAL: '+label+'?\\n\\nData lokal yang ikut dihapus: kasus ('+linked.cases+'), kontak ('+linked.contacts+'), spesimen ('+linked.specimens+'), kunjungan lapangan ('+linked.fieldVisits+').\\n\\nMode lokal tidak menghapus data pada server.';
+        if(!window.confirm(prompt))return;
       }
       db.investigations=db.investigations.filter(x=>String(x.id)!==String(id));
       db.cases=(db.cases||[]).filter(x=>String(x.investigationId)!==String(id));
