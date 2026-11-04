@@ -1,10 +1,10 @@
-// Copy this to backend-config.js and fill with your Supabase project values.
-// NEVER use a service_role key in the browser. The browser uses the public anon/publishable key.
+// STAGING ONLY — isolated E2E branch for investigation-save verification.
+// Never use a production URL/key or service_role/secret key in this branch.
+// Public surveys remain disabled during staging.
 window.GORUT_BACKEND = {
   provider: 'supabase',
-  url: 'https://lheuszdhprwmtajhdukc.supabase.co',
-  anonKey: 'sb_publishable_avKj9iO9b_VMaOPNvPB9_g_TyMoKotr',
+  url: 'https://xeqdhwqylutntphlkmqe.supabase.co',
+  anonKey: 'sb_publishable_y2Sc8AOuQ0AqLDWMxRVlXA_0OIo1P54',
   enabled: true,
-  // Fail closed: formulir publik tetap nonaktif sampai RPC, skema, RLS, dan alur retry lulus uji langsung.
   publicSurveyEnabled: false
 };
