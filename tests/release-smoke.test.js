@@ -43,6 +43,10 @@ const edgeMigration = read('supabase/migrations/20261104140000_secure_admin_oper
 const edgeCutoverMigration = read('supabase/migrations/20261104141000_revoke_legacy_admin_rpc_client_access.sql');
 const edgeShared = read('supabase/functions/_shared/secure-admin-operation.ts');
 assert.match(edgeShared, /withSupabase\(\s*\{ auth: "user" \}/, 'Edge Function must validate a signed-in user');
+assert.match(edgeShared, /npm:@supabase\\/server@\\^1/, 'Supabase server SDK major version must be pinned');
+assert.match(edgeShared, /profile\\?\\.role !== "admin"/, 'Edge admin authorization must use exact role match');
+assert.match(edgeMigration, /p\\.role = 'admin'/, 'SQL admin authorization must preserve the existing exact role check');
+assert.doesNotMatch(edgeMigration, /lower\\(coalesce\\(p\\.role/, 'new SQL must not broaden the legacy admin role rule');
 assert.match(edgeShared, /ctx\.userClaims\?\.sub/, 'actor identity must come from the verified JWT');
 assert.match(edgeShared, /ctx\.supabaseAdmin\.rpc/, 'privileged database work must use server-only Supabase admin client');
 assert.match(edgeShared, /\.eq\("id", actorId\)/, 'admin role must be checked against the profiles table');
