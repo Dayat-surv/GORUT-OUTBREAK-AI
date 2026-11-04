@@ -85,3 +85,12 @@ HTTP 404 pada dua operasi registrasi ADMIN menunjukkan pemeriksaan ADMIN dilewat
 - Tidak ada data produksi yang diubah.
 - `publicSurveyEnabled:false`; tidak ada survei publik atau sinkronisasi yang diaktifkan.
 - PR #69 wajib tetap **Draft / DO NOT MERGE** sampai review akhir selesai dan pengguna memberikan persetujuan eksplisit terpisah untuk promosi berikutnya.
+
+
+## Perbaikan pasca-review manual — 4 November 2026
+
+- [x] Validasi actor ID diperketat menjadi format UUID kanonis (termasuk versi dan variant UUID yang valid).
+- [x] Exception tak terduga pada handler tidak lagi dilabeli sebagai kegagalan autentikasi; respons generik HTTP 500 `INTERNAL_SERVER_ERROR` digunakan.
+- [x] Smoke-test ditambah untuk mengunci dua perilaku tersebut.
+- [ ] CI untuk commit perbaikan ini belum terlihat pada pemeriksaan workflow saat dokumentasi diperbarui; verifikasi hasil CI tetap diperlukan.
+- [ ] Uji runtime negatif 401/403/404 perlu diulang pada deployment Edge Function yang memuat commit perbaikan. Tidak ada redeploy atau mutasi database dalam langkah ini.
