@@ -220,7 +220,7 @@ async function saveKlb(){
       return;
     }catch(error){
       console.error('Gagal menyimpan investigasi ke Supabase:',error);
-      alert('Investigasi BELUM tersimpan ke server. Data formulir tetap tersedia.\\n\\n'+(error?.message||String(error)));
+      alert('Investigasi BELUM tersimpan ke server. Data formulir tetap tersedia.\n\n'+(error?.message||String(error)));
       return;
     }
   }
