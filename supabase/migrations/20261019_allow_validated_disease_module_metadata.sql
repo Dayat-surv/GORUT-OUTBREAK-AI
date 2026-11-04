@@ -65,9 +65,18 @@ BEGIN
     AND s.is_active = true
     AND (s.expires_at IS NULL OR s.expires_at > now())
     AND q.status = 'published'
-    -- Never accept public submissions for test/simulation-only investigations.
+    -- Fail closed for investigations marked/named as test or simulation.
+    -- Keep the ID-prefix checks as a second layer, not the only safeguard.
     AND upper(s.investigation_id) NOT LIKE 'TEST-%'
-    AND upper(s.investigation_id) NOT LIKE 'SIM-%';
+    AND upper(s.investigation_id) NOT LIKE 'SIM-%'
+    AND lower(coalesce(i.name, '')) NOT LIKE '%simulasi%'
+    AND lower(coalesce(i.name, '')) NOT LIKE '%simulation%'
+    AND lower(coalesce(i.name, '')) NOT LIKE '%uji sistem%'
+    AND lower(coalesce(i.name, '')) NOT LIKE '%test-only%'
+    AND lower(coalesce(i.name, '')) NOT LIKE '%fixture%'
+    AND lower(coalesce(i.metadata ->> 'is_simulation', 'false')) NOT IN ('true', '1', 'yes')
+    AND lower(coalesce(i.metadata ->> 'is_test', 'false')) NOT IN ('true', '1', 'yes')
+    AND lower(coalesce(i.metadata ->> 'record_type', '')) NOT IN ('simulation', 'test', 'fixture');
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Survei tidak valid atau investigasi tidak ditemukan';
