@@ -47,7 +47,7 @@ assert.ok(edgeShared.includes('npm:@supabase/server@^1'), 'Supabase server SDK m
 assert.ok(edgeShared.includes('profile?.role !== "admin"'), 'Edge admin authorization must use exact role match');
 assert.ok(edgeMigration.includes("p.role = 'admin'"), 'SQL admin authorization must preserve the existing exact role check');
 assert.ok(!edgeMigration.includes("lower(coalesce(p.role"), 'new SQL must not broaden the legacy admin role rule');
-assert.match(edgeShared, /ctx\.userClaims\?\.sub/, 'actor identity must come from the verified JWT');
+assert.match(edgeShared, /ctx\.userClaims\?\.id\s*\?\?\s*ctx\.jwtClaims\?\.sub/, 'actor identity must come from verified Supabase user identity or JWT claims');
 assert.match(edgeShared, /ctx\.supabaseAdmin\.rpc/, 'privileged database work must use server-only Supabase admin client');
 assert.match(edgeShared, /\.eq\("id", actorId\)/, 'admin role must be checked against the profiles table');
 
