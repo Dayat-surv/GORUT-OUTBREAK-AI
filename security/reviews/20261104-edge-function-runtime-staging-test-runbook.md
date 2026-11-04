@@ -1,8 +1,8 @@
 # Runbook Pengujian Runtime Edge Functions — STAGING
 
 **Tanggal pembaruan:** 4 November 2026  
-**Lingkup:** proyek Supabase STAGING `xeqdhwqylutntphlkmqe` dan preview branch PR #69.  
-**Batas tegas:** tidak ada perubahan pada produksi; `publicSurveyEnabled:false`; tidak ada pengujian operasi ADMIN yang memutasi data.
+**Lingkup:** proyek Supabase STAGING `xeqdhwqylutntphlkmqe` dan PR #69.  
+**Batas tegas:** tidak ada perubahan pada produksi; `publicSurveyEnabled:false`; tidak ada pengujian delete positif dan tidak ada penghapusan pada tiga investigasi yang dipertahankan.
 
 ## Status pelaksanaan
 
@@ -17,8 +17,12 @@
 - [x] Tes PETUGAS bukan pemilik saat menghapus investigasi menghasilkan HTTP 403 `NOT_AUTHORIZED`.
 - [x] Tes langsung tiga RPC lama dari browser menghasilkan HTTP 403 / permission denied.
 - [x] Tes ADMIN dengan UUID dummy yang tidak ada: activate dan reject menghasilkan HTTP 404 `Permintaan registrasi tidak ditemukan`; delete menghasilkan HTTP 404 `INVESTIGATION_NOT_FOUND`.
+- [x] Uji positif ADMIN untuk penolakan registrasi sintetis STAGING berhasil (HTTP 200); verifikasi read-only menunjukkan status `rejected`, `user_id=null`.
+- [x] Uji positif ADMIN untuk aktivasi registrasi sintetis STAGING berhasil; registrasi berubah menjadi `approved` dan terhubung ke user Auth yang benar.
+- [x] Subscription Premium 7 hari berhasil dibuat satu kali dengan status `active`; `starts_at=2026-11-04T16:10:49.990267Z` dan `expires_at=2026-11-11T16:10:49.990267Z`.
+- [x] Uji prasyarat tanpa akun Auth cocok menghasilkan HTTP 409 setelah perbaikan pemetaan error; tidak ada subscription atau perubahan registrasi pada percobaan tersebut.
 - [x] Security Advisor pascamigrasi: tidak ada temuan RPC baru; temuan yang tersisa adalah leaked password protection nonaktif pada paket Free.
-- [x] GitHub Actions run #169 SUCCESS: syntax, research snapshot regression, release smoke tests, Supabase RPC static security, dan SQL safety checks.
+- [x] GitHub Actions run #176 pada head commit PR `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703` **SUCCESS**: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41862971915
 - [x] Pemeriksaan konsistensi akhir: investigations=3; cases=0; contacts=0; specimens=0; field_visits=0; public_surveys=0; survey_responses=0.
 - [x] PR #69 masih Open, Draft, dan belum merged.
 
@@ -31,11 +35,20 @@
 | PETUGAS → reject-registration | 403 `ADMIN_ONLY` | Role non-admin ditolak |
 | PETUGAS bukan pemilik → delete-investigation | 403 `NOT_AUTHORIZED` | Pemeriksaan kepemilikan bekerja |
 | Browser → RPC lama activate/reject/delete | 403 permission denied | Akses client ke RPC lama telah dicabut |
-| ADMIN → activate dengan UUID dummy | 404 registrasi tidak ditemukan | Pemeriksaan admin dilewati; tidak ada record target |
-| ADMIN → reject dengan UUID dummy | 404 registrasi tidak ditemukan | Pemeriksaan admin dilewati; tidak ada record target |
+| ADMIN → activate dengan UUID dummy | 404 registrasi tidak ditemukan | Pemeriksaan admin dilewati; target tidak ditemukan |
+| ADMIN → reject dengan UUID dummy | 404 registrasi tidak ditemukan | Pemeriksaan admin dilewati; target tidak ditemukan |
 | ADMIN → delete dengan ID dummy | 404 investigasi tidak ditemukan | Tidak ada investigasi target; bukan bukti jalur admin karena delete berbasis kepemilikan |
+| ADMIN → reject registrasi sintetis | HTTP 200 | Mutasi positif berhasil; read-back status `rejected`, `user_id=null` |
+| ADMIN → activate registrasi sintetis | Tidak ada error; read-back `approved` | Mutasi positif berhasil; `user_id` terhubung ke Auth user yang cocok |
+| Subscription setelah aktivasi | `premium_7d`, `active` | Satu subscription; durasi tepat 7 hari |
+| Aktivasi tanpa akun Auth yang cocok | HTTP 409 | Prasyarat bisnis ditolak dengan status konflik yang sesuai |
 
-Tes ADMIN menggunakan UUID valid yang dipastikan tidak ada, sehingga tidak mengaktifkan subscription, mengubah status registrasi, menghapus investigasi, atau membuat audit mutasi sukses. **Belum dilakukan tes sukses ADMIN yang benar-benar mengubah data.** Tes positif hapus investigasi juga tidak dilakukan.
+### Rincian data sintetis untuk uji positif
+
+- Registrasi aktivasi: `93a5ed73-4357-462b-aea2-8ca6609db412`; email `staging-activate-20261104@example.invalid`; status akhir `approved`; `user_id=d046b830-2dc9-4949-b052-2b099765d4a1`.
+- Subscription: `abb368a2-58b4-4ff2-bfe1-b947e89794c2`; `plan_code=premium_7d`; status `active`; mulai 4 Nov 2026 16:10:49.990267 UTC; berakhir 11 Nov 2026 16:10:49.990267 UTC.
+- Registrasi penolakan: `f5608a58-84db-4029-b035-558e4f2e85a5`; status akhir `rejected`; `user_id=null`; alasan `UJI PENOLAKAN SINTETIS STAGING`.
+- Uji positif hanya memutasi dua registrasi sintetis yang telah disetujui untuk pengujian dan membuat satu subscription sintetis. Tidak ada data kasus atau investigasi yang dihapus.
 
 ## Hak akses database setelah cutover
 
@@ -57,14 +70,15 @@ Edge Functions memanggil RPC baru melalui konteks server `supabaseAdmin`; browse
 Snapshot akhir STAGING:
 - Investigations: **3** (tiga investigasi sintetis dipertahankan).
 - Cases, contacts, specimens, field visits, public surveys, survey responses: **0**.
+- Satu subscription sintetis `premium_7d` aktif dibuat untuk uji aktivasi positif.
 - `publicSurveyEnabled:false` harus tetap dipertahankan.
 - Tidak ada data produksi yang disentuh.
 
 ## Pekerjaan yang masih tersisa
 
-1. Review manual akhir terhadap kode, migration, dan dokumentasi PR #69.
-2. Jika diperlukan, lakukan pengujian ADMIN positif yang memutasi hanya record registrasi sintetis khusus STAGING, setelah record uji dan dampaknya disetujui secara terpisah.
-3. Jangan lakukan pengujian delete positif pada investigasi yang saat ini dipertahankan; jika benar-benar diperlukan, buat record khusus yang boleh dihapus dan minta persetujuan tersendiri.
+1. Review manual akhir terhadap seluruh diff kode, migration, dan dokumentasi PR #69; CI sukses tidak menggantikan review keamanan.
+2. Tes delete positif **belum dilakukan**. Jangan menghapus tiga investigasi sintetis yang dipertahankan; bila diperlukan, tes tersebut membutuhkan record khusus yang boleh dihapus dan persetujuan tersendiri.
+3. Verifikasi UI/end-to-end tambahan pada alur admin dapat dilakukan terpisah bila diperlukan.
 4. Jangan merge PR #69 atau mengubah produksi tanpa persetujuan eksplisit yang terpisah.
 
 ## Rollback / batas rilis
@@ -73,3 +87,4 @@ Snapshot akhir STAGING:
 - Jika endpoint bermasalah setelah cutover, jangan membuka kembali RPC lama untuk client secara spontan. Buat rollback STAGING yang ditinjau dan tetap menjaga fungsi istimewa tertutup bagi client.
 - Tidak ada langkah di runbook ini yang mengizinkan perubahan produksi.
 - Tidak ada pengaktifan survei publik atau sinkronisasi.
+- PR #69 tetap **DRAFT — STAGING ONLY — DO NOT MERGE**.
