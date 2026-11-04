@@ -629,9 +629,22 @@ async function loadServerOperationalData(){
   }
   const localId=(r,fallback)=>String(r?.metadata?.local_id??fallback??r?.id??'');
   const invMap=new Map();
+  /* A duplicate metadata.local_id makes two server investigations share one local ID.
+     openKlb() resolves by local ID, so that collision can open/edit the wrong server row.
+     Keep the first legacy ID and give every later collision a unique server-derived local ID. */
+  const usedInvestigationLocalIds=new Set();
   const investigations=raw.investigations.map(r=>{
-    const id=localId(r,r.id);invMap.set(String(r.id),id);
-    return {id,name:r.name||'Investigasi tanpa nama',type:r.outbreak_type||'Penyakit Menular',disease:r.metadata?.local_disease||r.disease_id||'campak',prov:r.province||'Gorontalo',kab:r.district||'Gorontalo Utara',kec:r.subdistrict||'',desa:r.village||'',pkm:r.facility||'',date:r.start_date||'',status:r.status||'Berjalan',serverId:r.id,owner_id:r.owner_id,foodInvestigation:r.metadata?.food_investigation||null};
+    const preferredId=localId(r,r.id);
+    let id=preferredId;
+    if(usedInvestigationLocalIds.has(id)){
+      id='server:'+String(r.id);
+      let suffix=1;
+      while(usedInvestigationLocalIds.has(id)){id='server:'+String(r.id)+':'+suffix++;}
+      console.warn('Duplicate investigations.metadata.local_id detected; using a unique server-derived local ID.',{serverId:r.id});
+    }
+    usedInvestigationLocalIds.add(id);
+    invMap.set(String(r.id),id);
+    return {id,name:r.name||'Investigasi tanpa nama',type:r.outbreak_type||'Penyakit Menular',disease:r.metadata?.local_disease||r.disease_id||'campak',prov:r.province||'Gorontalo',kab:r.district||'Gorontalo Utara',kec:r.subdistrict||'',desa:r.village||'',pkm:r.facility||'',date:r.start_date||'',status:r.status||'Berjalan',serverId:r.id,owner_id:r.owner_id,metadata:r.metadata||{},foodInvestigation:r.metadata?.food_investigation||null};
   });
   const caseMap=new Map();
   const cases=raw.cases.map(r=>{
