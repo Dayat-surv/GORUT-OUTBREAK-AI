@@ -154,17 +154,21 @@ const save=()=>{localStorage.setItem(K,JSON.stringify(db));syncLocalDatabase()};
 function login(){loginEl.style.display='none';app.style.display='block';render()}
 function page(id,b){document.querySelectorAll('.page').forEach(x=>x.classList.remove('show'));document.getElementById(id).classList.add('show');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));if(b)b.classList.add('active');title.textContent=id==='analisis'?'Analisis Epidemiologi':id[0].toUpperCase()+id.slice(1);render();if(id==='master'){renderMasterGroups();renderMaster()}}
 function syncInvestigationType(){const type=val('inType');const d=document.getElementById('disease');const panel=document.getElementById('foodInvestigationPanel');if(type==='Keracunan Makanan'){if(d){d.value='keracunan-pangan';selectDisease('keracunan-pangan')}if(panel)panel.style.display='block'}else{if(panel)panel.style.display='none';if(d&&d.value==='keracunan-pangan'){d.value='campak';selectDisease('campak')}}}
-function newKlb(){page('investigasi');['inName','kec','desa','pkm','tgl','foodEventName','foodEventDate','foodVenue','foodSource','foodMealTime','foodExposed','foodIll','foodDead','foodSuspected','foodHandler','foodWater','foodStorage','foodHypothesis'].forEach(x=>{const e=document.getElementById(x);if(e)e.value=''});const t=document.getElementById('inType');if(t)t.value='Penyakit Menular';syncInvestigationType();}
+function newKlb(){db.active=null;save();page('investigasi');['inName','kec','desa','pkm','tgl','foodEventName','foodEventDate','foodVenue','foodSource','foodMealTime','foodExposed','foodIll','foodDead','foodSuspected','foodHandler','foodWater','foodStorage','foodHypothesis'].forEach(x=>{const e=document.getElementById(x);if(e)e.value=''});const t=document.getElementById('inType');if(t)t.value='Penyakit Menular';syncInvestigationType();}
 async function saveKlb(){
+  const editingId=db.active;
+  const existing=editingId==null?null:db.investigations.find(x=>String(x.id)===String(editingId));
+  if(editingId!=null&&!existing){alert('Investigasi yang akan diedit tidak ditemukan. Tidak ada data yang disimpan.');return;}
   const o={
-    id:Date.now(),
+    ...(existing||{}),
+    id:existing?existing.id:Date.now(),
     name:val('inName')||'Investigasi Baru',
     type:val('inType'),
     disease:val('disease')||db.selectedDisease||'campak',
     prov:val('prov'),kab:val('kab'),kec:val('kec'),desa:val('desa'),
     pkm:val('pkm'),
     date:val('tgl')||new Date().toISOString().slice(0,10),
-    status:'Berjalan'
+    status:existing?.status||'Berjalan'
   };
   if(o.type==='Keracunan Makanan'){
     o.disease='keracunan-pangan';
@@ -177,6 +181,8 @@ async function saveKlb(){
       waterSource:val('foodWater'),storage:val('foodStorage'),
       initialHypothesis:val('foodHypothesis')
     };
+  }else{
+    delete o.foodInvestigation;
   }
 
   const cfg=window.GORUT_BACKEND||{};
@@ -188,11 +194,8 @@ async function saveKlb(){
       if(auth.error)throw auth.error;
       const user=auth.data?.user;
       if(!user?.id)throw new Error('Sesi login Supabase tidak ditemukan. Silakan login ulang.');
-      const serverId=(window.crypto&&typeof window.crypto.randomUUID==='function')
-        ?window.crypto.randomUUID()
-        :uuidFrom(String(Date.now())+Math.random()+Math.random());
       const row={
-        id:serverId,owner_id:user.id,name:o.name,
+        owner_id:user.id,name:o.name,
         outbreak_type:o.type||'Penyakit Menular',
         disease_id:o.disease||null,
         province:o.prov||'Gorontalo',
@@ -201,35 +204,59 @@ async function saveKlb(){
         facility:o.pkm||null,start_date:o.date||null,
         status:o.status||'Berjalan',
         metadata:{
+          ...(existing?.metadata||{}),
           local_id:String(o.id),
           local_disease:o.disease||null,
           food_investigation:o.foodInvestigation||null
         }
       };
-      const result=await sb.from('investigations').insert(row).select('id').single();
-      if(result.error)throw result.error;
-      if(!result.data?.id)throw new Error('Server tidak mengembalikan ID investigasi setelah penyimpanan.');
-      o.serverId=result.data.id;
+      let result;
+      if(existing){
+        let serverId=existing.serverId||null;
+        if(!serverId){
+          const lookup=await sb.from('investigations').select('id')
+            .eq('owner_id',user.id).eq('metadata->>local_id',String(existing.id))
+            .limit(2);
+          if(lookup.error)throw lookup.error;
+          if(lookup.data?.length!==1)throw new Error('ID server investigasi lama tidak dapat dipastikan (hasil pencarian bukan tepat satu). Edit dibatalkan agar tidak membuat investigasi duplikat.');
+          serverId=lookup.data[0].id;
+        }
+        result=await sb.from('investigations').update(row)
+          .eq('id',serverId).eq('owner_id',user.id).select('id').single();
+        if(result.error)throw result.error;
+        if(!result.data?.id)throw new Error('Server tidak mengonfirmasi pembaruan investigasi.');
+        o.serverId=result.data.id;
+      }else{
+        const serverId=(window.crypto&&typeof window.crypto.randomUUID==='function')
+          ?window.crypto.randomUUID()
+          :uuidFrom(String(Date.now())+Math.random()+Math.random());
+        result=await sb.from('investigations').insert({...row,id:serverId}).select('id').single();
+        if(result.error)throw result.error;
+        if(!result.data?.id)throw new Error('Server tidak mengembalikan ID investigasi setelah penyimpanan.');
+        o.serverId=result.data.id;
+      }
       o.owner_id=user.id;
-      db.investigations.push(o);
+      if(existing)Object.assign(existing,o);
+      else db.investigations.push(o);
       db.active=o.id;
       db.selectedDisease=o.disease;
       save();
-      alert('Berhasil! Investigasi telah tersimpan di server.');
+      alert(existing?'Berhasil! Perubahan investigasi diperbarui pada server.':'Berhasil! Investigasi baru tersimpan di server.');
       page('dashboard');
       return;
     }catch(error){
       console.error('Gagal menyimpan investigasi ke Supabase:',error);
-      alert('Investigasi BELUM tersimpan ke server. Data formulir tetap tersedia.\n\n'+(error?.message||String(error)));
+      alert('Investigasi BELUM disimpan ke server. Data formulir tetap tersedia dan daftar investigasi tidak diubah.\\n\\n'+(error?.message||String(error)));
       return;
     }
   }
 
-  db.investigations.push(o);
+  if(existing)Object.assign(existing,o);
+  else db.investigations.push(o);
   db.active=o.id;
   db.selectedDisease=o.disease;
   save();
-  alert('Investigasi tersimpan di perangkat ini saja; belum tersimpan ke server.');
+  alert(existing?'Perubahan investigasi diperbarui di perangkat ini saja; belum tersimpan ke server.':'Investigasi tersimpan di perangkat ini saja; belum tersimpan ke server.');
   page('dashboard');
 }
 function dash(){let q=val('search').toLowerCase(),t=val('typeFilter'),r=db.investigations.filter(x=>(!q||x.name.toLowerCase().includes(q))&&(!t||x.type===t));const uniqueFor=rows=>{const m=new Map();rows.forEach((c,i)=>{const id=String(c.id??'').trim(),key=String(c.investigationId??'')+'::'+(id||'__record_'+i);m.set(key,c)});return [...m.values()]};klbRows.innerHTML=r.map(x=>{const records=db.cases.filter(c=>String(c.investigationId)===String(x.id)),unique=uniqueFor(records);return `<tr><td><b>${x.name}</b></td><td>${x.type}</td><td>${x.desa||'-'}, ${x.kec||'-'}</td><td><b>${unique.length}</b><div class="small">${records.length} rekaman sumber</div></td><td>${x.status}</td><td><button onclick="openKlb(this.dataset.investigationId)" data-investigation-id="${esc0(x.id)}">Buka</button></td></tr>`}).join('')||'<tr><td colspan="6">Belum ada investigasi.</td></tr>';let cs=db.cases,uniqueCases=uniqueFor(cs);stats.innerHTML=[['Investigasi',db.investigations.length],['Kasus unik',uniqueCases.length],['Rekaman sumber',cs.length],['Konfirmasi',uniqueCases.filter(c=>c.status==='Konfirmasi').length],['Meninggal',uniqueCases.filter(c=>c.outcome==='Meninggal').length]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('')}
