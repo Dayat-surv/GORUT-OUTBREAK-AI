@@ -64,13 +64,13 @@ Tiga respons 404 terbaru telah diperiksa dari body JSON browser Console. Ketigan
 
 HTTP 404 pada operasi registrasi ADMIN menunjukkan target tidak ditemukan setelah request terautentikasi; tes ini bukan pengganti pengujian role negatif PETUGAS. Untuk delete, 404 hanya membuktikan target tidak ditemukan; fungsi delete mengandalkan ownership, bukan role ADMIN.
 
-Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis berhasil. Aktivasi menghasilkan satu subscription `premium_7d` aktif dengan masa berlaku tepat 7 hari; penolakan menghasilkan status `rejected`. Uji positif penghapusan tetap tidak dilakukan.
+Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis berhasil. Aktivasi menghasilkan satu subscription `premium_7d` aktif dengan masa berlaku tepat 7 hari; penolakan menghasilkan status `rejected`. Uji positif penghapusan juga berhasil pada satu investigasi sintetis khusus yang disetujui untuk dihapus: Edge Function mengembalikan `success=true`, `deleted=true`, tanpa error. Respons melaporkan seluruh hitungan child bundle = 0. Query read-back independen memastikan target `6d12f897-94f6-4f12-8df6-9074d8649c11` sudah tidak ada, sementara ketiga investigasi sintetis yang dipertahankan tetap ada dengan owner ID yang sama.
 
 ### CI dan database
 
 - GitHub Actions run #176 pada commit kode `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703`: **SUCCESS** — https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41862971915.
 - Run #176 lulus: JavaScript syntax, research snapshot regression, release smoke tests, Supabase RPC static security checks, dan SQL safety checks.
-- Pemeriksaan workflow pada head PR yang tercatat `5144a5b44d147473c976949059c9924451b9a17b` menunjukkan run #180 dilaporkan completed/success oleh daftar run, tetapi endpoint jobs masih menampilkan job `release-checks` queued. Karena status tidak konsisten, CI untuk head terbaru **belum dinyatakan terverifikasi**.
+- GitHub Actions run #181 pada head PR `0d2c40189fd950a525681156ce482accd26b8214` berstatus `completed / success`: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41868145568.
 - Security Advisor pascamigrasi: tidak ada temuan RPC baru; temuan tersisa adalah leaked password protection nonaktif pada paket Free.
 - Snapshot database akhir STAGING: 3 investigasi sintetis; 0 kasus, kontak, spesimen, kunjungan lapangan, survei publik, dan respons survei.
 - `publicSurveyEnabled:false` tetap.
@@ -78,8 +78,8 @@ Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis berhasil. Akt
 ## Temuan review manual dan status perbaikan
 
 1. **Respons error database terlalu rinci:** perbaikan kode telah dibuat pada commit `1d43cc83afff710115a2266e27be3a7a846cc050`. Handler kini mengembalikan kode publik generik (`NOT_AUTHORIZED`, `NOT_FOUND`, `CONFLICT`, `OPERATION_FAILED`) dan hanya mencatat nama operasi, SQLSTATE, serta status pada log server. Perbaikan telah dideploy ke STAGING dan ketiga endpoint diuji dengan UUID dummy; semuanya mengembalikan HTTP 404 `{"error":"NOT_FOUND"}`. **Uji runtime penyamaran error lulus 3/3.**
-2. **Penghapusan positif belum tervalidasi:** uji 403 non-owner telah berhasil, tetapi belum ada uji sukses owner yang membuktikan seluruh bundle terhapus atomik dan audit tercatat. Jangan menggunakan tiga investigasi yang dipertahankan; uji ini memerlukan record sintetis khusus dan persetujuan tersendiri.
-3. **CI terbaru perlu dikonfirmasi:** run #176 menguji commit kode yang lebih lama. Run #180 pada head PR dilaporkan success pada daftar run tetapi job masih queued saat pemeriksaan. Jangan menyatakan seluruh head PR lulus CI sampai status job konsisten.
+2. **Uji delete positif:** berhasil pada record sintetis khusus yang disetujui; query read-back memastikan hanya target tersebut yang hilang dan tiga investigasi lain tetap ada.
+3. **CI:** run #181 pada head PR sebelum pembaruan dokumentasi berstatus completed/success. Periksa ulang bila pembaruan dokumentasi memicu workflow baru.
 4. **Leaked-password protection:** temuan Security Advisor tersisa pada konfigurasi paket Free; perlu ditangani melalui pengaturan yang mendukung dan tidak terkait langsung dengan migrasi Edge Functions.
 
 ## Batas rilis
@@ -87,5 +87,5 @@ Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis berhasil. Akt
 - Proyek Supabase produksi dan URL produksi tidak disentuh.
 - Tidak ada data produksi yang diubah.
 - `publicSurveyEnabled:false`; tidak ada survei publik atau sinkronisasi yang diaktifkan.
-- Tidak ada uji positif delete; tiga investigasi sintetis dipertahankan.
+- Uji positif delete hanya menghapus satu investigasi sintetis khusus; tiga investigasi sintetis lainnya tetap dipertahankan.
 - PR #69 wajib tetap **Draft / DO NOT MERGE** sampai review akhir selesai, CI terbaru terkonfirmasi, dan pengguna memberikan persetujuan eksplisit terpisah untuk promosi berikutnya.
