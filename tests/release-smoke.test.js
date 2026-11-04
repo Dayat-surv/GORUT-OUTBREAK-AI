@@ -50,6 +50,9 @@ assert.ok(!edgeMigration.includes("lower(coalesce(p.role"), 'new SQL must not br
 assert.match(edgeShared, /ctx\.userClaims\?\.id\s*\?\?\s*ctx\.jwtClaims\?\.sub/, 'actor identity must come from verified Supabase user identity or JWT claims');
 assert.match(edgeShared, /ctx\.supabaseAdmin\.rpc/, 'privileged database work must use server-only Supabase admin client');
 assert.match(edgeShared, /\.eq\("id", actorId\)/, 'admin role must be checked against the profiles table');
+assert.ok(edgeShared.includes('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actorId)'), 'actor identity must be validated as a canonical UUID');
+assert.ok(edgeShared.includes('INTERNAL_SERVER_ERROR'), 'unexpected internal exceptions must not be mislabeled as authentication failures');
+assert.ok(edgeShared.includes('return json({ error: "INTERNAL_SERVER_ERROR" }, 500)'), 'unexpected internal exceptions must return HTTP 500');
 
 
 
