@@ -29,6 +29,8 @@ assert.match(appJs, /from\('investigations'\)\.update\(row\)[\s\S]*?\.eq\('id',s
 assert.match(appJs, /if\(existing\)Object\.assign\(existing,o\);\s*else db\.investigations\.push\(o\)/, 'editing must update the existing local record instead of appending a duplicate');
 assert.match(appJs, /function newKlb\(\)\{db\.active=null/, 'starting a new investigation must clear the edit target');
 assert.match(appJs, /const editingId=db\.active/, 'save must capture the active investigation ID before building the form payload');
+assert.match(appJs, /usedInvestigationLocalIds=new Set\(\)/, 'server hydration must guard duplicate investigation local IDs');
+assert.match(appJs, /Duplicate investigations\.metadata\.local_id detected/, 'duplicate local IDs must be logged and remapped to a unique server-derived ID');
 assert.match(appJs, /if\(!result\.data\?\.id\)throw new Error/, 'investigation save must fail closed without a returned server ID');
 assert.match(appJs, /Investigasi BELUM disimpan ke server/, 'server save errors must not be reported as successful local saves');
 assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation metadata must be restored after server reload');
