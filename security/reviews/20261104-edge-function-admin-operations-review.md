@@ -100,8 +100,8 @@ Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis kemudian berh
 
 ## Temuan review manual tambahan
 
-1. **Respons error database terlalu rinci (perlu diperbaiki sebelum rilis):** `secure-admin-operation.ts` mengembalikan `error.message` langsung ke client. Ubah menjadi kode/pesan publik generik berdasarkan kategori status, dan kirim rincian ke log server tanpa token atau data pribadi.
+1. **Respons error database terlalu rinci:** perbaikan kode telah dibuat pada commit `1d43cc83afff710115a2266e27be3a7a846cc050`. Handler kini mengembalikan kode publik generik (`NOT_AUTHORIZED`, `NOT_FOUND`, `CONFLICT`, `OPERATION_FAILED`) dan hanya mencatat nama operasi, SQLSTATE, serta status pada log server. Perubahan ini belum memiliki hasil CI yang terkonfirmasi dan belum dideploy/diuji runtime pada STAGING.
 2. **Penghapusan positif belum tervalidasi:** uji 403 non-owner telah berhasil, tetapi belum ada uji sukses owner yang membuktikan seluruh bundle terhapus atomik dan audit tercatat. Jangan menggunakan tiga investigasi yang dipertahankan; uji ini memerlukan record sintetis khusus dan persetujuan tersendiri.
 3. **CI docs-only commit:** commit dokumentasi `9c434f8ebdc9648a12ec1b93e062f6d73db5a814` tidak menghasilkan workflow run pada pemeriksaan connector. CI #176 tetap menguji commit kode `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703`, bukan commit dokumentasi terbaru.
 
-Tidak ada perubahan kode atau database yang dilakukan sebagai bagian dari review manual ini.
+Perubahan kode perbaikan respons error dibuat pada branch PR saja; belum ada redeploy Edge Function atau perubahan database. Produksi tetap tidak disentuh.
