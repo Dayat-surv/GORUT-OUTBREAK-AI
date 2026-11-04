@@ -44,15 +44,15 @@ Browser sekarang diarahkan ke tiga Edge Functions terautentikasi: delete-investi
 
 ### 2. Urutan penerapan yang direncanakan
 
-1. Tinjau dan validasi migration pada salinan/branch database STAGING terlebih dahulu.
-2. Deploy tiga Edge Functions ke STAGING saja.
-3. Jalankan migration SQL STAGING agar RPC lama ditutup dan RPC baru hanya dapat dipanggil service role.
-4. Verifikasi browser memanggil Edge Function, bukan RPC lama.
-5. Jalankan pengujian negatif: tanpa sesi, akun petugas kedua, akun pemilik, dan admin.
-6. Periksa audit log dan jumlah data sebelum/sesudah pengujian.
-7. Jalankan Security Advisor dan uji regresi aplikasi.
+1. Tinjau migration pertama (20261104140000) pada branch database STAGING; migration ini hanya menambahkan RPC server-only dan belum mencabut RPC lama.
+2. Terapkan migration pertama pada STAGING.
+3. Deploy tiga Edge Functions ke STAGING.
+4. Deploy aplikasi STAGING yang menggunakan Edge Functions. Cache-busting app.js dan service worker dinaikkan ke v180 agar browser tidak memakai JavaScript lama.
+5. Uji ketiga alur melalui Edge Functions, termasuk otorisasi dan audit, sementara RPC lama masih tersedia sebagai jembatan sementara.
+6. Setelah aplikasi baru dan ketiga endpoint terverifikasi, terapkan migration kedua (20261104141000) untuk mencabut EXECUTE RPC lama dari PUBLIC, anon, dan authenticated.
+7. Uji ulang pemanggilan langsung RPC lama (harus ditolak), uji regresi, periksa audit log/data, lalu jalankan Security Advisor.
 
-**Jangan menjalankan migration sebelum Edge Functions siap.** Saat RPC lama dicabut, versi aplikasi lama yang masih memanggil RPC tersebut akan gagal sampai versi aplikasi baru dan Edge Functions tersedia. Rencanakan urutan deployment agar tidak terjadi jeda fungsi.
+**Urutan dua migration ini wajib dipertahankan.** Jangan menerapkan migration kedua sebelum Edge Functions dan aplikasi baru sudah aktif serta lulus pengujian. Migration pertama sendiri tidak memutus aplikasi lama.
 
 ## Matriks uji wajib
 
