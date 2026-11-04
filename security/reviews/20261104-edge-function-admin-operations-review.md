@@ -45,63 +45,47 @@ Browser sekarang memakai `supabase.functions.invoke()` untuk endpoint `delete-in
 - [x] Migration kedua diterapkan setelah persetujuan pengguna.
 - [x] Verifikasi privilege menunjukkan ketiga RPC lama tidak dapat dieksekusi `anon`, `authenticated`, maupun `service_role`; ketiga RPC baru hanya dapat dieksekusi `service_role`.
 - [x] Aplikasi preview branch v180 diuji melalui browser.
+- [x] Shared handler yang menyamarkan error database dideploy ulang pada 4 November 2026: `activate-registration` v5, `reject-registration` v4, `delete-investigation` v4; semuanya `verify_jwt=true`.
 
 ### Runtime negative/authorization dan positive tests
 
 | Skenario | Hasil aktual |
 |---|---|
-| Tanpa sesi ke tiga Edge Functions | HTTP 401 |
-| PETUGAS → activate-registration | HTTP 403 `ADMIN_ONLY` |
-| PETUGAS → reject-registration | HTTP 403 `ADMIN_ONLY` |
-| PETUGAS bukan pemilik → delete-investigation | HTTP 403 `NOT_AUTHORIZED` |
+| Tanpa sesi ke tiga Edge Functions | HTTP 401 (deployment sebelumnya) |
+| PETUGAS → activate-registration | HTTP 403 `ADMIN_ONLY` (deployment sebelumnya) |
+| PETUGAS → reject-registration | HTTP 403 `ADMIN_ONLY` (deployment sebelumnya) |
+| PETUGAS bukan pemilik → delete-investigation | HTTP 403 `NOT_AUTHORIZED` (deployment sebelumnya) |
 | Browser memanggil RPC lama activate/reject/delete | HTTP 403 permission denied |
-| ADMIN activate dengan UUID valid yang tidak ada | HTTP 404 `Permintaan registrasi tidak ditemukan` |
-| ADMIN reject dengan UUID valid yang tidak ada | HTTP 404 `Permintaan registrasi tidak ditemukan` |
-| ADMIN delete dengan ID investigasi yang tidak ada | HTTP 404 `INVESTIGATION_NOT_FOUND` |
+| ADMIN activate dengan UUID dummy tidak ada | HTTP 404 `{"error":"NOT_FOUND"}` (deployment terbaru) |
+| ADMIN reject dengan UUID dummy tidak ada | HTTP 404 `{"error":"NOT_FOUND"}` (deployment terbaru) |
+| ADMIN delete dengan ID investigasi dummy tidak ada | HTTP 404 `{"error":"NOT_FOUND"}` (deployment terbaru) |
 
-HTTP 404 pada dua operasi registrasi ADMIN menunjukkan pemeriksaan ADMIN dilewati dan fungsi mencapai pencarian record. Tes menggunakan UUID dummy yang tidak ada sehingga tidak ada aktivasi, penolakan, subscription, atau audit mutasi sukses. Untuk delete, 404 hanya membuktikan target tidak ditemukan; fungsi delete mengandalkan ownership, bukan role ADMIN.
+Tiga respons 404 terbaru telah diperiksa dari body JSON browser Console. Ketiganya hanya mengembalikan kode publik `NOT_FOUND`, tanpa pesan database internal. Tes menggunakan UUID dummy yang tidak ada, sehingga tidak mengubah registrasi, subscription, atau investigasi. Pesan `Edge Function returned a non-2xx status code` yang dicetak `supabase-js` merupakan pembungkus umum untuk respons 404 dan bukan body respons server.
 
-Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis kemudian berhasil. Aktivasi menghasilkan satu subscription `premium_7d` aktif dengan masa berlaku tepat 7 hari; penolakan menghasilkan status `rejected`. Uji positif penghapusan tetap tidak dilakukan.
+HTTP 404 pada operasi registrasi ADMIN menunjukkan target tidak ditemukan setelah request terautentikasi; tes ini bukan pengganti pengujian role negatif PETUGAS. Untuk delete, 404 hanya membuktikan target tidak ditemukan; fungsi delete mengandalkan ownership, bukan role ADMIN.
+
+Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis berhasil. Aktivasi menghasilkan satu subscription `premium_7d` aktif dengan masa berlaku tepat 7 hari; penolakan menghasilkan status `rejected`. Uji positif penghapusan tetap tidak dilakukan.
 
 ### CI dan database
 
 - GitHub Actions run #176 pada commit kode `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703`: **SUCCESS** — https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41862971915.
-- Lulus: JavaScript syntax, research snapshot regression, release smoke tests, Supabase RPC static security checks, dan SQL safety checks. Run #169 adalah hasil CI sebelumnya.
+- Run #176 lulus: JavaScript syntax, research snapshot regression, release smoke tests, Supabase RPC static security checks, dan SQL safety checks.
+- Pemeriksaan workflow pada head PR yang tercatat `5144a5b44d147473c976949059c9924451b9a17b` menunjukkan run #180 dilaporkan completed/success oleh daftar run, tetapi endpoint jobs masih menampilkan job `release-checks` queued. Karena status tidak konsisten, CI untuk head terbaru **belum dinyatakan terverifikasi**.
 - Security Advisor pascamigrasi: tidak ada temuan RPC baru; temuan tersisa adalah leaked password protection nonaktif pada paket Free.
 - Snapshot database akhir STAGING: 3 investigasi sintetis; 0 kasus, kontak, spesimen, kunjungan lapangan, survei publik, dan respons survei.
 - `publicSurveyEnabled:false` tetap.
 
-## Pekerjaan tersisa / risiko
+## Temuan review manual dan status perbaikan
 
-- Review manual akhir masih terbuka untuk temuan error response: shared handler saat ini mengirim `error.message` dari database secara langsung kepada client. Pesan database dapat mengungkap detail internal; pertimbangkan pemetaan ke kode error publik yang aman dan pencatatan detail hanya di log server sebelum rilis.
-- Tes positif delete belum dilakukan; ownership denial telah diuji, tetapi keberhasilan penghapusan atomik dan audit belum dibuktikan.
-- Bila diperlukan, tes ADMIN sukses hanya dengan record registrasi sintetis khusus STAGING yang disetujui untuk dimutasi; jangan gunakan registrasi nyata.
-- Jangan lakukan tes hapus positif pada tiga investigasi sintetis yang saat ini dipertahankan. Bila dibutuhkan, buat record khusus yang boleh dihapus dengan persetujuan terpisah.
-- Temuan leaked-password protection perlu ditangani melalui pengaturan paket/produk yang mendukung; tidak terkait langsung dengan migrasi Edge Functions.
-- CI statis dan uji negatif tidak menggantikan review kode serta uji positif terkontrol sebelum rilis.
+1. **Respons error database terlalu rinci:** perbaikan kode telah dibuat pada commit `1d43cc83afff710115a2266e27be3a7a846cc050`. Handler kini mengembalikan kode publik generik (`NOT_AUTHORIZED`, `NOT_FOUND`, `CONFLICT`, `OPERATION_FAILED`) dan hanya mencatat nama operasi, SQLSTATE, serta status pada log server. Perbaikan telah dideploy ke STAGING dan ketiga endpoint diuji dengan UUID dummy; semuanya mengembalikan HTTP 404 `{"error":"NOT_FOUND"}`. **Uji runtime penyamaran error lulus 3/3.**
+2. **Penghapusan positif belum tervalidasi:** uji 403 non-owner telah berhasil, tetapi belum ada uji sukses owner yang membuktikan seluruh bundle terhapus atomik dan audit tercatat. Jangan menggunakan tiga investigasi yang dipertahankan; uji ini memerlukan record sintetis khusus dan persetujuan tersendiri.
+3. **CI terbaru perlu dikonfirmasi:** run #176 menguji commit kode yang lebih lama. Run #180 pada head PR dilaporkan success pada daftar run tetapi job masih queued saat pemeriksaan. Jangan menyatakan seluruh head PR lulus CI sampai status job konsisten.
+4. **Leaked-password protection:** temuan Security Advisor tersisa pada konfigurasi paket Free; perlu ditangani melalui pengaturan yang mendukung dan tidak terkait langsung dengan migrasi Edge Functions.
 
 ## Batas rilis
 
 - Proyek Supabase produksi dan URL produksi tidak disentuh.
 - Tidak ada data produksi yang diubah.
 - `publicSurveyEnabled:false`; tidak ada survei publik atau sinkronisasi yang diaktifkan.
-- PR #69 wajib tetap **Draft / DO NOT MERGE** sampai review akhir selesai dan pengguna memberikan persetujuan eksplisit terpisah untuk promosi berikutnya.
-
-
-## Perbaikan pasca-review manual — 4 November 2026
-
-- [x] Validasi actor ID diperketat menjadi format UUID kanonis (termasuk versi dan variant UUID yang valid).
-- [x] Exception tak terduga pada handler tidak lagi dilabeli sebagai kegagalan autentikasi; respons generik HTTP 500 `INTERNAL_SERVER_ERROR` digunakan.
-- [x] Smoke-test ditambah untuk mengunci dua perilaku tersebut.
-- [x] CI run #176 pada commit kode perbaikan `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703` SUCCESS.
-- [x] Runtime uji aktivasi positif pada deployment Edge Function yang memuat pemetaan HTTP 409 berhasil setelah akun Auth sintetis tersedia.
-- [ ] Uji runtime negatif 401/403/404 tidak diulang khusus setelah perbaikan helper; hasil sebelumnya tetap tercatat, tetapi tidak boleh dianggap sebagai rerun pada deployment terbaru.
-
-
-## Temuan review manual tambahan
-
-1. **Respons error database terlalu rinci:** perbaikan kode telah dibuat pada commit `1d43cc83afff710115a2266e27be3a7a846cc050`. Handler kini mengembalikan kode publik generik (`NOT_AUTHORIZED`, `NOT_FOUND`, `CONFLICT`, `OPERATION_FAILED`) dan hanya mencatat nama operasi, SQLSTATE, serta status pada log server. Perubahan ini belum memiliki hasil CI yang terkonfirmasi dan belum dideploy/diuji runtime pada STAGING.
-2. **Penghapusan positif belum tervalidasi:** uji 403 non-owner telah berhasil, tetapi belum ada uji sukses owner yang membuktikan seluruh bundle terhapus atomik dan audit tercatat. Jangan menggunakan tiga investigasi yang dipertahankan; uji ini memerlukan record sintetis khusus dan persetujuan tersendiri.
-3. **CI docs-only commit:** commit dokumentasi `9c434f8ebdc9648a12ec1b93e062f6d73db5a814` tidak menghasilkan workflow run pada pemeriksaan connector. CI #176 tetap menguji commit kode `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703`, bukan commit dokumentasi terbaru.
-
-Perubahan kode perbaikan respons error dibuat pada branch PR saja; belum ada redeploy Edge Function atau perubahan database. Produksi tetap tidak disentuh.
+- Tidak ada uji positif delete; tiga investigasi sintetis dipertahankan.
+- PR #69 wajib tetap **Draft / DO NOT MERGE** sampai review akhir selesai, CI terbaru terkonfirmasi, dan pengguna memberikan persetujuan eksplisit terpisah untuk promosi berikutnya.
