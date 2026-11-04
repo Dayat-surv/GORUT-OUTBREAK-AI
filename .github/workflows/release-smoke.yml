@@ -1,0 +1,19 @@
+name: Release smoke checks
+on:
+  pull_request:
+    branches:
+      - production/port-staging-fixes-20261101
+      - main
+  push:
+    branches:
+      - feature/investigation-delete-confirm-20261104
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run release smoke checks
+        run: node tests/release-smoke.test.js
