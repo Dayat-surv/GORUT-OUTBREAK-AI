@@ -1,6 +1,6 @@
 # Review Keamanan STAGING — Migrasi RPC Sensitif ke Edge Functions
 
-**Status: TELAH DITERAPKAN DAN DIUJI PADA STAGING — PR MASIH DRAFT, BELUM MERGED.**  
+**Status: IMPLEMENTASI DAN UJI POSITIF REGISTRASI SELESAI DI STAGING — REVIEW KEAMANAN AKHIR MASIH TERBUKA; PR TETAP DRAFT DAN BELUM MERGED.**  
 **Tanggal verifikasi:** 4 November 2026.
 
 ## Tujuan
@@ -46,7 +46,7 @@ Browser sekarang memakai `supabase.functions.invoke()` untuk endpoint `delete-in
 - [x] Verifikasi privilege menunjukkan ketiga RPC lama tidak dapat dieksekusi `anon`, `authenticated`, maupun `service_role`; ketiga RPC baru hanya dapat dieksekusi `service_role`.
 - [x] Aplikasi preview branch v180 diuji melalui browser.
 
-### Runtime negative/authorization tests
+### Runtime negative/authorization dan positive tests
 
 | Skenario | Hasil aktual |
 |---|---|
@@ -61,19 +61,20 @@ Browser sekarang memakai `supabase.functions.invoke()` untuk endpoint `delete-in
 
 HTTP 404 pada dua operasi registrasi ADMIN menunjukkan pemeriksaan ADMIN dilewati dan fungsi mencapai pencarian record. Tes menggunakan UUID dummy yang tidak ada sehingga tidak ada aktivasi, penolakan, subscription, atau audit mutasi sukses. Untuk delete, 404 hanya membuktikan target tidak ditemukan; fungsi delete mengandalkan ownership, bukan role ADMIN.
 
-**Belum dilakukan operasi ADMIN sukses yang mengubah data.** Pengujian positif penghapusan juga tidak dilakukan.
+Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis kemudian berhasil. Aktivasi menghasilkan satu subscription `premium_7d` aktif dengan masa berlaku tepat 7 hari; penolakan menghasilkan status `rejected`. Uji positif penghapusan tetap tidak dilakukan.
 
 ### CI dan database
 
-- GitHub Actions run #169: **SUCCESS** — https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41845412592
-- Lulus: JavaScript syntax, research snapshot regression, release smoke tests, Supabase RPC static security checks, dan SQL safety checks.
+- GitHub Actions run #176 pada commit kode `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703`: **SUCCESS** — https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41862971915.
+- Lulus: JavaScript syntax, research snapshot regression, release smoke tests, Supabase RPC static security checks, dan SQL safety checks. Run #169 adalah hasil CI sebelumnya.
 - Security Advisor pascamigrasi: tidak ada temuan RPC baru; temuan tersisa adalah leaked password protection nonaktif pada paket Free.
 - Snapshot database akhir STAGING: 3 investigasi sintetis; 0 kasus, kontak, spesimen, kunjungan lapangan, survei publik, dan respons survei.
 - `publicSurveyEnabled:false` tetap.
 
 ## Pekerjaan tersisa / risiko
 
-- Review manual akhir terhadap kode dan migration.
+- Review manual akhir masih terbuka untuk temuan error response: shared handler saat ini mengirim `error.message` dari database secara langsung kepada client. Pesan database dapat mengungkap detail internal; pertimbangkan pemetaan ke kode error publik yang aman dan pencatatan detail hanya di log server sebelum rilis.
+- Tes positif delete belum dilakukan; ownership denial telah diuji, tetapi keberhasilan penghapusan atomik dan audit belum dibuktikan.
 - Bila diperlukan, tes ADMIN sukses hanya dengan record registrasi sintetis khusus STAGING yang disetujui untuk dimutasi; jangan gunakan registrasi nyata.
 - Jangan lakukan tes hapus positif pada tiga investigasi sintetis yang saat ini dipertahankan. Bila dibutuhkan, buat record khusus yang boleh dihapus dengan persetujuan terpisah.
 - Temuan leaked-password protection perlu ditangani melalui pengaturan paket/produk yang mendukung; tidak terkait langsung dengan migrasi Edge Functions.
@@ -92,5 +93,15 @@ HTTP 404 pada dua operasi registrasi ADMIN menunjukkan pemeriksaan ADMIN dilewat
 - [x] Validasi actor ID diperketat menjadi format UUID kanonis (termasuk versi dan variant UUID yang valid).
 - [x] Exception tak terduga pada handler tidak lagi dilabeli sebagai kegagalan autentikasi; respons generik HTTP 500 `INTERNAL_SERVER_ERROR` digunakan.
 - [x] Smoke-test ditambah untuk mengunci dua perilaku tersebut.
-- [ ] CI untuk commit perbaikan ini belum terlihat pada pemeriksaan workflow saat dokumentasi diperbarui; verifikasi hasil CI tetap diperlukan.
-- [ ] Uji runtime negatif 401/403/404 perlu diulang pada deployment Edge Function yang memuat commit perbaikan. Tidak ada redeploy atau mutasi database dalam langkah ini.
+- [x] CI run #176 pada commit kode perbaikan `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703` SUCCESS.
+- [x] Runtime uji aktivasi positif pada deployment Edge Function yang memuat pemetaan HTTP 409 berhasil setelah akun Auth sintetis tersedia.
+- [ ] Uji runtime negatif 401/403/404 tidak diulang khusus setelah perbaikan helper; hasil sebelumnya tetap tercatat, tetapi tidak boleh dianggap sebagai rerun pada deployment terbaru.
+
+
+## Temuan review manual tambahan
+
+1. **Respons error database terlalu rinci (perlu diperbaiki sebelum rilis):** `secure-admin-operation.ts` mengembalikan `error.message` langsung ke client. Ubah menjadi kode/pesan publik generik berdasarkan kategori status, dan kirim rincian ke log server tanpa token atau data pribadi.
+2. **Penghapusan positif belum tervalidasi:** uji 403 non-owner telah berhasil, tetapi belum ada uji sukses owner yang membuktikan seluruh bundle terhapus atomik dan audit tercatat. Jangan menggunakan tiga investigasi yang dipertahankan; uji ini memerlukan record sintetis khusus dan persetujuan tersendiri.
+3. **CI docs-only commit:** commit dokumentasi `9c434f8ebdc9648a12ec1b93e062f6d73db5a814` tidak menghasilkan workflow run pada pemeriksaan connector. CI #176 tetap menguji commit kode `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703`, bukan commit dokumentasi terbaru.
+
+Tidak ada perubahan kode atau database yang dilakukan sebagai bagian dari review manual ini.
