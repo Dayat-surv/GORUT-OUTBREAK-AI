@@ -1,6 +1,6 @@
 # Review Keamanan STAGING — Migrasi RPC Sensitif ke Edge Functions
 
-**Status: IMPLEMENTASI DAN UJI POSITIF REGISTRASI SELESAI DI STAGING — REVIEW KEAMANAN AKHIR MASIH TERBUKA; PR TETAP DRAFT DAN BELUM MERGED.**  
+**Status: IMPLEMENTASI DAN UJI POSITIF SELESAI DI STAGING — REVIEW KODE DAN CI TERKINI DIPERBARUI; PR TETAP DRAFT DAN BELUM MERGED.**  
 **Tanggal verifikasi:** 4 November 2026.
 
 ## Tujuan
@@ -70,16 +70,16 @@ Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis berhasil. Akt
 
 - GitHub Actions run #176 pada commit kode `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703`: **SUCCESS** — https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41862971915.
 - Run #176 lulus: JavaScript syntax, research snapshot regression, release smoke tests, Supabase RPC static security checks, dan SQL safety checks.
-- GitHub Actions run #181 pada head PR `0d2c40189fd950a525681156ce482accd26b8214` berstatus `completed / success`: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41868145568.
+- GitHub Actions run #183 pada commit `66ba24fb36cf1d0dbef81a29ede9c4087f9a0bcb` berstatus `completed / success`: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41876830458. Commit berikutnya menambahkan assertion regresi untuk pemetaan `AUTH_REQUIRED` → HTTP 401; CI untuk commit terbaru perlu selesai sebelum status akhir.
 - Security Advisor pascamigrasi: tidak ada temuan RPC baru; temuan tersisa adalah leaked password protection nonaktif pada paket Free.
 - Snapshot database akhir STAGING: 3 investigasi sintetis; 0 kasus, kontak, spesimen, kunjungan lapangan, survei publik, dan respons survei.
 - `publicSurveyEnabled:false` tetap.
 
 ## Temuan review manual dan status perbaikan
 
-1. **Respons error database terlalu rinci:** perbaikan kode telah dibuat pada commit `1d43cc83afff710115a2266e27be3a7a846cc050`. Handler kini mengembalikan kode publik generik (`NOT_AUTHORIZED`, `NOT_FOUND`, `CONFLICT`, `OPERATION_FAILED`) dan hanya mencatat nama operasi, SQLSTATE, serta status pada log server. Perbaikan telah dideploy ke STAGING dan ketiga endpoint diuji dengan UUID dummy; semuanya mengembalikan HTTP 404 `{"error":"NOT_FOUND"}`. **Uji runtime penyamaran error lulus 3/3.**
+1. **Respons error database terlalu rinci:** perbaikan kode telah dibuat pada commit `1d43cc83afff710115a2266e27be3a7a846cc050`. Handler kini memetakan `AUTH_REQUIRED` menjadi HTTP 401 dan mengembalikan kode publik generik (`AUTH_REQUIRED`, `NOT_AUTHORIZED`, `NOT_FOUND`, `CONFLICT`, `OPERATION_FAILED`) dan hanya mencatat nama operasi, SQLSTATE, serta status pada log server. Perbaikan telah dideploy ke STAGING dan ketiga endpoint diuji dengan UUID dummy; semuanya mengembalikan HTTP 404 `{"error":"NOT_FOUND"}`. **Uji runtime penyamaran error lulus 3/3.**
 2. **Uji delete positif:** berhasil pada record sintetis khusus yang disetujui; query read-back memastikan hanya target tersebut yang hilang dan tiga investigasi lain tetap ada.
-3. **CI:** run #181 pada head PR sebelum pembaruan dokumentasi berstatus completed/success. Periksa ulang bila pembaruan dokumentasi memicu workflow baru.
+3. **CI:** run #183 pada commit `66ba24f` completed/success. Assertion regresi untuk mapping `AUTH_REQUIRED` → HTTP 401 ditambahkan pada commit `c1d9526`; tunggu hasil CI commit tersebut.
 4. **Leaked-password protection:** temuan Security Advisor tersisa pada konfigurasi paket Free; perlu ditangani melalui pengaturan yang mendukung dan tidak terkait langsung dengan migrasi Edge Functions.
 
 ## Batas rilis
@@ -88,4 +88,4 @@ Uji positif ADMIN untuk aktivasi dan penolakan registrasi sintetis berhasil. Akt
 - Tidak ada data produksi yang diubah.
 - `publicSurveyEnabled:false`; tidak ada survei publik atau sinkronisasi yang diaktifkan.
 - Uji positif delete hanya menghapus satu investigasi sintetis khusus; tiga investigasi sintetis lainnya tetap dipertahankan.
-- PR #69 wajib tetap **Draft / DO NOT MERGE** sampai review akhir selesai, CI terbaru terkonfirmasi, dan pengguna memberikan persetujuan eksplisit terpisah untuk promosi berikutnya.
+- PR #69 tetap **Draft / DO NOT MERGE**. CI terbaru harus sukses dan persetujuan eksplisit terpisah tetap diperlukan sebelum promosi produksi.
