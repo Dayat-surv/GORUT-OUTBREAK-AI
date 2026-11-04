@@ -174,10 +174,9 @@ begin
 end;
 $function$;
 
--- Remove direct client access to the legacy SECURITY DEFINER RPCs.
-revoke all on function public.delete_investigation_bundle(text) from public, anon, authenticated;
-revoke all on function public.activate_premium_7d(uuid) from public, anon, authenticated;
-revoke all on function public.reject_registration(uuid, text) from public, anon, authenticated;
+-- Legacy client RPC grants remain temporarily during the staged cutover.
+-- A separate follow-up migration revokes them only after the new app and
+-- Edge Functions are deployed and verified on STAGING.
 
 -- The new RPC entry points are callable only by the server-side service role.
 revoke all on function public.edge_delete_investigation_bundle(uuid, text) from public, anon, authenticated;
