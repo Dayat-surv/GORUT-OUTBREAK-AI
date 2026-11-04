@@ -1,74 +1,76 @@
 # Runbook Pengujian Runtime Edge Functions — STAGING
 
-**Tujuan:** memverifikasi ketiga endpoint Edge Function pada proyek Supabase STAGING tanpa menyentuh produksi dan tanpa mengubah data operasional.
+**Tanggal pembaruan:** 4 November 2026  
+**Lingkup:** proyek Supabase STAGING `xeqdhwqylutntphlkmqe` dan preview branch PR #69.  
+**Batas tegas:** tidak ada perubahan pada produksi; `publicSurveyEnabled:false`; tidak ada pengujian operasi ADMIN yang memutasi data.
 
-**Status saat ini (4 November 2026):** ketiga Edge Functions telah dideploy ke STAGING dengan `verify_jwt=true`; migration pertama telah diterapkan. Migration kedua belum diterapkan. Aplikasi v180 belum diverifikasi pada preview STAGING dan uji runtime autentikasi masih menunggu deployment aplikasi.
+## Status pelaksanaan
 
-## Pemeriksaan prasyarat dan status
+<badge> </badge>
+- [x] Tiga Edge Functions aktif pada STAGING: `delete-investigation`, `activate-registration`, `reject-registration`; ketiganya memakai `verify_jwt=true`.
+- [x] Shared handler mengambil actor ID dari verified JWT (`ctx.userClaims?.id ?? ctx.jwtClaims?.sub`) dan memeriksa role admin dari `profiles`.
+- [x] Migration pertama `20261104140000_secure_admin_operations_edge_functions.sql` diterapkan pada STAGING.
+- [x] Hak baca `service_role` ke `public.profiles` diberikan pada STAGING agar Edge Function dapat memeriksa role.
+- [x] Migration kedua `20261104141000_revoke_legacy_admin_rpc_client_access.sql` diterapkan pada STAGING setelah persetujuan pengguna.
+- [x] Verifikasi hak EXECUTE: RPC lama ditolak untuk `anon` dan `authenticated`; RPC baru hanya dapat dieksekusi `service_role`.
+- [x] Tes tanpa sesi pada ketiga endpoint menghasilkan HTTP 401.
+- [x] Tes PETUGAS untuk aktivasi dan penolakan registrasi menghasilkan HTTP 403 `ADMIN_ONLY`.
+- [x] Tes PETUGAS bukan pemilik saat menghapus investigasi menghasilkan HTTP 403 `NOT_AUTHORIZED`.
+- [x] Tes langsung tiga RPC lama dari browser menghasilkan HTTP 403 / permission denied.
+- [x] Tes ADMIN dengan UUID dummy yang tidak ada: activate dan reject menghasilkan HTTP 404 `Permintaan registrasi tidak ditemukan`; delete menghasilkan HTTP 404 `INVESTIGATION_NOT_FOUND`.
+- [x] Security Advisor pascamigrasi: tidak ada temuan RPC baru; temuan yang tersisa adalah leaked password protection nonaktif pada paket Free.
+- [x] GitHub Actions run #169 SUCCESS: syntax, research snapshot regression, release smoke tests, Supabase RPC static security, dan SQL safety checks.
+- [x] Pemeriksaan konsistensi akhir: investigations=3; cases=0; contacts=0; specimens=0; field_visits=0; public_surveys=0; survey_responses=0.
+- [x] PR #69 masih Open, Draft, dan belum merged.
 
-- [x] PR #69 tetap Draft dan belum digabung.
-- [x] Proyek STAGING terverifikasi dengan project ref `xeqdhwqylutntphlkmqe`.
-- [ ] Periksa Settings → API Keys / Edge Functions → Secrets bahwa runtime memiliki konfigurasi otomatis `SUPABASE_URL`, publishable keys, dan secret keys yang dibutuhkan SDK. Jangan menyalin atau mengirim nilai secret ke chat, browser console, atau repository.
-- [x] Edge Functions menggunakan `npm:@supabase/server@^1`; ketiganya aktif dan `verify_jwt=true`.
-- [ ] Siapkan akun STAGING: satu akun admin, satu akun pemilik investigasi, dan satu akun petugas kedua. Jangan gunakan akun produksi untuk uji.
-- [x] Snapshot pascamigrasi: 3 investigasi; 0 kasus, kontak, spesimen, kunjungan lapangan, survei publik, dan respons survei. Tiga investigasi sintetis harus tetap dipertahankan.
-- [x] `publicSurveyEnabled:false`; jumlah survei publik aktif = 0.
+## Detail hasil uji runtime
 
-## Urutan cutover STAGING
+| Skenario | Hasil aktual | Interpretasi |
+|---|---|---|
+| Tanpa sesi → tiga Edge Functions | 401 | JWT diwajibkan |
+| PETUGAS → activate-registration | 403 `ADMIN_ONLY` | Role non-admin ditolak |
+| PETUGAS → reject-registration | 403 `ADMIN_ONLY` | Role non-admin ditolak |
+| PETUGAS bukan pemilik → delete-investigation | 403 `NOT_AUTHORIZED` | Pemeriksaan kepemilikan bekerja |
+| Browser → RPC lama activate/reject/delete | 403 permission denied | Akses client ke RPC lama telah dicabut |
+| ADMIN → activate dengan UUID dummy | 404 registrasi tidak ditemukan | Pemeriksaan admin dilewati; tidak ada record target |
+| ADMIN → reject dengan UUID dummy | 404 registrasi tidak ditemukan | Pemeriksaan admin dilewati; tidak ada record target |
+| ADMIN → delete dengan ID dummy | 404 investigasi tidak ditemukan | Tidak ada investigasi target; bukan bukti jalur admin karena delete berbasis kepemilikan |
 
-1. [x] Deploy Edge Functions: `delete-investigation`, `activate-registration`, `reject-registration`.
-2. [x] Terapkan migration pertama `20261104140000_secure_admin_operations_edge_functions.sql`; RPC lama tetap aktif.
-3. [ ] Deploy aplikasi STAGING v180 dari branch PR ini ke preview STAGING saja.
-4. [ ] Uji seluruh skenario tanpa menghapus atau membuat data operasional.
-5. [ ] Jika seluruh uji lulus, terapkan migration kedua `20261104141000_revoke_legacy_admin_rpc_client_access.sql` sesuai persetujuan STAGING.
-6. [ ] Setelah migration kedua, ulangi tes penolakan direct RPC dan seluruh regresi.
+Tes ADMIN menggunakan UUID valid yang dipastikan tidak ada, sehingga tidak mengaktifkan subscription, mengubah status registrasi, menghapus investigasi, atau membuat audit mutasi sukses. **Belum dilakukan tes sukses ADMIN yang benar-benar mengubah data.** Tes positif hapus investigasi juga tidak dilakukan.
 
-## Pengujian tanpa perubahan data
+## Hak akses database setelah cutover
 
-### Autentikasi dan otorisasi
+Hasil verifikasi `has_function_privilege`:
 
-| Skenario | Hasil yang diharapkan |
-|---|---|
-| Tanpa login memanggil endpoint | 401; tidak ada perubahan database |
-| JWT tidak valid/kedaluwarsa | 401; tidak ada perubahan database |
-| Petugas non-admin memanggil activate-registration | 403; tidak ada subscription/registrasi baru |
-| Petugas non-admin memanggil reject-registration | 403; status registrasi tidak berubah |
-| Akun kedua mencoba hapus investigasi milik akun pemilik | 403 / NOT_AUTHORIZED; investigasi tetap ada |
-| Akun pemilik mengirim ID investigasi sintetis yang tidak ada | 404 / NOT_FOUND; tidak ada perubahan database |
+| Fungsi | anon | authenticated | service_role |
+|---|---:|---:|---:|
+| Legacy `activate_premium_7d` | false | false | false |
+| Legacy `reject_registration` | false | false | false |
+| Legacy `delete_investigation_bundle` | false | false | false |
+| New `edge_activate_premium_7d` | false | false | true |
+| New `edge_reject_registration` | false | false | true |
+| New `edge_delete_investigation_bundle` | false | false | true |
 
-### Pengujian admin yang mengubah data
+Edge Functions memanggil RPC baru melalui konteks server `supabaseAdmin`; browser tidak memperoleh hak EXECUTE pada RPC tersebut.
 
-Jangan membuat atau mengubah record registrasi selama rangkaian uji ini. Gunakan UUID valid yang dipastikan tidak ada di tabel untuk memastikan admin melewati pemeriksaan peran dan menerima 404 tanpa perubahan data. Petugas non-admin harus menerima 403 sebelum database dipanggil.
+## Pemeriksaan data dan batas keselamatan
 
-| Skenario | Hasil yang diharapkan |
-|---|---|
-| Admin memanggil activate-registration dengan UUID valid yang tidak ada | 404; tidak ada registrasi/subscription baru |
-| Admin memanggil reject-registration dengan UUID valid yang tidak ada | 404; tidak ada perubahan status/audit mutasi |
+Snapshot akhir STAGING:
+- Investigations: **3** (tiga investigasi sintetis dipertahankan).
+- Cases, contacts, specimens, field visits, public surveys, survey responses: **0**.
+- `publicSurveyEnabled:false` harus tetap dipertahankan.
+- Tidak ada data produksi yang disentuh.
 
-### Uji hak akses database setelah cutover
+## Pekerjaan yang masih tersisa
 
-Jalankan hanya setelah migration kedua diterapkan:
+1. Review manual akhir terhadap kode, migration, dan dokumentasi PR #69.
+2. Jika diperlukan, lakukan pengujian ADMIN positif yang memutasi hanya record registrasi sintetis khusus STAGING, setelah record uji dan dampaknya disetujui secara terpisah.
+3. Jangan lakukan pengujian delete positif pada investigasi yang saat ini dipertahankan; jika benar-benar diperlukan, buat record khusus yang boleh dihapus dan minta persetujuan tersendiri.
+4. Jangan merge PR #69 atau mengubah produksi tanpa persetujuan eksplisit yang terpisah.
 
-- [ ] `authenticated` tidak dapat menjalankan tiga RPC lama secara langsung.
-- [ ] `anon` tidak dapat menjalankan tiga RPC lama.
-- [ ] `authenticated` tidak dapat menjalankan tiga RPC baru secara langsung.
-- [ ] Edge Function tetap dapat menjalankan RPC baru melalui `supabaseAdmin`.
-- [ ] Security Advisor tidak lagi melaporkan tiga RPC lama sebagai authenticated-executable. Temuan leaked-password protection pada paket Free mungkin tetap ada dan harus dicatat terpisah.
+## Rollback / batas rilis
 
-## Pemeriksaan pascauji
-
-- [ ] Hitung ulang semua tabel terkait dan bandingkan dengan catatan awal.
-- [ ] Audit log menunjukkan actor_id dan action yang benar untuk setiap aksi uji.
-- [ ] Tidak ada investigasi/kasus operasional yang berubah.
-- [ ] Tidak ada survei publik atau respons survei yang dibuat/diaktifkan.
-- [ ] `publicSurveyEnabled:false` tetap.
-- [ ] Tidak ada secret di browser bundle, log, commit, atau response API.
-- [ ] Simpan hasil uji, waktu, akun uji (ID internal saja dalam dokumen privat), status HTTP, dan audit event.
-
-## Rollback / batas keselamatan
-
-- Jangan menjalankan migration kedua sampai endpoint dan aplikasi baru terverifikasi.
-- Jika Edge Function gagal sebelum migration kedua, hentikan cutover dan kembalikan preview aplikasi ke versi sebelumnya; RPC lama masih tersedia.
-- Jika migration kedua sudah diterapkan dan endpoint baru bermasalah, jangan langsung mengubah grant produksi. Pada STAGING, rollback harus berupa migration terpisah yang ditinjau dan disetujui, dengan memastikan fungsi server-only tetap tertutup bagi client.
+- Jangan menjalankan migration tambahan tanpa review dan persetujuan.
+- Jika endpoint bermasalah setelah cutover, jangan membuka kembali RPC lama untuk client secara spontan. Buat rollback STAGING yang ditinjau dan tetap menjaga fungsi istimewa tertutup bagi client.
 - Tidak ada langkah di runbook ini yang mengizinkan perubahan produksi.
-- Tidak ada pengaktifan survei publik, sinkronisasi, atau perubahan data produksi.
+- Tidak ada pengaktifan survei publik atau sinkronisasi.
