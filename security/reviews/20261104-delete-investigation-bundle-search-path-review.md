@@ -283,3 +283,72 @@ Namun, masih terdapat peringatan SECURITY DEFINER dan leaked-password protection
 10. Rilis produksi hanya dapat dipertimbangkan setelah seluruh pemeriksaan keamanan, regresi aplikasi, dan validasi konfigurasi selesai.
 
 **Status akhir: STAGING FUNCTIONAL TESTS PASSED — SECURITY REVIEW WITH RESIDUAL FINDINGS — PRODUCTION RELEASE NOT APPROVED.**
+
+---
+
+# PEMBARUAN HASIL PENGUJIAN FUNGSI ADMINISTRASI DAN PEMERIKSAAN AKHIR
+
+**Tanggal:** 4 November 2026  
+**Lingkungan:** Supabase STAGING  
+**Status:** Pengujian otorisasi berhasil; temuan residual tetap dicatat.
+
+## 1. Pengujian fungsi administrasi oleh akun non-admin
+
+Pengujian dilakukan menggunakan akun kedua dengan peran `petugas`.
+
+Hasil pemanggilan RPC:
+
+| Fungsi | Hasil | Pesan |
+|---|---|---|
+| `activate_premium_7d` | Ditolak | Hanya administrator yang dapat mengaktifkan akses |
+| `reject_registration` | Ditolak | Hanya administrator yang dapat menolak registrasi |
+
+Kedua fungsi mengembalikan kode error `P0001` dan tidak mengembalikan data hasil operasi.
+
+Pengujian menggunakan UUID dummy `00000000-0000-0000-0000-000000000000`, bukan permohonan registrasi sebenarnya.
+
+## 2. Verifikasi dampak pengujian
+
+Pemeriksaan database setelah pengujian menghasilkan:
+
+- Registrasi dummy: 0.
+- Subscription tambahan akun petugas: 0.
+- Audit event aktivasi/penolakan dummy: 0.
+
+Tidak ditemukan perubahan data akibat percobaan akun non-admin.
+
+## 3. Pemeriksaan akhir konsistensi STAGING
+
+| Objek | Jumlah |
+|---|---:|
+| Investigasi sintetis milik akun penguji | 3 |
+| Kasus | 0 |
+| Kontak | 0 |
+| Spesimen | 0 |
+| Kunjungan lapangan | 0 |
+| Survei publik | 0 |
+| Survei publik aktif | 0 |
+| Respons survei | 0 |
+
+Ketiga investigasi sintetis tetap dipertahankan.
+
+## 4. Security Advisor
+
+Pemeriksaan Security Advisor pada 4 November 2026 pukul 13:10 UTC masih menunjukkan:
+
+1. `authenticated_security_definer_function_executable`: 3 temuan, yaitu `activate_premium_7d`, `delete_investigation_bundle`, dan `reject_registration`.
+2. `auth_leaked_password_protection`: perlindungan kata sandi bocor belum aktif.
+
+Ketiga fungsi tetap menggunakan `search_path=""`. Peringatan SECURITY DEFINER tidak dianggap sebagai bukti otomatis adanya eksploitasi, tetapi tetap merupakan risiko yang perlu ditinjau.
+
+Pengujian negatif runtime untuk `activate_premium_7d` dan `reject_registration` terhadap akun non-admin berhasil. Pengujian ini tidak menggantikan audit keamanan menyeluruh.
+
+## 5. Kesimpulan
+
+Seluruh skenario otorisasi yang telah diuji pada lingkungan STAGING menunjukkan hasil sesuai harapan, termasuk penolakan akses fungsi administrasi oleh akun non-admin.
+
+Kondisi database tetap konsisten dan tidak ditemukan perubahan data akibat pengujian dummy.
+
+Peringatan Security Advisor tetap menjadi tindak lanjut sebelum rilis produksi.
+
+**FINAL STAGING CHECK: AUTHORIZATION TESTS PASSED — DATA CONSISTENCY VERIFIED — SECURITY WARNINGS REMAIN — PRODUCTION RELEASE NOT APPROVED.**
