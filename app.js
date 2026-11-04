@@ -155,7 +155,83 @@ function login(){loginEl.style.display='none';app.style.display='block';render()
 function page(id,b){document.querySelectorAll('.page').forEach(x=>x.classList.remove('show'));document.getElementById(id).classList.add('show');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));if(b)b.classList.add('active');title.textContent=id==='analisis'?'Analisis Epidemiologi':id[0].toUpperCase()+id.slice(1);render();if(id==='master'){renderMasterGroups();renderMaster()}}
 function syncInvestigationType(){const type=val('inType');const d=document.getElementById('disease');const panel=document.getElementById('foodInvestigationPanel');if(type==='Keracunan Makanan'){if(d){d.value='keracunan-pangan';selectDisease('keracunan-pangan')}if(panel)panel.style.display='block'}else{if(panel)panel.style.display='none';if(d&&d.value==='keracunan-pangan'){d.value='campak';selectDisease('campak')}}}
 function newKlb(){page('investigasi');['inName','kec','desa','pkm','tgl','foodEventName','foodEventDate','foodVenue','foodSource','foodMealTime','foodExposed','foodIll','foodDead','foodSuspected','foodHandler','foodWater','foodStorage','foodHypothesis'].forEach(x=>{const e=document.getElementById(x);if(e)e.value=''});const t=document.getElementById('inType');if(t)t.value='Penyakit Menular';syncInvestigationType();}
-function saveKlb(){let o={id:Date.now(),name:val('inName')||'Investigasi Baru',type:val('inType'),disease:val('disease')||db.selectedDisease||'campak',prov:val('prov'),kab:val('kab'),kec:val('kec'),desa:val('desa'),pkm:val('pkm'),date:val('tgl')||new Date().toISOString().slice(0,10),status:'Berjalan'};if(o.type==='Keracunan Makanan'){o.disease='keracunan-pangan';o.foodInvestigation={eventName:val('foodEventName'),eventDate:val('foodEventDate'),venue:val('foodVenue'),foodSource:val('foodSource'),mealTime:val('foodMealTime'),exposed:+val('foodExposed')||0,ill:+val('foodIll')||0,dead:+val('foodDead')||0,suspectedFood:val('foodSuspected'),foodHandler:val('foodHandler'),waterSource:val('foodWater'),storage:val('foodStorage'),initialHypothesis:val('foodHypothesis')}}db.investigations.push(o);db.active=o.id;db.selectedDisease=o.disease;save();page('dashboard')}
+async function saveKlb(){
+  const o={
+    id:Date.now(),
+    name:val('inName')||'Investigasi Baru',
+    type:val('inType'),
+    disease:val('disease')||db.selectedDisease||'campak',
+    prov:val('prov'),kab:val('kab'),kec:val('kec'),desa:val('desa'),
+    pkm:val('pkm'),
+    date:val('tgl')||new Date().toISOString().slice(0,10),
+    status:'Berjalan'
+  };
+  if(o.type==='Keracunan Makanan'){
+    o.disease='keracunan-pangan';
+    o.foodInvestigation={
+      eventName:val('foodEventName'),eventDate:val('foodEventDate'),
+      venue:val('foodVenue'),foodSource:val('foodSource'),
+      mealTime:val('foodMealTime'),exposed:+val('foodExposed')||0,
+      ill:+val('foodIll')||0,dead:+val('foodDead')||0,
+      suspectedFood:val('foodSuspected'),foodHandler:val('foodHandler'),
+      waterSource:val('foodWater'),storage:val('foodStorage'),
+      initialHypothesis:val('foodHypothesis')
+    };
+  }
+
+  const cfg=window.GORUT_BACKEND||{};
+  if(cfg.enabled){
+    try{
+      const sb=await backendClient();
+      if(!sb)throw new Error('Backend aktif tetapi konfigurasi Supabase tidak tersedia.');
+      const auth=await sb.auth.getUser();
+      if(auth.error)throw auth.error;
+      const user=auth.data?.user;
+      if(!user?.id)throw new Error('Sesi login Supabase tidak ditemukan. Silakan login ulang.');
+      const serverId=(window.crypto&&typeof window.crypto.randomUUID==='function')
+        ?window.crypto.randomUUID()
+        :uuidFrom(String(Date.now())+Math.random()+Math.random());
+      const row={
+        id:serverId,owner_id:user.id,name:o.name,
+        outbreak_type:o.type||'Penyakit Menular',
+        disease_id:o.disease||null,
+        province:o.prov||'Gorontalo',
+        district:o.kab||'Gorontalo Utara',
+        subdistrict:o.kec||null,village:o.desa||null,
+        facility:o.pkm||null,start_date:o.date||null,
+        status:o.status||'Berjalan',
+        metadata:{
+          local_id:String(o.id),
+          local_disease:o.disease||null,
+          food_investigation:o.foodInvestigation||null
+        }
+      };
+      const result=await sb.from('investigations').insert(row).select('id').single();
+      if(result.error)throw result.error;
+      if(!result.data?.id)throw new Error('Server tidak mengembalikan ID investigasi setelah penyimpanan.');
+      o.serverId=result.data.id;
+      o.owner_id=user.id;
+      db.investigations.push(o);
+      db.active=o.id;
+      db.selectedDisease=o.disease;
+      save();
+      alert('Berhasil! Investigasi telah tersimpan di server.');
+      page('dashboard');
+      return;
+    }catch(error){
+      console.error('Gagal menyimpan investigasi ke Supabase:',error);
+      alert('Investigasi BELUM tersimpan ke server. Data formulir tetap tersedia.\\n\\n'+(error?.message||String(error)));
+      return;
+    }
+  }
+
+  db.investigations.push(o);
+  db.active=o.id;
+  db.selectedDisease=o.disease;
+  save();
+  alert('Investigasi tersimpan di perangkat ini saja; belum tersimpan ke server.');
+  page('dashboard');
+}
 function dash(){let q=val('search').toLowerCase(),t=val('typeFilter'),r=db.investigations.filter(x=>(!q||x.name.toLowerCase().includes(q))&&(!t||x.type===t));const uniqueFor=rows=>{const m=new Map();rows.forEach((c,i)=>{const id=String(c.id??'').trim(),key=String(c.investigationId??'')+'::'+(id||'__record_'+i);m.set(key,c)});return [...m.values()]};klbRows.innerHTML=r.map(x=>{const records=db.cases.filter(c=>String(c.investigationId)===String(x.id)),unique=uniqueFor(records);return `<tr><td><b>${x.name}</b></td><td>${x.type}</td><td>${x.desa||'-'}, ${x.kec||'-'}</td><td><b>${unique.length}</b><div class="small">${records.length} rekaman sumber</div></td><td>${x.status}</td><td><button onclick="openKlb(this.dataset.investigationId)" data-investigation-id="${esc0(x.id)}">Buka</button></td></tr>`}).join('')||'<tr><td colspan="6">Belum ada investigasi.</td></tr>';let cs=db.cases,uniqueCases=uniqueFor(cs);stats.innerHTML=[['Investigasi',db.investigations.length],['Kasus unik',uniqueCases.length],['Rekaman sumber',cs.length],['Konfirmasi',uniqueCases.filter(c=>c.status==='Konfirmasi').length],['Meninggal',uniqueCases.filter(c=>c.outcome==='Meninggal').length]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('')}
 function openKlb(id){db.active=id;save();let o=act();inName.value=o.name||'';inType.value=o.type||'Penyakit Menular';disease.innerHTML=diseaseOptions();disease.value=o.disease||'campak';prov.value=o.prov||'';kab.value=o.kab||'';kec.value=o.kec||'';desa.value=o.desa||'';pkm.value=o.pkm||'';tgl.value=o.date||'';db.selectedDisease=o.disease||'campak';syncInvestigationType();if(o.type==='Keracunan Makanan'&&o.foodInvestigation){const f=o.foodInvestigation;[['foodEventName','eventName'],['foodEventDate','eventDate'],['foodVenue','venue'],['foodSource','foodSource'],['foodMealTime','mealTime'],['foodExposed','exposed'],['foodIll','ill'],['foodDead','dead'],['foodSuspected','suspectedFood'],['foodHandler','foodHandler'],['foodWater','waterSource'],['foodStorage','storage'],['foodHypothesis','initialHypothesis']].forEach(([id,k])=>{const e=document.getElementById(id);if(e)e.value=f[k]??''})}page('investigasi')}
 function addCase(){if(!act())return alert('Pilih investigasi terlebih dahulu.');const food=act().disease==='keracunan-pangan';const diseaseId=act().disease;const extraPriority=priorityPanel(diseaseId,{});const extra=(food?`<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>${f('Makanan/minuman dikonsumsi','caseFood','text','')}${f('Waktu konsumsi','caseConsumedAt','datetime-local','')}${f('Waktu onset','caseOnsetTime','datetime-local','')}${f('Masa inkubasi (jam)','caseIncubation','number','')}${f('Gejala utama','caseSymptoms','text','')}${f('Sumber pangan','caseFoodSource','text','')}${f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')}${f('Spesimen klinis','caseClinicalSpecimen','text','')}</div>`:'')+extraPriority;modal(`<h2>Tambah Kasus</h2>${f('ID','cid','text','K'+String(db.cases.length+1).padStart(3,'0'))}${f('Nama','cn','text','')}${f('Umur','ca','number','')}${f('Jenis kelamin','cs','select','Laki-laki|Perempuan')}${f('Onset','co',food?'datetime-local':'date','')}${f('Status','ct','select','Suspek|Probable|Konfirmasi')}${f('Outcome','cu','select','Rawat jalan|Dirawat|Sembuh|Meninggal')}${extra}<button class="primary" onclick="saveCase()">Simpan</button>`)}
@@ -528,7 +604,7 @@ async function loadServerOperationalData(){
   const invMap=new Map();
   const investigations=raw.investigations.map(r=>{
     const id=localId(r,r.id);invMap.set(String(r.id),id);
-    return {id,name:r.name||'Investigasi tanpa nama',type:r.outbreak_type||'Penyakit Menular',disease:r.metadata?.local_disease||r.disease_id||'campak',prov:r.province||'Gorontalo',kab:r.district||'Gorontalo Utara',kec:r.subdistrict||'',desa:r.village||'',pkm:r.facility||'',date:r.start_date||'',status:r.status||'Berjalan',serverId:r.id,owner_id:r.owner_id};
+    return {id,name:r.name||'Investigasi tanpa nama',type:r.outbreak_type||'Penyakit Menular',disease:r.metadata?.local_disease||r.disease_id||'campak',prov:r.province||'Gorontalo',kab:r.district||'Gorontalo Utara',kec:r.subdistrict||'',desa:r.village||'',pkm:r.facility||'',date:r.start_date||'',status:r.status||'Berjalan',serverId:r.id,owner_id:r.owner_id,foodInvestigation:r.metadata?.food_investigation||null};
   });
   const caseMap=new Map();
   const cases=raw.cases.map(r=>{
