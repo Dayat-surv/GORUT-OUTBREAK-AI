@@ -63,7 +63,9 @@ export function serveSecureAdminOperation(config: OperationConfig): void {
       });
 
       if (error) {
-        const message = String(error.message ?? "DATABASE_OPERATION_FAILED");
+        // Keep database details out of the public response. The SQLSTATE is
+        // sufficient for operational correlation and does not expose row data.
+        const message = String(error.message ?? "");
         const status = /NOT_AUTHORIZED|Hanya administrator/i.test(message)
           ? 403
           : /NOT_FOUND|tidak ditemukan/i.test(message)
@@ -71,7 +73,17 @@ export function serveSecureAdminOperation(config: OperationConfig): void {
           : /pending|terlalu panjang|AUTH_REQUIRED|Akun Auth.*belum tersedia/i.test(message)
           ? 409
           : 500;
-        return json({ error: message }, status);
+        const publicCode =
+          status === 403 ? "NOT_AUTHORIZED"
+          : status === 404 ? "NOT_FOUND"
+          : status === 409 ? "CONFLICT"
+          : "OPERATION_FAILED";
+        console.error("Secure admin operation RPC failed", {
+          operation: config.rpcName,
+          code: error.code ?? "UNKNOWN",
+          status,
+        });
+        return json({ error: publicCode }, status);
       }
 
       return json({ success: true, data });
