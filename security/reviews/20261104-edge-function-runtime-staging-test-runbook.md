@@ -2,28 +2,26 @@
 
 **Tujuan:** memverifikasi ketiga endpoint Edge Function pada proyek Supabase STAGING tanpa menyentuh produksi dan tanpa mengubah data operasional.
 
-**Status saat ini:** belum dijalankan. Dokumen ini adalah rencana uji; tidak ada deployment atau migrasi yang dilakukan saat menyusunnya.
+**Status saat ini (4 November 2026):** ketiga Edge Functions telah dideploy ke STAGING dengan `verify_jwt=true`; migration pertama telah diterapkan. Migration kedua belum diterapkan. Aplikasi v180 belum diverifikasi pada preview STAGING dan uji runtime autentikasi masih menunggu deployment aplikasi.
 
-## Prasyarat sebelum deployment
+## Pemeriksaan prasyarat dan status
 
-- [ ] PR #69 tetap Draft dan belum digabung.
-- [ ] Pastikan proyek yang sedang dibuka adalah STAGING dengan project ref `xeqdhwqylutntphlkmqe`.
+- [x] PR #69 tetap Draft dan belum digabung.
+- [x] Proyek STAGING terverifikasi dengan project ref `xeqdhwqylutntphlkmqe`.
 - [ ] Periksa Settings → API Keys / Edge Functions → Secrets bahwa runtime memiliki konfigurasi otomatis `SUPABASE_URL`, publishable keys, dan secret keys yang dibutuhkan SDK. Jangan menyalin atau mengirim nilai secret ke chat, browser console, atau repository.
-- [ ] Pastikan paket Edge Functions menggunakan `npm:@supabase/server@^1` dan project runtime mendukung SDK tersebut.
+- [x] Edge Functions menggunakan `npm:@supabase/server@^1`; ketiganya aktif dan `verify_jwt=true`.
 - [ ] Siapkan akun STAGING: satu akun admin, satu akun pemilik investigasi, dan satu akun petugas kedua. Jangan gunakan akun produksi untuk uji.
-- [ ] Catat jumlah awal investigasi, kasus, kontak, spesimen, kunjungan lapangan, survei, respons survei, dan audit log. Jangan masukkan data nyata baru.
-- [ ] Pastikan `publicSurveyEnabled:false` dan tidak ada survei publik aktif.
+- [x] Snapshot pascamigrasi: 3 investigasi; 0 kasus, kontak, spesimen, kunjungan lapangan, survei publik, dan respons survei. Tiga investigasi sintetis harus tetap dipertahankan.
+- [x] `publicSurveyEnabled:false`; jumlah survei publik aktif = 0.
 
-## Urutan deployment STAGING yang disarankan
+## Urutan cutover STAGING
 
-Jangan menjalankan tahap berikut tanpa persetujuan eksplisit untuk deployment STAGING.
-
-1. Deploy Edge Functions: `delete-investigation`, `activate-registration`, `reject-registration`.
-2. Jalankan migration pertama `20261104140000_secure_admin_operations_edge_functions.sql` untuk membuat RPC server-only. RPC lama tetap aktif pada tahap ini agar versi aplikasi sebelumnya tidak langsung terputus.
-3. Deploy aplikasi STAGING v180 dari branch PR ini ke preview STAGING saja.
-4. Uji seluruh skenario di bawah sementara RPC lama masih aktif.
-5. Jika seluruh uji lulus, minta persetujuan terpisah sebelum menjalankan migration kedua `20261104141000_revoke_legacy_admin_rpc_client_access.sql`.
-6. Setelah migration kedua, ulangi tes penolakan direct RPC dan seluruh regresi.
+1. [x] Deploy Edge Functions: `delete-investigation`, `activate-registration`, `reject-registration`.
+2. [x] Terapkan migration pertama `20261104140000_secure_admin_operations_edge_functions.sql`; RPC lama tetap aktif.
+3. [ ] Deploy aplikasi STAGING v180 dari branch PR ini ke preview STAGING saja.
+4. [ ] Uji seluruh skenario tanpa menghapus atau membuat data operasional.
+5. [ ] Jika seluruh uji lulus, terapkan migration kedua `20261104141000_revoke_legacy_admin_rpc_client_access.sql` sesuai persetujuan STAGING.
+6. [ ] Setelah migration kedua, ulangi tes penolakan direct RPC dan seluruh regresi.
 
 ## Pengujian tanpa perubahan data
 
@@ -36,17 +34,16 @@ Jangan menjalankan tahap berikut tanpa persetujuan eksplisit untuk deployment ST
 | Petugas non-admin memanggil activate-registration | 403; tidak ada subscription/registrasi baru |
 | Petugas non-admin memanggil reject-registration | 403; status registrasi tidak berubah |
 | Akun kedua mencoba hapus investigasi milik akun pemilik | 403 / NOT_AUTHORIZED; investigasi tetap ada |
-| Akun pemilik menghapus investigasi uji yang memang disetujui untuk dihapus | Sukses; hitungan data turunan dan audit cocok |
+| Akun pemilik mengirim ID investigasi sintetis yang tidak ada | 404 / NOT_FOUND; tidak ada perubahan database |
 
 ### Pengujian admin yang mengubah data
 
-Pengujian ini memerlukan record registrasi sintetis berstatus pending dan persetujuan khusus untuk membuat/mengubah record uji di STAGING. Jangan jalankan sebelum data uji dan prosedur pembersihannya disepakati.
+Jangan membuat atau mengubah record registrasi selama rangkaian uji ini. Gunakan UUID valid yang dipastikan tidak ada di tabel untuk memastikan admin melewati pemeriksaan peran dan menerima 404 tanpa perubahan data. Petugas non-admin harus menerima 403 sebelum database dipanggil.
 
 | Skenario | Hasil yang diharapkan |
 |---|---|
-| Admin mengaktifkan registrasi pending sintetis | Status approved, subscription premium_7d 7 hari, audit actor_id = admin |
-| Admin menolak registrasi pending sintetis | Status rejected, alasan tercatat, audit actor_id = admin |
-| Admin mengulang aksi pada registrasi yang bukan pending | Ditolak; tidak ada subscription ganda atau perubahan kedua |
+| Admin memanggil activate-registration dengan UUID valid yang tidak ada | 404; tidak ada registrasi/subscription baru |
+| Admin memanggil reject-registration dengan UUID valid yang tidak ada | 404; tidak ada perubahan status/audit mutasi |
 
 ### Uji hak akses database setelah cutover
 
