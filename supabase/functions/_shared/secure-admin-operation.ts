@@ -52,7 +52,7 @@ export function serveSecureAdminOperation(config: OperationConfig): void {
         if (profileError) {
           return json({ error: "ADMIN_CHECK_FAILED" }, 503);
         }
-        if (String(profile?.role ?? "").toLowerCase() !== "admin") {
+        if (profile?.role !== "admin") {
           return json({ error: "ADMIN_ONLY" }, 403);
         }
       }
