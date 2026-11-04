@@ -52,6 +52,8 @@ assert.match(edgeShared, /ctx\.supabaseAdmin\.rpc/, 'privileged database work mu
 assert.match(edgeShared, /\.eq\("id", actorId\)/, 'admin role must be checked against the profiles table');
 assert.ok(edgeShared.includes('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actorId)'), 'actor identity must be validated as a canonical UUID');
 assert.ok(edgeShared.includes('INTERNAL_SERVER_ERROR'), 'unexpected internal exceptions must not be mislabeled as authentication failures');
+assert.match(edgeShared, /const status = \/AUTH_REQUIRED\/i\.test\(message\)\s*\?\s*401/, 'database AUTH_REQUIRED must map to HTTP 401');
+assert.match(edgeShared, /status === 401 \? "AUTH_REQUIRED"/, 'HTTP 401 must use the public AUTH_REQUIRED code');
 assert.ok(edgeShared.includes('return json({ error: "INTERNAL_SERVER_ERROR" }, 500)'), 'unexpected internal exceptions must return HTTP 500');
 
 
