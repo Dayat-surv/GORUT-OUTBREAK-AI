@@ -68,7 +68,7 @@ export function serveSecureAdminOperation(config: OperationConfig): void {
           ? 403
           : /NOT_FOUND|tidak ditemukan/i.test(message)
           ? 404
-          : /pending|terlalu panjang|AUTH_REQUIRED/i.test(message)
+          : /pending|terlalu panjang|AUTH_REQUIRED|Akun Auth.*belum tersedia/i.test(message)
           ? 409
           : 500;
         return json({ error: message }, status);
