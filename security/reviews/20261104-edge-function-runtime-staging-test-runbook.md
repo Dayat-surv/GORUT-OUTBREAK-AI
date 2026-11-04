@@ -6,7 +6,6 @@
 
 ## Status pelaksanaan
 
-<badge> </badge>
 - [x] Tiga Edge Functions aktif pada STAGING: `delete-investigation`, `activate-registration`, `reject-registration`; ketiganya memakai `verify_jwt=true`.
 - [x] Shared handler mengambil actor ID dari verified JWT (`ctx.userClaims?.id ?? ctx.jwtClaims?.sub`) dan memeriksa role admin dari `profiles`.
 - [x] Migration pertama `20261104140000_secure_admin_operations_edge_functions.sql` diterapkan pada STAGING.
