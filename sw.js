@@ -32,5 +32,5 @@ self.addEventListener('fetch',event=>{
       caches.open(CACHE).then(cache=>cache.put(event.request,copy));
     }
     return response;
-  }).catch(()=>cached)));
+  }).catch(()=>cached||new Response('Resource tidak tersedia saat offline.',{status:503,statusText:'Service Unavailable',headers:{'Content-Type':'text/plain;charset=UTF-8'}}))));
 });
