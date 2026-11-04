@@ -35,6 +35,9 @@ assert.match(appJs, /Investigation sync skipped: serverId is missing/, 'general 
 assert.match(appJs, /from\('investigations'\)\.update\(row\)[\s\S]*?\.eq\('id',x\.serverId\)/, 'general sync must update investigations by their stable server ID');
 assert.doesNotMatch(appJs, /from\('investigations'\)\.upsert\(row,\{onConflict:'id'\}\)/, 'general sync must not upsert investigation rows');
 assert.match(appJs, /metadata:\{\.\.\.\(x\.metadata\|\|\{\}\),local_id:x\.id/, 'general sync must preserve investigation metadata');
+assert.doesNotMatch(appJs, /from\('investigations'\)\.upsert\(/, 'no application flow may upsert investigation rows');
+assert.match(appJs, /publicSurveyEnabled!==true/, 'public survey creation must remain disabled unless explicitly enabled');
+assert.match(appJs, /from\('investigations'\)\.update\(invRow\)[\s\S]*?\.eq\('id',serverInvId\)/, 'public questionnaire parent verification must update only the validated server investigation');
 assert.match(appJs, /if\(!result\.data\?\.id\)throw new Error/, 'investigation save must fail closed without a returned server ID');
 assert.match(appJs, /Investigasi BELUM disimpan ke server/, 'server save errors must not be reported as successful local saves');
 assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation metadata must be restored after server reload');
