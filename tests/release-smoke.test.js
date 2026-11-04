@@ -12,9 +12,9 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=179/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v179/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=179/, 'service worker must precache the release application script');
+assert.match(index, /app\.js\?v=180/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v180/, 'service worker cache version must match the release');
+assert.match(sw, /app\.js\?v=180/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 try { new Function(appJs); } catch (error) {
@@ -35,7 +35,35 @@ assert.match(appJs, /public_surveys/, 'delete confirmation must include linked p
 assert.match(appJs, /survey_responses/, 'delete confirmation must include linked survey response counts');
 assert.match(appJs, /Seluruh ID survei belum dapat diverifikasi/, 'delete confirmation must fail closed when survey ID pagination is incomplete');
 assert.match(appJs, /ID investigasi server belum tersedia/, 'server deletion must fail closed when investigation ID mapping is missing');
-assert.match(appJs, /rpc\('delete_investigation_bundle'/, 'authenticated investigation deletion must call the atomic server RPC');
+assert.match(appJs, /functions\.invoke\('delete-investigation'/, 'investigation deletion must go through the authenticated Edge Function');
+assert.match(appJs, /functions\.invoke\('activate-registration'/, 'registration activation must go through the authenticated Edge Function');
+assert.match(appJs, /functions\.invoke\('reject-registration'/, 'registration rejection must go through the authenticated Edge Function');
+assert.doesNotMatch(appJs, /rpc\('(delete_investigation_bundle|activate_premium_7d|reject_registration)'/, 'browser code must not invoke privileged SECURITY DEFINER RPCs directly');
+const edgeMigration = read('supabase/migrations/20261104140000_secure_admin_operations_edge_functions.sql');
+const edgeCutoverMigration = read('supabase/migrations/20261104141000_revoke_legacy_admin_rpc_client_access.sql');
+const edgeShared = read('supabase/functions/_shared/secure-admin-operation.ts');
+assert.match(edgeShared, /withSupabase\(\s*\{ auth: "user" \}/, 'Edge Function must validate a signed-in user');
+assert.ok(edgeShared.includes('npm:@supabase/server@^1'), 'Supabase server SDK major version must be pinned');
+assert.ok(edgeShared.includes('profile?.role !== "admin"'), 'Edge admin authorization must use exact role match');
+assert.ok(edgeMigration.includes("p.role = 'admin'"), 'SQL admin authorization must preserve the existing exact role check');
+assert.ok(!edgeMigration.includes("lower(coalesce(p.role"), 'new SQL must not broaden the legacy admin role rule');
+assert.match(edgeShared, /ctx\.userClaims\?\.id\s*\?\?\s*ctx\.jwtClaims\?\.sub/, 'actor identity must come from verified Supabase user identity or JWT claims');
+assert.match(edgeShared, /ctx\.supabaseAdmin\.rpc/, 'privileged database work must use server-only Supabase admin client');
+assert.match(edgeShared, /\.eq\("id", actorId\)/, 'admin role must be checked against the profiles table');
+assert.ok(edgeShared.includes('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actorId)'), 'actor identity must be validated as a canonical UUID');
+assert.ok(edgeShared.includes('INTERNAL_SERVER_ERROR'), 'unexpected internal exceptions must not be mislabeled as authentication failures');
+assert.match(edgeShared, /const status = \/AUTH_REQUIRED\/i\.test\(message\)\s*\?\s*401/, 'database AUTH_REQUIRED must map to HTTP 401');
+assert.match(edgeShared, /status === 401 \? "AUTH_REQUIRED"/, 'HTTP 401 must use the public AUTH_REQUIRED code');
+assert.ok(edgeShared.includes('return json({ error: "INTERNAL_SERVER_ERROR" }, 500)'), 'unexpected internal exceptions must return HTTP 500');
+
+
+
+assert.match(edgeMigration, /grant execute on function public\.edge_delete_investigation_bundle\(uuid, text\) to service_role/i, 'new delete RPC must be service-role-only');
+assert.match(edgeMigration, /grant execute on function public\.edge_activate_premium_7d\(uuid, uuid\) to service_role/i, 'new activation RPC must be service-role-only');
+assert.match(edgeMigration, /grant execute on function public\.edge_reject_registration\(uuid, uuid, text\) to service_role/i, 'new rejection RPC must be service-role-only');
+assert.ok(edgeCutoverMigration.includes("revoke all on function public.delete_investigation_bundle(text) from public, anon, authenticated"), 'legacy delete RPC must be revoked only in the final cutover migration');
+assert.ok(edgeCutoverMigration.includes("revoke all on function public.activate_premium_7d(uuid) from public, anon, authenticated"), 'legacy activation RPC must be revoked only in the final cutover migration');
+assert.ok(edgeCutoverMigration.includes("revoke all on function public.reject_registration(uuid, text) from public, anon, authenticated"), 'legacy rejection RPC must be revoked only in the final cutover migration');
 assert.match(appJs, /if\(!serverSummary\|\|serverSummary\.deleted!==true\)/, 'local records must remain unless the server confirms deletion');
 assert.match(deleteMigration, /security definer/i, 'bundle deletion must execute atomically despite survey-response RLS');
 assert.match(deleteMigration, /auth\.uid\(\)/, 'bundle deletion must require an authenticated user');
