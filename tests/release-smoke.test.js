@@ -52,9 +52,9 @@ assert.match(edgeShared, /\.eq\("id", actorId\)/, 'admin role must be checked ag
 assert.match(edgeMigration, /grant execute on function public\.edge_delete_investigation_bundle\(uuid, text\) to service_role/i, 'new delete RPC must be service-role-only');
 assert.match(edgeMigration, /grant execute on function public\.edge_activate_premium_7d\(uuid, uuid\) to service_role/i, 'new activation RPC must be service-role-only');
 assert.match(edgeMigration, /grant execute on function public\.edge_reject_registration\(uuid, uuid, text\) to service_role/i, 'new rejection RPC must be service-role-only');
-assert.match(edgeCutoverMigration, /revoke all on function public\\.delete_investigation_bundle\\(text\\) from public, anon, authenticated/i, 'legacy delete RPC must be revoked only in the final cutover migration');
-assert.match(edgeCutoverMigration, /revoke all on function public\\.activate_premium_7d\\(uuid\\) from public, anon, authenticated/i, 'legacy activation RPC must be revoked only in the final cutover migration');
-assert.match(edgeCutoverMigration, /revoke all on function public\\.reject_registration\\(uuid, text\\) from public, anon, authenticated/i, 'legacy rejection RPC must be revoked only in the final cutover migration');
+assert.ok(edgeCutoverMigration.includes("revoke all on function public.delete_investigation_bundle(text) from public, anon, authenticated"), 'legacy delete RPC must be revoked only in the final cutover migration');
+assert.ok(edgeCutoverMigration.includes("revoke all on function public.activate_premium_7d(uuid) from public, anon, authenticated"), 'legacy activation RPC must be revoked only in the final cutover migration');
+assert.ok(edgeCutoverMigration.includes("revoke all on function public.reject_registration(uuid, text) from public, anon, authenticated"), 'legacy rejection RPC must be revoked only in the final cutover migration');
 assert.match(appJs, /if\(!serverSummary\|\|serverSummary\.deleted!==true\)/, 'local records must remain unless the server confirms deletion');
 assert.match(deleteMigration, /security definer/i, 'bundle deletion must execute atomically despite survey-response RLS');
 assert.match(deleteMigration, /auth\.uid\(\)/, 'bundle deletion must require an authenticated user');
