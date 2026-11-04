@@ -584,7 +584,26 @@ async function syncNow(){
   const user=(await sb.auth.getUser()).data.user;
   if(!user){alert('Silakan login melalui Supabase Auth terlebih dahulu.');return;}
   let ok=0,fail=0;
-  for(const x of db.investigations){const row={id:x.serverId||uuidFrom(x.id),owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',disease_id:x.disease||null,province:x.prov||'Gorontalo',district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,status:x.status||'Berjalan',metadata:{local_id:x.id}};const r=await sb.from('investigations').upsert(row,{onConflict:'id'});if(!r.error){x.serverId=row.id;ok++;}else fail++;}
+  for(const x of db.investigations){
+    if(!x.serverId){
+      console.warn('Investigation sync skipped: serverId is missing; use the validated online save flow instead.',{localId:x.id});
+      fail++;
+      continue;
+    }
+    const row={
+      owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',
+      disease_id:x.disease||null,province:x.prov||'Gorontalo',
+      district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,
+      village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,
+      status:x.status||'Berjalan',
+      metadata:{...(x.metadata||{}),local_id:x.id,local_disease:x.disease||null,
+        food_investigation:x.foodInvestigation||null}
+    };
+    const r=await sb.from('investigations').update(row)
+      .eq('id',x.serverId).eq('owner_id',user.id).select('id').single();
+    if(r.error||!r.data?.id){console.error('Investigation sync update failed; no INSERT fallback was attempted.',r.error);fail++;}
+    else ok++;
+  }
   for(const a of (db.alerts||[])){const row={id:a.serverId||uuidFrom(a.id),owner_id:user.id,disease_id:a.disease||null,epi_week:a.week||null,alert_date:a.date||null,reporting_facility:a.facility||null,count:a.count||0,verification_result:a.result||null,metadata:{local_id:a.id}};const r=await sb.from('alerts').upsert(row,{onConflict:'id'});if(!r.error){a.serverId=row.id;ok++;}else fail++;}
   for(const c of (db.cases||[])){if(!db.investigations.find(i=>i.id===c.investigationId)) continue;const invForCase=db.investigations.find(i=>String(i.id)===String(c.investigationId));/* ID server harus unik per rekaman sumber; case_code tetap menjadi pengenal kasus untuk deduplikasi analitik. Simpan ID lebih dulu agar percobaan ulang memakai ID yang sama. */const row={id:c.serverId||(c.serverId=(window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():uuidFrom(String(Date.now())+Math.random()+Math.random()))),owner_id:user.id,investigation_id:invForCase?.serverId||uuidFrom(c.investigationId),case_code:String(c.id||''),full_name:c.name||'',age:Number(c.age)||null,sex:c.sex||null,onset_date:c.onset||null,status:c.status||null,outcome:c.outcome||null,latitude:c.lat||null,longitude:c.lng||null,questionnaire_response:{...(c.answers||{}),foodCase:c.foodCase||null,priority:c.priority||null}};const r=await sb.from('cases').upsert(row,{onConflict:'id'});if(!r.error)c.serverId=row.id;r.error?fail++:ok++;}
   for(const c of (db.contacts||[])){if(!db.investigations.find(i=>i.id===c.investigationId)) continue;const invForContact=db.investigations.find(i=>String(i.id)===String(c.investigationId));const linkedCase=db.cases.find(x=>String(x.id)===String(c.caseId));const row={id:c.serverId||uuidFrom(c.id),owner_id:user.id,investigation_id:invForContact?.serverId||uuidFrom(c.investigationId),index_case_id:c.caseId?(linkedCase?.serverId||uuidFrom(c.caseId)):null,contact_name:c.name||'',relation:c.relation||null,last_contact_date:c.last||null,monitoring_status:c.status||null,follow_up:c.follow||null,metadata:{local_id:c.id,linked_case_id:c.linkedCaseId||null}};const r=await sb.from('contacts').upsert(row,{onConflict:'id'});if(!r.error){c.serverId=row.id;ok++;}else fail++;}
