@@ -28,7 +28,9 @@
 - [x] PR #69 masih Open, Draft, dan belum merged.
 - [x] Shared handler yang menyamarkan error database telah dideploy ulang ke STAGING: `activate-registration` v5, `reject-registration` v4, `delete-investigation` v4; semuanya `verify_jwt=true`.
 - [x] Runtime test terbaru pada deployment tersebut: ketiga endpoint dipanggil dengan UUID dummy yang tidak ada; masing-masing mengembalikan HTTP 404 dan JSON `{"error":"NOT_FOUND"}`.
-- [x] CI pada head PR sebelum pembaruan dokumentasi: GitHub Actions run #181 pada SHA `0d2c40189fd950a525681156ce482accd26b8214` berstatus `completed / success`: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41868145568. CI setelah commit dokumentasi ini tetap perlu dipastikan bila workflow berjalan kembali.
+- [x] GitHub Actions run #183 pada commit `66ba24fb36cf1d0dbef81a29ede9c4087f9a0bcb` berstatus `completed / success`: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41876830458.
+- [x] Shared handler memetakan pesan `AUTH_REQUIRED` menjadi HTTP 401 dan kode publik `AUTH_REQUIRED`; assertion regresi statis ditambahkan ke `tests/release-smoke.test.js` pada commit `c1d952664474af9861ebf5b755398a417bcfe5b8`.
+- [ ] CI untuk commit assertion dan pembaruan dokumentasi terbaru masih harus selesai.
 
 ## Hasil runtime terbaru — penyamaran error (4 November 2026)
 
@@ -112,11 +114,10 @@ Snapshot akhir STAGING yang diverifikasi:
 
 ## Pekerjaan yang masih tersisa
 
-1. CI run #181 pada head PR sebelum pembaruan dokumentasi telah sukses; periksa CI baru bila commit dokumentasi memicu workflow.
-2. Review manual akhir terhadap seluruh diff kode, migration, dan dokumentasi PR #69 tetap diperlukan; CI sukses tidak menggantikan review keamanan.
+1. Tunggu CI terbaru pada commit assertion regresi dan pembaruan dokumentasi.
+2. Runtime test yang sudah dilakukan membuktikan 401 dari gerbang JWT tanpa sesi. Cabang SQL `AUTH_REQUIRED` tidak diuji terpisah karena actor ID yang tidak valid sudah ditolak sebelum RPC; assertion regresi statis memastikan pemetaan defensifnya tetap 401.
 3. Uji delete positif telah selesai pada satu record sintetis khusus; tiga investigasi lain tetap dipertahankan.
-4. Verifikasi UI/end-to-end tambahan pada alur admin dapat dilakukan terpisah bila diperlukan.
-5. Jangan merge PR #69 atau mengubah produksi tanpa persetujuan eksplisit yang terpisah.
+4. Jangan merge PR #69 atau mengubah produksi tanpa persetujuan eksplisit yang terpisah.
 
 ## Rollback / batas rilis
 
