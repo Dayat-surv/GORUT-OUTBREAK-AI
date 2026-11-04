@@ -21,7 +21,7 @@ export function serveSecureAdminOperation(config: OperationConfig): void {
   const authenticatedHandler = withSupabase(
     { auth: "user" },
     async (req, ctx) => {
-      const actorId = ctx.userClaims?.sub;
+      const actorId = ctx.userClaims?.id ?? ctx.jwtClaims?.sub;
       if (typeof actorId !== "string" || !/^[0-9a-f-]{36}$/i.test(actorId)) {
         return json({ error: "AUTH_REQUIRED" }, 401);
       }
