@@ -18,7 +18,7 @@ Browser sekarang diarahkan ke tiga Edge Functions terautentikasi: delete-investi
 2. Edge Function memakai withSupabase({ auth: "user" }); request tanpa JWT pengguna yang valid ditolak.
 3. Identitas aktor diambil dari ctx.userClaims.sub, bukan dari body request atau user_metadata.
 4. Operasi database istimewa memakai ctx.supabaseAdmin di server Supabase. Kunci server tidak ditanam pada aplikasi browser atau repository.
-5. Dua operasi registrasi memeriksa profiles.role = 'admin' pada Edge Function dan mengulang pemeriksaan yang sama di SQL.
+5. Dua operasi registrasi memeriksa profiles.role = 'admin' (pemeriksaan exact match, sama seperti helper admin yang lama) pada Edge Function dan mengulang pemeriksaan yang sama di SQL.
 6. Penghapusan investigasi memeriksa investigations.owner_id = actor_id dalam transaksi SQL; admin tidak mendapat bypass kepemilikan.
 7. Fungsi SQL baru hanya memberi hak EXECUTE kepada service_role. RPC lama dicabut dari PUBLIC, anon, dan authenticated.
 8. Seluruh fungsi SQL menggunakan search_path = '' dan referensi objek yang terkualifikasi skema.
@@ -36,7 +36,7 @@ Browser sekarang diarahkan ke tiga Edge Functions terautentikasi: delete-investi
 
 ### 1. Prasyarat Supabase
 
-- Pastikan runtime Edge Functions pada proyek STAGING mendukung npm:@supabase/server dan menyediakan konteks supabaseAdmin.
+- Pastikan runtime Edge Functions pada proyek STAGING mendukung npm:@supabase/server@^1 (dipin ke major version 1) dan menyediakan konteks supabaseAdmin.
 - Pastikan environment Edge Functions menyediakan URL, key publishable/anon untuk validasi user, dan secret/service-role key untuk operasi server-side. Nilai secret tidak boleh disalin ke repository, chat, atau browser.
 - Pastikan profiles.role memakai nilai admin untuk administrator yang sah.
 - Pastikan kolom audit metadata atau details cocok dengan cabang SQL yang dijalankan.
