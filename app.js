@@ -156,7 +156,7 @@ function page(id,b){document.querySelectorAll('.page').forEach(x=>x.classList.re
 function syncInvestigationType(){const type=val('inType');const d=document.getElementById('disease');const panel=document.getElementById('foodInvestigationPanel');if(type==='Keracunan Makanan'){if(d){d.value='keracunan-pangan';selectDisease('keracunan-pangan')}if(panel)panel.style.display='block'}else{if(panel)panel.style.display='none';if(d&&d.value==='keracunan-pangan'){d.value='campak';selectDisease('campak')}}}
 function newKlb(){page('investigasi');['inName','kec','desa','pkm','tgl','foodEventName','foodEventDate','foodVenue','foodSource','foodMealTime','foodExposed','foodIll','foodDead','foodSuspected','foodHandler','foodWater','foodStorage','foodHypothesis'].forEach(x=>{const e=document.getElementById(x);if(e)e.value=''});const t=document.getElementById('inType');if(t)t.value='Penyakit Menular';syncInvestigationType();}
 function saveKlb(){let o={id:Date.now(),name:val('inName')||'Investigasi Baru',type:val('inType'),disease:val('disease')||db.selectedDisease||'campak',prov:val('prov'),kab:val('kab'),kec:val('kec'),desa:val('desa'),pkm:val('pkm'),date:val('tgl')||new Date().toISOString().slice(0,10),status:'Berjalan'};if(o.type==='Keracunan Makanan'){o.disease='keracunan-pangan';o.foodInvestigation={eventName:val('foodEventName'),eventDate:val('foodEventDate'),venue:val('foodVenue'),foodSource:val('foodSource'),mealTime:val('foodMealTime'),exposed:+val('foodExposed')||0,ill:+val('foodIll')||0,dead:+val('foodDead')||0,suspectedFood:val('foodSuspected'),foodHandler:val('foodHandler'),waterSource:val('foodWater'),storage:val('foodStorage'),initialHypothesis:val('foodHypothesis')}}db.investigations.push(o);db.active=o.id;db.selectedDisease=o.disease;save();page('dashboard')}
-function dash(){let q=val('search').toLowerCase(),t=val('typeFilter'),r=db.investigations.filter(x=>(!q||x.name.toLowerCase().includes(q))&&(!t||x.type===t));const uniqueFor=rows=>{const m=new Map();rows.forEach((c,i)=>{const id=String(c.id??'').trim(),key=String(c.investigationId??'')+'::'+(id||'__record_'+i);m.set(key,c)});return [...m.values()]};klbRows.innerHTML=r.map(x=>{const records=db.cases.filter(c=>String(c.investigationId)===String(x.id)),unique=uniqueFor(records);return `<tr><td><b>${x.name}</b></td><td>${x.type}</td><td>${x.desa||'-'}, ${x.kec||'-'}</td><td><b>${unique.length}</b><div class="small">${records.length} rekaman sumber</div></td><td>${x.status}</td><td><button onclick="openKlb(${x.id})">Buka</button></td></tr>`}).join('')||'<tr><td colspan="6">Belum ada investigasi.</td></tr>';let cs=db.cases,uniqueCases=uniqueFor(cs);stats.innerHTML=[['Investigasi',db.investigations.length],['Kasus unik',uniqueCases.length],['Rekaman sumber',cs.length],['Konfirmasi',uniqueCases.filter(c=>c.status==='Konfirmasi').length],['Meninggal',uniqueCases.filter(c=>c.outcome==='Meninggal').length]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('')}
+function dash(){let q=val('search').toLowerCase(),t=val('typeFilter'),r=db.investigations.filter(x=>(!q||x.name.toLowerCase().includes(q))&&(!t||x.type===t));const uniqueFor=rows=>{const m=new Map();rows.forEach((c,i)=>{const id=String(c.id??'').trim(),key=String(c.investigationId??'')+'::'+(id||'__record_'+i);m.set(key,c)});return [...m.values()]};klbRows.innerHTML=r.map(x=>{const records=db.cases.filter(c=>String(c.investigationId)===String(x.id)),unique=uniqueFor(records);return `<tr><td><b>${x.name}</b></td><td>${x.type}</td><td>${x.desa||'-'}, ${x.kec||'-'}</td><td><b>${unique.length}</b><div class="small">${records.length} rekaman sumber</div></td><td>${x.status}</td><td><button onclick="openKlb(this.dataset.investigationId)" data-investigation-id="${esc0(x.id)}">Buka</button></td></tr>`}).join('')||'<tr><td colspan="6">Belum ada investigasi.</td></tr>';let cs=db.cases,uniqueCases=uniqueFor(cs);stats.innerHTML=[['Investigasi',db.investigations.length],['Kasus unik',uniqueCases.length],['Rekaman sumber',cs.length],['Konfirmasi',uniqueCases.filter(c=>c.status==='Konfirmasi').length],['Meninggal',uniqueCases.filter(c=>c.outcome==='Meninggal').length]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('')}
 function openKlb(id){db.active=id;save();let o=act();inName.value=o.name||'';inType.value=o.type||'Penyakit Menular';disease.innerHTML=diseaseOptions();disease.value=o.disease||'campak';prov.value=o.prov||'';kab.value=o.kab||'';kec.value=o.kec||'';desa.value=o.desa||'';pkm.value=o.pkm||'';tgl.value=o.date||'';db.selectedDisease=o.disease||'campak';syncInvestigationType();if(o.type==='Keracunan Makanan'&&o.foodInvestigation){const f=o.foodInvestigation;[['foodEventName','eventName'],['foodEventDate','eventDate'],['foodVenue','venue'],['foodSource','foodSource'],['foodMealTime','mealTime'],['foodExposed','exposed'],['foodIll','ill'],['foodDead','dead'],['foodSuspected','suspectedFood'],['foodHandler','foodHandler'],['foodWater','waterSource'],['foodStorage','storage'],['foodHypothesis','initialHypothesis']].forEach(([id,k])=>{const e=document.getElementById(id);if(e)e.value=f[k]??''})}page('investigasi')}
 function addCase(){if(!act())return alert('Pilih investigasi terlebih dahulu.');const food=act().disease==='keracunan-pangan';const diseaseId=act().disease;const extraPriority=priorityPanel(diseaseId,{});const extra=(food?`<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>${f('Makanan/minuman dikonsumsi','caseFood','text','')}${f('Waktu konsumsi','caseConsumedAt','datetime-local','')}${f('Waktu onset','caseOnsetTime','datetime-local','')}${f('Masa inkubasi (jam)','caseIncubation','number','')}${f('Gejala utama','caseSymptoms','text','')}${f('Sumber pangan','caseFoodSource','text','')}${f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')}${f('Spesimen klinis','caseClinicalSpecimen','text','')}</div>`:'')+extraPriority;modal(`<h2>Tambah Kasus</h2>${f('ID','cid','text','K'+String(db.cases.length+1).padStart(3,'0'))}${f('Nama','cn','text','')}${f('Umur','ca','number','')}${f('Jenis kelamin','cs','select','Laki-laki|Perempuan')}${f('Onset','co',food?'datetime-local':'date','')}${f('Status','ct','select','Suspek|Probable|Konfirmasi')}${f('Outcome','cu','select','Rawat jalan|Dirawat|Sembuh|Meninggal')}${extra}<button class="primary" onclick="saveCase()">Simpan</button>`)}
 function f(l,id,t,v,opts){return `<div class="field"><label>${l}</label>${t==='select'?`<select id="${id}">${(opts||v||'').split('|').map(x=>`<option ${String(x)===String(v)?'selected':''}>${x}</option>`).join('')}</select>`:`<input id="${id}" type="${t}" value="${escHtml(v??'')}">`}</div>`}
@@ -1090,7 +1090,74 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
   window.deleteSpecimen=function(id){if(!confirmDelete('spesimen '+id))return;db.specimens=(db.specimens||[]).filter(x=>String(x.id)!==String(id));save();specimens();render()}
   window.deleteFieldVisit=function(id){if(!confirmDelete('kunjungan '+id))return;db.fieldVisits=(db.fieldVisits||[]).filter(x=>String(x.id)!==String(id));save();fieldVisits();render()}
   window.deleteAlert=function(id){if(!confirmDelete('alert '+id))return;db.alerts=(db.alerts||[]).filter(x=>String(x.id)!==String(id));save();alerts();render()}
-  window.deleteInvestigation=function(id){if(!confirmDelete('investigasi ini'))return;db.investigations=db.investigations.filter(x=>String(x.id)!==String(id));db.cases=db.cases.filter(x=>String(x.investigationId)!==String(id));db.contacts=(db.contacts||[]).filter(x=>String(x.investigationId)!==String(id));db.specimens=(db.specimens||[]).filter(x=>String(x.investigationId)!==String(id));db.fieldVisits=(db.fieldVisits||[]).filter(x=>String(x.investigationId)!==String(id));if(String(db.active)===String(id))db.active=db.investigations[0]?.id||null;save();render()}
+  window.deleteInvestigation=async function(id){
+    const inv=db.investigations.find(x=>String(x.id)===String(id));
+    if(!inv){alert('Investigasi tidak ditemukan atau daftar sudah diperbarui.');return;}
+    const label=String(inv.name||('Investigasi '+id));
+    let sb=null,serverId=null,serverSummary=null;
+    try{
+      sb=await backendClient();
+      if(sb){
+        const auth=await sb.auth.getUser();
+        if(auth.error||!auth.data?.user)throw new Error('Sesi login tidak valid. Silakan masuk kembali sebelum menghapus investigasi.');
+        serverId=String(inv.serverId||'').trim();
+        if(!serverId)throw new Error('ID investigasi server belum tersedia. Muat ulang data dari server sebelum mencoba menghapus; tidak ada data yang diubah.');
+        const verify=await sb.from('investigations').select('id',{count:'exact',head:true}).eq('id',serverId);
+        if(verify.error)throw verify.error;
+        if(!verify.count)throw new Error('Investigasi tidak ditemukan pada server dengan ID yang dipetakan. Penghapusan dibatalkan.');
+        const countForServer=async function(table){
+          const result=await sb.from(table).select('id',{count:'exact',head:true}).eq('investigation_id',serverId);
+          if(result.error)throw result.error;
+          return Number(result.count||0);
+        };
+        const counts=await Promise.all([
+          countForServer('cases'),
+          countForServer('contacts'),
+          countForServer('specimens'),
+          countForServer('field_visits'),
+          sb.from('public_surveys').select('id',{count:'exact'}).eq('investigation_id',serverId)
+        ]);
+        if(counts[4].error)throw counts[4].error;
+        const surveyIds=(counts[4].data||[]).map(row=>row.id);
+        if(Number(counts[4].count||0)!==surveyIds.length)throw new Error('Seluruh ID survei belum dapat diverifikasi. Muat ulang data atau hubungi administrator; penghapusan dibatalkan.');
+        let responseCount=0;
+        if(surveyIds.length){
+          const responses=await sb.from('survey_responses').select('id',{count:'exact',head:true}).in('survey_id',surveyIds);
+          if(responses.error)throw responses.error;
+          responseCount=Number(responses.count||0);
+        }
+        serverSummary={cases:counts[0],contacts:counts[1],specimens:counts[2],field_visits:counts[3],public_surveys:surveyIds.length,survey_responses:responseCount};
+        const prompt='HAPUS INVESTIGASI: '+label+'?\n\nJumlah data terkait yang diverifikasi langsung dari server dan akan ikut dihapus: kasus ('+serverSummary.cases+'), kontak ('+serverSummary.contacts+'), spesimen ('+serverSummary.specimens+'), kunjungan lapangan ('+serverSummary.field_visits+'), survei publik ('+serverSummary.public_surveys+'), respons survei ('+serverSummary.survey_responses+').\n\nCatatan: jumlah server mencakup rekaman yang mungkin tidak tampil pada daftar operasional karena penyaringan data simulasi/uji.\n\nPenghapusan permanen dan tidak dapat dibatalkan.';
+        if(!window.confirm(prompt))return;
+        const result=await sb.rpc('delete_investigation_bundle',{p_investigation_id:serverId});
+        if(result.error)throw result.error;
+        serverSummary=result.data||null;
+        if(!serverSummary||serverSummary.deleted!==true)throw new Error('Server belum mengonfirmasi penghapusan. Data lokal tidak diubah.');
+      }else{
+        const linked={
+          cases:(db.cases||[]).filter(x=>String(x.investigationId)===String(id)).length,
+          contacts:(db.contacts||[]).filter(x=>String(x.investigationId)===String(id)).length,
+          specimens:(db.specimens||[]).filter(x=>String(x.investigationId)===String(id)).length,
+          fieldVisits:(db.fieldVisits||[]).filter(x=>String(x.investigationId)===String(id)).length
+        };
+        const prompt='HAPUS INVESTIGASI LOKAL: '+label+'?\n\nData lokal yang ikut dihapus: kasus ('+linked.cases+'), kontak ('+linked.contacts+'), spesimen ('+linked.specimens+'), kunjungan lapangan ('+linked.fieldVisits+').\n\nMode lokal tidak menghapus data pada server.';
+        if(!window.confirm(prompt))return;
+      }
+      db.investigations=db.investigations.filter(x=>String(x.id)!==String(id));
+      db.cases=(db.cases||[]).filter(x=>String(x.investigationId)!==String(id));
+      db.contacts=(db.contacts||[]).filter(x=>String(x.investigationId)!==String(id));
+      db.specimens=(db.specimens||[]).filter(x=>String(x.investigationId)!==String(id));
+      db.fieldVisits=(db.fieldVisits||[]).filter(x=>String(x.investigationId)!==String(id));
+      if(String(db.active)===String(id))db.active=db.investigations[0]?.id||null;
+      save();
+      await render();
+      const summary=serverSummary?'\nServer: '+(serverSummary.cases||0)+' kasus, '+(serverSummary.contacts||0)+' kontak, '+(serverSummary.specimens||0)+' spesimen, '+(serverSummary.field_visits||0)+' kunjungan, '+(serverSummary.public_surveys||0)+' survei dan '+(serverSummary.survey_responses||0)+' respons ikut dihapus.':'\nMode lokal: penghapusan hanya berlaku pada perangkat ini.';
+      alert('Investigasi "'+label+'" berhasil dihapus.'+summary);
+    }catch(error){
+      console.error('Gagal menghapus investigasi:',error);
+      alert('Penghapusan gagal. Data lokal tidak diubah.\n'+(error?.message||String(error)));
+    }
+  }
 
   /* Override list renderers to expose delete buttons. */
   const oldCases=window.cases; window.cases=function(){
@@ -1108,7 +1175,8 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
     const q=val('search').toLowerCase(),t=val('typeFilter'),r=db.investigations.filter(x=>(!q||x.name.toLowerCase().includes(q))&&(!t||x.type===t));
     const validRows=(db.cases||[]).filter(c=>!isInvalidTestCaseForDashboard128(c)&&!isSimulationCaseForOps(c));
     const uniqueFor=rows=>{const m=new Map();rows.forEach((c,i)=>{const id=String(c.id??'').trim(),key=String(c.investigationId??'')+'::'+(id||'__record_'+i);m.set(key,c)});return [...m.values()]};
-    const el=document.getElementById('klbRows');if(el)el.innerHTML=r.map(x=>{const validCases=uniqueFor(validRows.filter(c=>String(c.investigationId)===String(x.id)));return `<tr><td><b>${esc0(x.name)}</b></td><td>${esc0(diseaseLabel(x.disease))}</td><td>${esc0(x.desa||'-')}, ${esc0(x.kec||'-')}</td><td>${validCases.length}</td><td>${esc0(x.status)}</td><td>${esc0(x.date||'-')}</td><td><button onclick="openKlb(${x.id})">Buka</button><button class="btn-danger" onclick="deleteInvestigation('${esc0(x.id)}')">Hapus</button></td></tr>`}).join('')||'<tr><td colspan="7">Belum ada investigasi.</td></tr>';
+    const rowsHtml=r.map(x=>{const validCases=uniqueFor(validRows.filter(c=>String(c.investigationId)===String(x.id)));return `<tr><td><b>${esc0(x.name)}</b></td><td>${esc0(diseaseLabel(x.disease))}</td><td>${esc0(x.desa||'-')}, ${esc0(x.kec||'-')}</td><td>${validCases.length}</td><td>${esc0(x.status)}</td><td>${esc0(x.date||'-')}</td><td><button onclick="openKlb(this.dataset.investigationId)" data-investigation-id="${esc0(x.id)}">Buka</button><button class="btn-danger" onclick="deleteInvestigation('${esc0(x.id)}')">Hapus</button></td></tr>`}).join('')||'<tr><td colspan="7">Belum ada investigasi.</td></tr>';
+    ['klbRows','investigationRows'].forEach(id=>{const target=document.getElementById(id);if(target)target.innerHTML=rowsHtml});
     const cs=uniqueFor(validRows);const st=document.getElementById('stats');if(st)st.innerHTML=[['Investigasi',db.investigations.filter(x=>!isSimulationInvestigationForOps(x)).length],['Kasus valid unik',cs.length],['Konfirmasi valid',cs.filter(c=>c.status==='Konfirmasi').length],['Meninggal valid',cs.filter(c=>c.outcome==='Meninggal').length]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('');
   }
 
