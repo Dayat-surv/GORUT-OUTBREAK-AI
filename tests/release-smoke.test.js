@@ -22,6 +22,12 @@ try { new Function(appJs); } catch (error) {
 }
 const publicSurvey = read('public_survey.html');
 const deleteMigration = read('supabase/migrations/20261104_delete_investigation_bundle.sql');
+assert.match(appJs, /async function saveKlb\(\)/, 'investigation save must await server persistence');
+assert.match(appJs, /const auth=await sb\.auth\.getUser\(\)/, 'investigation save must require a valid Supabase session');
+assert.match(appJs, /from\('investigations'\)\.insert\(row\)\.select\('id'\)\.single\(\)/, 'investigation save must insert and request server confirmation');
+assert.match(appJs, /if\(!result\.data\?\.id\)throw new Error/, 'investigation save must fail closed without a returned server ID');
+assert.match(appJs, /Investigasi BELUM tersimpan ke server/, 'server save errors must not be reported as successful local saves');
+assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation metadata must be restored after server reload');
 assert.match(appJs, /window\.deleteInvestigation=async function\(id\)/, 'investigation deletion must wait for server confirmation');
 assert.match(appJs, /countForServer\('cases'\)/, 'delete confirmation must use exact server-side linked case counts');
 assert.match(appJs, /countForServer\('contacts'\)/, 'delete confirmation must use exact server-side linked contact counts');
