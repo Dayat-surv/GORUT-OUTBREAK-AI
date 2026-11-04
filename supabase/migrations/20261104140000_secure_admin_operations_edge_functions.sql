@@ -97,7 +97,7 @@ declare
 begin
   if p_actor_id is null or not exists (
     select 1 from public.profiles p
-    where p.id = p_actor_id and lower(coalesce(p.role,'')) = 'admin'
+    where p.id = p_actor_id and p.role = 'admin'
   ) then
     raise exception 'Hanya administrator yang dapat mengaktifkan akses';
   end if;
@@ -151,7 +151,7 @@ declare
 begin
   if p_actor_id is null or not exists (
     select 1 from public.profiles p
-    where p.id = p_actor_id and lower(coalesce(p.role,'')) = 'admin'
+    where p.id = p_actor_id and p.role = 'admin'
   ) then
     raise exception 'Hanya administrator yang dapat menolak registrasi';
   end if;
