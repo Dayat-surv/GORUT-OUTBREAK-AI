@@ -12,9 +12,9 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=179/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v179/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=179/, 'service worker must precache the release application script');
+assert.match(index, /app\\.js\\?v=180/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v180/, 'service worker cache version must match the release');
+assert.match(sw, /app\\.js\\?v=180/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 try { new Function(appJs); } catch (error) {
@@ -24,7 +24,11 @@ const publicSurvey = read('public_survey.html');
 const deleteMigration = read('supabase/migrations/20261104_delete_investigation_bundle.sql');
 assert.match(appJs, /async function saveKlb\(\)/, 'investigation save must await server persistence');
 assert.match(appJs, /const auth=await sb\.auth\.getUser\(\)/, 'investigation save must require a valid Supabase session');
-assert.match(appJs, /from\('investigations'\)\.insert\(row\)\.select\('id'\)\.single\(\)/, 'investigation save must insert and request server confirmation');
+assert.match(appJs, /from\('investigations'\)\.insert\(\{\.\.\.row,id:serverId\}\)\.select\('id'\)\.single\(\)/, 'new investigation save must insert and request server confirmation');
+assert.match(appJs, /from\('investigations'\)\.update\(row\)[\s\S]*?\.eq\('id',serverId\)/, 'editing an investigation must update the existing server row by its stable server ID');
+assert.match(appJs, /if\(existing\)Object\.assign\(existing,o\);\s*else db\.investigations\.push\(o\)/, 'editing must update the existing local record instead of appending a duplicate');
+assert.match(appJs, /function newKlb\(\)\{db\.active=null/, 'starting a new investigation must clear the edit target');
+assert.match(appJs, /const editingId=db\.active/, 'save must capture the active investigation ID before building the form payload');
 assert.match(appJs, /if\(!result\.data\?\.id\)throw new Error/, 'investigation save must fail closed without a returned server ID');
 assert.match(appJs, /Investigasi BELUM tersimpan ke server/, 'server save errors must not be reported as successful local saves');
 assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation metadata must be restored after server reload');
