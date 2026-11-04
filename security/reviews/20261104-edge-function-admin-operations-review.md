@@ -1,87 +1,87 @@
 # Review Keamanan STAGING — Migrasi RPC Sensitif ke Edge Functions
 
-**Status: PROPOSAL KODE SAJA — BELUM DIDEploy — BELUM ADA MIGRASI DATABASE YANG DITERAPKAN**
+**Status: TELAH DITERAPKAN DAN DIUJI PADA STAGING — PR MASIH DRAFT, BELUM MERGED.**  
+**Tanggal verifikasi:** 4 November 2026.
 
 ## Tujuan
 
-Menghilangkan pemanggilan langsung dari browser terhadap tiga RPC SECURITY DEFINER yang sebelumnya dapat dieksekusi oleh role authenticated:
+Mengalihkan tiga operasi istimewa dari pemanggilan RPC langsung oleh browser ke Edge Functions yang memverifikasi sesi pengguna dan otorisasi server-side:
 
-- delete_investigation_bundle(text)
-- activate_premium_7d(uuid)
-- reject_registration(uuid, text)
+- `delete_investigation_bundle(text)`
+- `activate_premium_7d(uuid)`
+- `reject_registration(uuid, text)`
 
-Browser sekarang diarahkan ke tiga Edge Functions terautentikasi: delete-investigation, activate-registration, dan reject-registration.
+Browser sekarang memakai `supabase.functions.invoke()` untuk endpoint `delete-investigation`, `activate-registration`, dan `reject-registration`.
 
-## Model kepercayaan
+## Model kepercayaan yang diterapkan
 
-1. Aplikasi memanggil Edge Function menggunakan sesi Supabase Auth pengguna.
-2. Edge Function memakai withSupabase({ auth: "user" }); request tanpa JWT pengguna yang valid ditolak.
-3. Identitas aktor diambil dari ctx.userClaims.sub, bukan dari body request atau user_metadata.
-4. Operasi database istimewa memakai ctx.supabaseAdmin di server Supabase. Kunci server tidak ditanam pada aplikasi browser atau repository.
-5. Dua operasi registrasi memeriksa profiles.role = 'admin' (pemeriksaan exact match, sama seperti helper admin yang lama) pada Edge Function dan mengulang pemeriksaan yang sama di SQL.
-6. Penghapusan investigasi memeriksa investigations.owner_id = actor_id dalam transaksi SQL; admin tidak mendapat bypass kepemilikan.
-7. Fungsi SQL baru hanya memberi hak EXECUTE kepada service_role. RPC lama dicabut dari PUBLIC, anon, dan authenticated.
-8. Seluruh fungsi SQL menggunakan search_path = '' dan referensi objek yang terkualifikasi skema.
+1. Edge Function menggunakan `withSupabase({ auth: "user" })`; request tanpa JWT valid ditolak.
+2. Actor ID diambil dari verified JWT/context (`ctx.userClaims?.id ?? ctx.jwtClaims?.sub`), bukan dari body request atau `user_metadata`.
+3. Pemeriksaan ADMIN memakai exact match `profiles.role = 'admin'` pada Edge Function dan diulang di SQL untuk aktivasi/penolakan registrasi.
+4. Penghapusan investigasi memeriksa `investigations.owner_id = actor_id`; role admin tidak melewati batas kepemilikan.
+5. Operasi database istimewa dipanggil server-side melalui `ctx.supabaseAdmin`; service-role secret tidak ditanam pada aplikasi browser/repository.
+6. RPC baru menggunakan `SECURITY DEFINER`, `search_path = ''`, referensi skema terkualifikasi, dan EXECUTE hanya untuk `service_role`.
+7. Migration kedua mencabut EXECUTE pada RPC lama dari `PUBLIC`, `anon`, dan `authenticated`.
+8. CORS bukan mekanisme autentikasi; batas keamanan berasal dari verifikasi JWT, pemeriksaan role/ownership, dan hak EXECUTE database.
 
-## Perubahan dalam branch ini
+## Perubahan branch
 
-- app.js: ketiga aksi istimewa memakai supabase.functions.invoke(); tidak ada lagi pemanggilan langsung tiga RPC lama.
-- supabase/functions/_shared/secure-admin-operation.ts: validasi JWT, actor ID, CORS, pemeriksaan peran admin, dan pemanggilan RPC server-side.
-- Tiga entrypoint Edge Function untuk hapus investigasi, aktivasi akses, dan penolakan registrasi.
-- supabase/migrations/20261104140000_secure_admin_operations_edge_functions.sql: definisi RPC server-only dan pencabutan EXECUTE RPC lama.
-- tests/release-smoke.test.js: pemeriksaan statis bahwa browser tidak lagi memanggil RPC sensitif langsung.
-- Branch ini berasal dari PR #67 yang khusus STAGING; konfigurasi backend STAGING tetap terisolasi. Jangan gabungkan branch ini ke branch produksi.
+- `app.js`: ketiga aksi memakai `supabase.functions.invoke()`.
+- Shared handler dan tiga Edge Function.
+- Migration pertama `20261104140000_secure_admin_operations_edge_functions.sql` untuk membuat RPC server-only.
+- Migration kedua `20261104141000_revoke_legacy_admin_rpc_client_access.sql` untuk mencabut akses client ke RPC lama.
+- `tests/release-smoke.test.js`, review ini, dan runbook runtime STAGING.
+- Cache-busting aplikasi/service worker v180.
+- Branch tetap terisolasi dari produksi; konfigurasi STAGING tidak boleh digabung ke konfigurasi produksi.
 
-## Hal yang harus diverifikasi sebelum deployment STAGING
+## Hasil deployment dan pengujian STAGING
 
-### 1. Prasyarat Supabase
+### Deployment dan migrasi
 
-- Pastikan runtime Edge Functions pada proyek STAGING mendukung npm:@supabase/server@^1 (dipin ke major version 1) dan menyediakan konteks supabaseAdmin.
-- Pastikan environment Edge Functions menyediakan URL, key publishable/anon untuk validasi user, dan secret/service-role key untuk operasi server-side. Nilai secret tidak boleh disalin ke repository, chat, atau browser.
-- Pastikan profiles.role memakai nilai admin untuk administrator yang sah.
-- Pastikan kolom audit metadata atau details cocok dengan cabang SQL yang dijalankan.
-- Pastikan tabel dan foreign key yang dirujuk migration sama dengan skema STAGING saat deployment.
+- [x] Tiga Edge Functions dideploy ke proyek STAGING `xeqdhwqylutntphlkmqe`.
+- [x] Ketiganya aktif dengan `verify_jwt=true`.
+- [x] Migration pertama diterapkan.
+- [x] Grant `SELECT` pada `public.profiles` untuk `service_role` diterapkan pada STAGING agar pemeriksaan role berjalan.
+- [x] Migration kedua diterapkan setelah persetujuan pengguna.
+- [x] Verifikasi privilege menunjukkan ketiga RPC lama tidak dapat dieksekusi `anon`, `authenticated`, maupun `service_role`; ketiga RPC baru hanya dapat dieksekusi `service_role`.
+- [x] Aplikasi preview branch v180 diuji melalui browser.
 
-### 2. Urutan penerapan yang direncanakan
+### Runtime negative/authorization tests
 
-1. Tinjau migration pertama (20261104140000) pada branch database STAGING; migration ini hanya menambahkan RPC server-only dan belum mencabut RPC lama.
-2. Terapkan migration pertama pada STAGING.
-3. Deploy tiga Edge Functions ke STAGING.
-4. Deploy aplikasi STAGING yang menggunakan Edge Functions. Cache-busting app.js dan service worker dinaikkan ke v180 agar browser tidak memakai JavaScript lama.
-5. Uji ketiga alur melalui Edge Functions, termasuk otorisasi dan audit, sementara RPC lama masih tersedia sebagai jembatan sementara.
-6. Setelah aplikasi baru dan ketiga endpoint terverifikasi, terapkan migration kedua (20261104141000) untuk mencabut EXECUTE RPC lama dari PUBLIC, anon, dan authenticated.
-7. Uji ulang pemanggilan langsung RPC lama (harus ditolak), uji regresi, periksa audit log/data, lalu jalankan Security Advisor.
-
-**Urutan dua migration ini wajib dipertahankan.** Jangan menerapkan migration kedua sebelum Edge Functions dan aplikasi baru sudah aktif serta lulus pengujian. Migration pertama sendiri tidak memutus aplikasi lama.
-
-## Matriks uji wajib
-
-| Kasus uji | Hasil yang diharapkan |
+| Skenario | Hasil aktual |
 |---|---|
-| Tanpa sesi / JWT tidak valid | 401, tidak ada perubahan data |
-| Petugas kedua menghapus investigasi milik orang lain | 403 / ditolak SQL, investigasi tetap ada |
-| Pemilik menghapus investigasi sendiri | Berhasil, data turunan dan audit tercatat atomik |
-| Petugas non-admin mengaktifkan akses | 403, tidak ada subscription/registrasi berubah |
-| Petugas non-admin menolak registrasi | 403, tidak ada perubahan |
-| Admin mengaktifkan registrasi pending | Berhasil, subscription 7 hari dan audit tercatat |
-| Admin menolak registrasi pending | Berhasil, alasan dan audit tercatat |
-| Panggilan browser langsung ke RPC lama | Ditolak karena EXECUTE dicabut |
-| Panggilan authenticated langsung ke RPC baru | Ditolak karena EXECUTE hanya service_role |
-| Public survey | Tetap nonaktif; publicSurveyEnabled: false |
+| Tanpa sesi ke tiga Edge Functions | HTTP 401 |
+| PETUGAS → activate-registration | HTTP 403 `ADMIN_ONLY` |
+| PETUGAS → reject-registration | HTTP 403 `ADMIN_ONLY` |
+| PETUGAS bukan pemilik → delete-investigation | HTTP 403 `NOT_AUTHORIZED` |
+| Browser memanggil RPC lama activate/reject/delete | HTTP 403 permission denied |
+| ADMIN activate dengan UUID valid yang tidak ada | HTTP 404 `Permintaan registrasi tidak ditemukan` |
+| ADMIN reject dengan UUID valid yang tidak ada | HTTP 404 `Permintaan registrasi tidak ditemukan` |
+| ADMIN delete dengan ID investigasi yang tidak ada | HTTP 404 `INVESTIGATION_NOT_FOUND` |
 
-## Risiko / batasan yang masih terbuka
+HTTP 404 pada dua operasi registrasi ADMIN menunjukkan pemeriksaan ADMIN dilewati dan fungsi mencapai pencarian record. Tes menggunakan UUID dummy yang tidak ada sehingga tidak ada aktivasi, penolakan, subscription, atau audit mutasi sukses. Untuk delete, 404 hanya membuktikan target tidak ditemukan; fungsi delete mengandalkan ownership, bukan role ADMIN.
 
-- Penggunaan supabaseAdmin melewati RLS. Karena itu, pemeriksaan aktor di Edge Function dan pemeriksaan ulang di SQL merupakan kontrol wajib, bukan pilihan.
-- CORS bukan mekanisme autentikasi; keamanan berasal dari verifikasi JWT dan otorisasi server-side.
-- Versi SDK/runtime dan ketersediaan secret harus diuji pada proyek STAGING yang sebenarnya.
-- Fungsi Edge dan SQL belum dideploy atau dijalankan. Pemeriksaan statis/CI tidak membuktikan runtime.
-- Security Advisor terkait leaked-password protection pada paket Free tetap merupakan temuan terpisah dan belum terselesaikan oleh rancangan ini.
+**Belum dilakukan operasi ADMIN sukses yang mengubah data.** Pengujian positif penghapusan juga tidak dilakukan.
+
+### CI dan database
+
+- GitHub Actions run #169: **SUCCESS** — https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41845412592
+- Lulus: JavaScript syntax, research snapshot regression, release smoke tests, Supabase RPC static security checks, dan SQL safety checks.
+- Security Advisor pascamigrasi: tidak ada temuan RPC baru; temuan tersisa adalah leaked password protection nonaktif pada paket Free.
+- Snapshot database akhir STAGING: 3 investigasi sintetis; 0 kasus, kontak, spesimen, kunjungan lapangan, survei publik, dan respons survei.
+- `publicSurveyEnabled:false` tetap.
+
+## Pekerjaan tersisa / risiko
+
+- Review manual akhir terhadap kode dan migration.
+- Bila diperlukan, tes ADMIN sukses hanya dengan record registrasi sintetis khusus STAGING yang disetujui untuk dimutasi; jangan gunakan registrasi nyata.
+- Jangan lakukan tes hapus positif pada tiga investigasi sintetis yang saat ini dipertahankan. Bila dibutuhkan, buat record khusus yang boleh dihapus dengan persetujuan terpisah.
+- Temuan leaked-password protection perlu ditangani melalui pengaturan paket/produk yang mendukung; tidak terkait langsung dengan migrasi Edge Functions.
+- CI statis dan uji negatif tidak menggantikan review kode serta uji positif terkontrol sebelum rilis.
 
 ## Batas rilis
 
-- Tidak ada perubahan pada proyek Supabase produksi.
-- Tidak ada deployment Cloudflare atau Supabase pada pekerjaan ini.
-- Tidak ada migrasi database yang diterapkan.
-- Tidak ada data investigasi, kasus, kontak, spesimen, kunjungan, survei, atau respons yang diubah.
-- publicSurveyEnabled tetap false.
-- PR wajib tetap Draft dan DO NOT MERGE sampai seluruh gerbang uji STAGING lulus dan pengguna memberi persetujuan terpisah untuk langkah berikutnya.
+- Proyek Supabase produksi dan URL produksi tidak disentuh.
+- Tidak ada data produksi yang diubah.
+- `publicSurveyEnabled:false`; tidak ada survei publik atau sinkronisasi yang diaktifkan.
+- PR #69 wajib tetap **Draft / DO NOT MERGE** sampai review akhir selesai dan pengguna memberikan persetujuan eksplisit terpisah untuk promosi berikutnya.
