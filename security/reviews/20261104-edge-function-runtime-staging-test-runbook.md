@@ -2,7 +2,7 @@
 
 **Tanggal pembaruan:** 4 November 2026  
 **Lingkup:** proyek Supabase STAGING `xeqdhwqylutntphlkmqe` dan PR #69.  
-**Batas tegas:** tidak ada perubahan pada produksi; `publicSurveyEnabled:false`; tidak ada pengujian delete positif dan tidak ada penghapusan pada tiga investigasi yang dipertahankan.
+**Batas tegas:** tidak ada perubahan pada produksi; `publicSurveyEnabled:false`; uji delete positif hanya dilakukan pada satu investigasi sintetis khusus yang disetujui untuk dihapus; tiga investigasi lain tetap dipertahankan.
 
 ## Status pelaksanaan
 
@@ -22,11 +22,13 @@
 - [x] Uji prasyarat tanpa akun Auth cocok menghasilkan HTTP 409; tidak ada subscription atau perubahan registrasi pada percobaan tersebut.
 - [x] Security Advisor pascamigrasi: tidak ada temuan RPC baru; temuan yang tersisa adalah leaked password protection nonaktif pada paket Free.
 - [x] GitHub Actions run #176 pada commit kode `283f99ef397d3cfee3e5aeacb8dddbd0d7cb4703` SUCCESS: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41862971915
-- [x] Pemeriksaan konsistensi akhir: investigations=3; cases=0; contacts=0; specimens=0; field_visits=0; public_surveys=0; survey_responses=0.
+- [x] Uji positif `delete-investigation` melalui Edge Function pada satu record sintetis khusus berhasil (`success=true`, `deleted=true`); semua hitungan child bundle yang dikembalikan = 0.
+- [x] Query read-back independen memastikan ID target tidak lagi ada dan ketiga investigasi sintetis yang dipertahankan tetap ada dengan `owner_id` semula.
+- [x] Pemeriksaan konsistensi setelah delete: investigations=3; cases=0; contacts=0; specimens=0; field_visits=0; public_surveys=0; survey_responses=0.
 - [x] PR #69 masih Open, Draft, dan belum merged.
 - [x] Shared handler yang menyamarkan error database telah dideploy ulang ke STAGING: `activate-registration` v5, `reject-registration` v4, `delete-investigation` v4; semuanya `verify_jwt=true`.
 - [x] Runtime test terbaru pada deployment tersebut: ketiga endpoint dipanggil dengan UUID dummy yang tidak ada; masing-masing mengembalikan HTTP 404 dan JSON `{"error":"NOT_FOUND"}`.
-- [ ] CI terbaru untuk commit head PR perlu dipastikan selesai. Connector melaporkan run #180 completed/success, tetapi job `release-checks` masih tampil queued pada pemeriksaan jobs; jangan tandai CI terbaru terverifikasi sampai status job konsisten.
+- [x] CI pada head PR sebelum pembaruan dokumentasi: GitHub Actions run #181 pada SHA `0d2c40189fd950a525681156ce482accd26b8214` berstatus `completed / success`: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/41868145568. CI setelah commit dokumentasi ini tetap perlu dipastikan bila workflow berjalan kembali.
 
 ## Hasil runtime terbaru — penyamaran error (4 November 2026)
 
@@ -39,6 +41,26 @@ Tes dilakukan dari browser STAGING yang telah login ADMIN, menggunakan UUID dumm
 | `delete-investigation` | 404 | `{"error":"NOT_FOUND"}` | Lulus |
 
 Pesan konsol `Edge Function returned a non-2xx status code` merupakan pesan umum dari `supabase-js`; body respons aktual telah diperiksa dan hanya berisi kode publik `NOT_FOUND`. Tidak terlihat pesan database, nama tabel, constraint, atau detail internal pada body respons tersebut.
+
+## Hasil uji positif penghapusan investigasi (4 November 2026)
+
+Pengujian dilakukan dari halaman aplikasi STAGING dengan sesi terautentikasi. Sebelum pemanggilan, `backendClient()` menghasilkan client aktif, sesi tersedia, dan `auth.getUser()` mengembalikan user ID yang sama dengan `owner_id` target (`51acea1d-34a8-4811-9f9c-c3cee464ef3e`). Endpoint `delete-investigation` dipanggil satu kali dengan `investigation_id` khusus berikut:
+
+- ID target: `6d12f897-94f6-4f12-8df6-9074d8649c11`.
+- Nama: `SIMULASI STAGING — UJI POSITIF HAPUS INVESTIGASI — 04-11-2026`.
+- Respons: `success=true`, `deleted=true`, `error=null`.
+- Jumlah child bundle yang dilaporkan: `cases=0`, `contacts=0`, `specimens=0`, `field_visits=0`, `public_surveys=0`, `survey_responses=0`.
+
+Query read-back pada `public.investigations` mengembalikan tepat tiga ID yang dipertahankan dan tidak mengembalikan ID target. Ketiga record tetap memiliki owner ID `51acea1d-34a8-4811-9f9c-c3cee464ef3e`:
+
+| ID yang dipertahankan | Hasil |
+|---|---|
+| `4463eb81-d3dd-4c53-a9d7-423fbd881cd4` | Tetap ada |
+| `21f0c877-e282-4dbc-bd1a-57c76117c628` | Tetap ada |
+| `c620faf3-5563-4b27-8601-211a26cc35dc` | Tetap ada |
+| `6d12f897-94f6-4f12-8df6-9074d8649c11` | Tidak ditemukan setelah penghapusan |
+
+Kesimpulan: jalur penghapusan positif berhasil untuk tepat satu target yang disetujui; ketiga investigasi lain tidak terhapus. Pengujian dilakukan hanya di STAGING.
 
 ## Detail hasil uji runtime sebelumnya
 
@@ -90,9 +112,9 @@ Snapshot akhir STAGING yang diverifikasi:
 
 ## Pekerjaan yang masih tersisa
 
-1. Pastikan CI terbaru pada head PR #69 selesai dan job berstatus sukses; run #176 hanya mencakup commit kode yang lebih lama.
-2. Review manual akhir terhadap seluruh diff kode, migration, dan dokumentasi PR #69; CI sukses tidak menggantikan review keamanan.
-3. Tes delete positif **belum dilakukan**. Jangan menghapus tiga investigasi sintetis yang dipertahankan; bila diperlukan, tes tersebut membutuhkan record khusus yang boleh dihapus dan persetujuan tersendiri.
+1. CI run #181 pada head PR sebelum pembaruan dokumentasi telah sukses; periksa CI baru bila commit dokumentasi memicu workflow.
+2. Review manual akhir terhadap seluruh diff kode, migration, dan dokumentasi PR #69 tetap diperlukan; CI sukses tidak menggantikan review keamanan.
+3. Uji delete positif telah selesai pada satu record sintetis khusus; tiga investigasi lain tetap dipertahankan.
 4. Verifikasi UI/end-to-end tambahan pada alur admin dapat dilakukan terpisah bila diperlukan.
 5. Jangan merge PR #69 atau mengubah produksi tanpa persetujuan eksplisit yang terpisah.
 
@@ -100,6 +122,7 @@ Snapshot akhir STAGING yang diverifikasi:
 
 - Jangan menjalankan migration tambahan tanpa review dan persetujuan.
 - Jika endpoint bermasalah setelah cutover, jangan membuka kembali RPC lama untuk client secara spontan. Buat rollback STAGING yang ditinjau dan tetap menjaga fungsi istimewa tertutup bagi client.
+- Uji delete positif hanya menargetkan ID `6d12f897-94f6-4f12-8df6-9074d8649c11`; tiga ID investigasi yang dipertahankan tetap ada.
 - Tidak ada langkah di runbook ini yang mengizinkan perubahan produksi.
 - Tidak ada pengaktifan survei publik atau sinkronisasi.
 - PR #69 tetap **DRAFT — STAGING ONLY — DO NOT MERGE**.
