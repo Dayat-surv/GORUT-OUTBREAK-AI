@@ -40,17 +40,21 @@ assert.match(appJs, /functions\.invoke\('activate-registration'/, 'registration 
 assert.match(appJs, /functions\.invoke\('reject-registration'/, 'registration rejection must go through the authenticated Edge Function');
 assert.doesNotMatch(appJs, /rpc\('(delete_investigation_bundle|activate_premium_7d|reject_registration)'/, 'browser code must not invoke privileged SECURITY DEFINER RPCs directly');
 const edgeMigration = read('supabase/migrations/20261104140000_secure_admin_operations_edge_functions.sql');
+const edgeCutoverMigration = read('supabase/migrations/20261104141000_revoke_legacy_admin_rpc_client_access.sql');
 const edgeShared = read('supabase/functions/_shared/secure-admin-operation.ts');
 assert.match(edgeShared, /withSupabase\(\s*\{ auth: "user" \}/, 'Edge Function must validate a signed-in user');
 assert.match(edgeShared, /ctx\.userClaims\?\.sub/, 'actor identity must come from the verified JWT');
 assert.match(edgeShared, /ctx\.supabaseAdmin\.rpc/, 'privileged database work must use server-only Supabase admin client');
 assert.match(edgeShared, /\.eq\("id", actorId\)/, 'admin role must be checked against the profiles table');
-assert.match(edgeMigration, /revoke all on function public\.delete_investigation_bundle\(text\) from public, anon, authenticated/i, 'legacy delete RPC must no longer be directly callable by clients');
-assert.match(edgeMigration, /revoke all on function public\.activate_premium_7d\(uuid\) from public, anon, authenticated/i, 'legacy activation RPC must no longer be directly callable by clients');
-assert.match(edgeMigration, /revoke all on function public\.reject_registration\(uuid, text\) from public, anon, authenticated/i, 'legacy rejection RPC must no longer be directly callable by clients');
+
+
+
 assert.match(edgeMigration, /grant execute on function public\.edge_delete_investigation_bundle\(uuid, text\) to service_role/i, 'new delete RPC must be service-role-only');
 assert.match(edgeMigration, /grant execute on function public\.edge_activate_premium_7d\(uuid, uuid\) to service_role/i, 'new activation RPC must be service-role-only');
 assert.match(edgeMigration, /grant execute on function public\.edge_reject_registration\(uuid, uuid, text\) to service_role/i, 'new rejection RPC must be service-role-only');
+assert.match(edgeCutoverMigration, /revoke all on function public\\.delete_investigation_bundle\\(text\\) from public, anon, authenticated/i, 'legacy delete RPC must be revoked only in the final cutover migration');
+assert.match(edgeCutoverMigration, /revoke all on function public\\.activate_premium_7d\\(uuid\\) from public, anon, authenticated/i, 'legacy activation RPC must be revoked only in the final cutover migration');
+assert.match(edgeCutoverMigration, /revoke all on function public\\.reject_registration\\(uuid, text\\) from public, anon, authenticated/i, 'legacy rejection RPC must be revoked only in the final cutover migration');
 assert.match(appJs, /if\(!serverSummary\|\|serverSummary\.deleted!==true\)/, 'local records must remain unless the server confirms deletion');
 assert.match(deleteMigration, /security definer/i, 'bundle deletion must execute atomically despite survey-response RLS');
 assert.match(deleteMigration, /auth\.uid\(\)/, 'bundle deletion must require an authenticated user');
