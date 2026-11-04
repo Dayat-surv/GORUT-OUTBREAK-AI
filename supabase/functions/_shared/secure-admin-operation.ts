@@ -22,7 +22,7 @@ export function serveSecureAdminOperation(config: OperationConfig): void {
     { auth: "user" },
     async (req, ctx) => {
       const actorId = ctx.userClaims?.id ?? ctx.jwtClaims?.sub;
-      if (typeof actorId !== "string" || !/^[0-9a-f-]{36}$/i.test(actorId)) {
+      if (typeof actorId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actorId)) {
         return json({ error: "AUTH_REQUIRED" }, 401);
       }
 
@@ -88,7 +88,7 @@ export function serveSecureAdminOperation(config: OperationConfig): void {
     try {
       return await authenticatedHandler(req);
     } catch {
-      return json({ error: "AUTHENTICATION_FAILED" }, 401);
+      return json({ error: "INTERNAL_SERVER_ERROR" }, 500);
     }
   });
 }
