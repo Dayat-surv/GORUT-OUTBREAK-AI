@@ -30,7 +30,7 @@ assert.match(appJs, /if\(existing\)Object\.assign\(existing,o\);\s*else db\.inve
 assert.match(appJs, /function newKlb\(\)\{db\.active=null/, 'starting a new investigation must clear the edit target');
 assert.match(appJs, /const editingId=db\.active/, 'save must capture the active investigation ID before building the form payload');
 assert.match(appJs, /if\(!result\.data\?\.id\)throw new Error/, 'investigation save must fail closed without a returned server ID');
-assert.match(appJs, /Investigasi BELUM tersimpan ke server/, 'server save errors must not be reported as successful local saves');
+assert.match(appJs, /Investigasi BELUM disimpan ke server/, 'server save errors must not be reported as successful local saves');
 assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation metadata must be restored after server reload');
 assert.match(appJs, /window\.deleteInvestigation=async function\(id\)/, 'investigation deletion must wait for server confirmation');
 assert.match(appJs, /countForServer\('cases'\)/, 'delete confirmation must use exact server-side linked case counts');
