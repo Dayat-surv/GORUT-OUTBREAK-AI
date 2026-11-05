@@ -1271,9 +1271,9 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
         serverSummary={cases:counts[0],contacts:counts[1],specimens:counts[2],field_visits:counts[3],public_surveys:surveyIds.length,survey_responses:responseCount};
         const prompt='HAPUS INVESTIGASI: '+label+'?\n\nJumlah data terkait yang diverifikasi langsung dari server dan akan ikut dihapus: kasus ('+serverSummary.cases+'), kontak ('+serverSummary.contacts+'), spesimen ('+serverSummary.specimens+'), kunjungan lapangan ('+serverSummary.field_visits+'), survei publik ('+serverSummary.public_surveys+'), respons survei ('+serverSummary.survey_responses+').\n\nCatatan: jumlah server mencakup rekaman yang mungkin tidak tampil pada daftar operasional karena penyaringan data simulasi/uji.\n\nPenghapusan permanen dan tidak dapat dibatalkan.';
         if(!window.confirm(prompt))return;
-        const result=await sb.rpc('delete_investigation_bundle',{p_investigation_id:serverId});
+        const result=await sb.functions.invoke('delete-investigation',{body:{investigation_id:serverId}});
         if(result.error)throw result.error;
-        serverSummary=result.data||null;
+        serverSummary=result.data?.data||null;
         if(!serverSummary||serverSummary.deleted!==true)throw new Error('Server belum mengonfirmasi penghapusan. Data lokal tidak diubah.');
       }else{
         const linked={
@@ -1378,19 +1378,29 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
     const name=val('regName').trim(),wa=val('regWhatsapp').trim(),email=val('regEmail').trim().toLowerCase(),pw=val('regPassword'),inst=val('regInstitution').trim(),ref=val('regPaymentRef').trim(),note=val('regNote').trim();
     if(!name||!wa||!email||!pw)return alert('Nama, WhatsApp, email, dan kata sandi wajib diisi.');
     if(pw.length<8)return alert('Kata sandi minimal 8 karakter untuk akun produksi.');
-    const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
-    if(sign.error){return alert('Registrasi akun gagal: '+sign.error.message);}
-    const rr=await sb.rpc('create_registration_request',{p_email:email,p_full_name:name,p_whatsapp:wa,p_institution:inst,p_payment_reference:ref,p_note:note});
-    if(rr.error){return alert('Akun berhasil dibuat, tetapi permintaan akses belum tercatat: '+rr.error.message);}
-    const rid=rr.data;
+    let currentUser=(await sb.auth.getUser()).data?.user||null;
+    if(currentUser&&String(currentUser.email||'').toLowerCase()!==email)return alert('Anda sedang masuk dengan email berbeda. Keluar terlebih dahulu, lalu gunakan email pendaftaran yang sesuai.');
+    if(!currentUser){
+      const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
+      if(sign.error)return alert('Registrasi akun gagal: '+sign.error.message);
+      currentUser=sign.data?.user||null;
+      if(!sign.data?.session){
+        return alert('Akun berhasil dibuat. Konfirmasikan email, lalu masuk menggunakan akun tersebut dan kirim ulang formulir permohonan akses. Belum ada permohonan akses yang dicatat.');
+      }
+    }
+    const rr=await sb.functions.invoke('create-registration-request',{body:{email,full_name:name,whatsapp:wa,institution:inst,payment_reference:ref,note}});
+    if(rr.error||rr.data?.success!==true||!rr.data?.data)return alert('Akun berhasil dibuat, tetapi permohonan akses belum tercatat: '+(rr.error?.message||rr.data?.error||'respons server tidak valid'));
+    const rid=rr.data.data;
     const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(rid)}%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(wa)}%0AInstansi: ${encodeURIComponent(inst)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(ref)}`;
     const box=document.getElementById('registerMsg');box.style.display='block';box.innerHTML=`Permintaan akses <b>${esc0(rid)}</b> sudah tercatat di server dan menunggu verifikasi admin.<br><br><a href="https://wa.me/6282290150334?text=${msg}" target="_blank" rel="noopener"><button class="btn-whatsapp">Kirim Konfirmasi WhatsApp</button></a><br><span class="small">Jika verifikasi email Supabase aktif, silakan konfirmasi email terlebih dahulu sebelum masuk.</span>`;
   };
   window.activateRegistrationV28=async function(id){
     const sb=await backendClient();if(!sb)return alert('Backend produksi belum dikonfigurasi.');
-    const r=await sb.rpc('activate_premium_7d',{p_registration_id:id});
+    const r=await sb.functions.invoke('activate-registration',{body:{registration_id:id}});
     if(r.error)return alert('Aktivasi gagal: '+r.error.message);
-    alert(`Akses Akses aktif sampai ${new Date(r.data.expires_at).toLocaleString('id-ID')}`);renderAdminV28();
+    const payload=r.data?.data;
+    if(!payload?.expires_at)return alert('Aktivasi belum dikonfirmasi oleh server.');
+    alert(`Akses aktif sampai ${new Date(payload.expires_at).toLocaleString('id-ID')}`);renderAdminV28();
   };
   window.renderAdminV28=async function(){
     const el=document.getElementById('v28RegList');if(!el)return;const sb=await backendClient();
@@ -1525,11 +1535,19 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
     const name=val('regName').trim(),wa=val('regWhatsapp').trim(),email=val('regEmail').trim().toLowerCase(),pw=val('regPassword'),inst=val('regInstitution').trim(),ref=val('regPaymentRef').trim(),note=val('regNote').trim();
     if(!name||!wa||!email||!pw)return alert('Nama, WhatsApp, email, dan kata sandi wajib diisi.');
     if(pw.length<8)return alert('Kata sandi minimal 8 karakter.');
-    const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
-    if(sign.error)return alert('Registrasi akun gagal: '+sign.error.message);
-    const rr=await sb.rpc('create_registration_request',{p_email:email,p_full_name:name,p_whatsapp:wa,p_institution:inst,p_payment_reference:ref,p_note:note});
-    if(rr.error)return alert('Akun dibuat tetapi permintaan akses gagal dicatat: '+rr.error.message);
-    const rid=rr.data; const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(rid)}%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(wa)}%0AInstansi: ${encodeURIComponent(inst)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(ref)}`;
+    let currentUser=(await sb.auth.getUser()).data?.user||null;
+    if(currentUser&&String(currentUser.email||'').toLowerCase()!==email)return alert('Anda sedang masuk dengan email berbeda. Keluar terlebih dahulu, lalu gunakan email pendaftaran yang sesuai.');
+    if(!currentUser){
+      const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
+      if(sign.error)return alert('Registrasi akun gagal: '+sign.error.message);
+      currentUser=sign.data?.user||null;
+      if(!sign.data?.session){
+        return alert('Akun berhasil dibuat. Konfirmasikan email, lalu masuk menggunakan akun tersebut dan kirim ulang formulir permohonan akses. Belum ada permohonan akses yang dicatat.');
+      }
+    }
+    const rr=await sb.functions.invoke('create-registration-request',{body:{email,full_name:name,whatsapp:wa,institution:inst,payment_reference:ref,note}});
+    if(rr.error||rr.data?.success!==true||!rr.data?.data)return alert('Akun dibuat tetapi permohonan akses belum tercatat: '+(rr.error?.message||rr.data?.error||'respons server tidak valid'));
+    const rid=rr.data.data; const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(rid)}%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(wa)}%0AInstansi: ${encodeURIComponent(inst)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(ref)}`;
     const box=document.getElementById('registerMsg');box.style.display='block';box.innerHTML=`Permintaan <b>${esc0(rid)}</b> tercatat di server dan menunggu verifikasi admin.<br><br><a href="https://wa.me/6282290150334?text=${msg}" target="_blank" rel="noopener"><button class="btn-whatsapp">Kirim Konfirmasi WhatsApp</button></a>`;
   };
   /* Start selectors after DOM is ready. */
@@ -1614,7 +1632,7 @@ async function access(){
  const r=await sb.from('my_access_status').select('*').single(); return r.error?{has_access:false,is_admin:false,error:r.error.message}:{...r.data,source:'server'};
 }
 function badge(s){const k=String(s||'pending').toLowerCase();return `<span class="v30-status ${esc(k)}">${esc(k)}</span>`}
-window.v30RejectRegistration=async function(id){if(!confirm('Tolak registrasi ini?'))return;const sb=await window.backendClient();if(!sb)return alert('Backend belum dikonfigurasi.');const r=await sb.rpc('reject_registration',{p_registration_id:id,p_reason:'Ditolak oleh admin'});if(r.error)return alert('Gagal: '+r.error.message);await window.v30RefreshAdmin()};
+window.v30RejectRegistration=async function(id){if(!confirm('Tolak registrasi ini?'))return;const sb=await window.backendClient();if(!sb)return alert('Backend belum dikonfigurasi.');const r=await sb.functions.invoke('reject-registration',{body:{registration_id:id,reason:'Ditolak oleh admin'}});if(r.error)return alert('Gagal: '+r.error.message);if(r.data?.success!==true)return alert('Penolakan belum dikonfirmasi oleh server.');await window.v30RefreshAdmin()};
 window.v30RefreshAdmin=async function(){
  const box=document.getElementById('v30AdminContent');if(!box)return;const a=await access();if(!a.is_admin){box.innerHTML='<div class="security-note-v29">Panel administrasi hanya untuk admin.</div>';return}
  const sb=await window.backendClient();if(!sb){box.innerHTML='<div class="notice">Backend belum dikonfigurasi.</div>';return}
