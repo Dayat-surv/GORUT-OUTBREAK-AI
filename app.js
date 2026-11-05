@@ -154,17 +154,21 @@ const save=()=>{localStorage.setItem(K,JSON.stringify(db));syncLocalDatabase()};
 function login(){loginEl.style.display='none';app.style.display='block';render()}
 function page(id,b){document.querySelectorAll('.page').forEach(x=>x.classList.remove('show'));document.getElementById(id).classList.add('show');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));if(b)b.classList.add('active');title.textContent=id==='analisis'?'Analisis Epidemiologi':id[0].toUpperCase()+id.slice(1);render();if(id==='master'){renderMasterGroups();renderMaster()}}
 function syncInvestigationType(){const type=val('inType');const d=document.getElementById('disease');const panel=document.getElementById('foodInvestigationPanel');if(type==='Keracunan Makanan'){if(d){d.value='keracunan-pangan';selectDisease('keracunan-pangan')}if(panel)panel.style.display='block'}else{if(panel)panel.style.display='none';if(d&&d.value==='keracunan-pangan'){d.value='campak';selectDisease('campak')}}}
-function newKlb(){page('investigasi');['inName','kec','desa','pkm','tgl','foodEventName','foodEventDate','foodVenue','foodSource','foodMealTime','foodExposed','foodIll','foodDead','foodSuspected','foodHandler','foodWater','foodStorage','foodHypothesis'].forEach(x=>{const e=document.getElementById(x);if(e)e.value=''});const t=document.getElementById('inType');if(t)t.value='Penyakit Menular';syncInvestigationType();}
+function newKlb(){db.active=null;save();page('investigasi');['inName','kec','desa','pkm','tgl','foodEventName','foodEventDate','foodVenue','foodSource','foodMealTime','foodExposed','foodIll','foodDead','foodSuspected','foodHandler','foodWater','foodStorage','foodHypothesis'].forEach(x=>{const e=document.getElementById(x);if(e)e.value=''});const t=document.getElementById('inType');if(t)t.value='Penyakit Menular';syncInvestigationType();}
 async function saveKlb(){
+  const editingId=db.active;
+  const existing=editingId==null?null:db.investigations.find(x=>String(x.id)===String(editingId));
+  if(editingId!=null&&!existing){alert('Investigasi yang akan diedit tidak ditemukan. Tidak ada data yang disimpan.');return;}
   const o={
-    id:Date.now(),
+    ...(existing||{}),
+    id:existing?existing.id:Date.now(),
     name:val('inName')||'Investigasi Baru',
     type:val('inType'),
     disease:val('disease')||db.selectedDisease||'campak',
     prov:val('prov'),kab:val('kab'),kec:val('kec'),desa:val('desa'),
     pkm:val('pkm'),
     date:val('tgl')||new Date().toISOString().slice(0,10),
-    status:'Berjalan'
+    status:existing?.status||'Berjalan'
   };
   if(o.type==='Keracunan Makanan'){
     o.disease='keracunan-pangan';
@@ -177,6 +181,8 @@ async function saveKlb(){
       waterSource:val('foodWater'),storage:val('foodStorage'),
       initialHypothesis:val('foodHypothesis')
     };
+  }else{
+    delete o.foodInvestigation;
   }
 
   const cfg=window.GORUT_BACKEND||{};
@@ -188,11 +194,8 @@ async function saveKlb(){
       if(auth.error)throw auth.error;
       const user=auth.data?.user;
       if(!user?.id)throw new Error('Sesi login Supabase tidak ditemukan. Silakan login ulang.');
-      const serverId=(window.crypto&&typeof window.crypto.randomUUID==='function')
-        ?window.crypto.randomUUID()
-        :uuidFrom(String(Date.now())+Math.random()+Math.random());
       const row={
-        id:serverId,owner_id:user.id,name:o.name,
+        owner_id:user.id,name:o.name,
         outbreak_type:o.type||'Penyakit Menular',
         disease_id:o.disease||null,
         province:o.prov||'Gorontalo',
@@ -201,35 +204,59 @@ async function saveKlb(){
         facility:o.pkm||null,start_date:o.date||null,
         status:o.status||'Berjalan',
         metadata:{
+          ...(existing?.metadata||{}),
           local_id:String(o.id),
           local_disease:o.disease||null,
           food_investigation:o.foodInvestigation||null
         }
       };
-      const result=await sb.from('investigations').insert(row).select('id').single();
-      if(result.error)throw result.error;
-      if(!result.data?.id)throw new Error('Server tidak mengembalikan ID investigasi setelah penyimpanan.');
-      o.serverId=result.data.id;
+      let result;
+      if(existing){
+        let serverId=existing.serverId||null;
+        if(!serverId){
+          const lookup=await sb.from('investigations').select('id')
+            .eq('owner_id',user.id).eq('metadata->>local_id',String(existing.id))
+            .limit(2);
+          if(lookup.error)throw lookup.error;
+          if(lookup.data?.length!==1)throw new Error('ID server investigasi lama tidak dapat dipastikan (hasil pencarian bukan tepat satu). Edit dibatalkan agar tidak membuat investigasi duplikat.');
+          serverId=lookup.data[0].id;
+        }
+        result=await sb.from('investigations').update(row)
+          .eq('id',serverId).eq('owner_id',user.id).select('id').single();
+        if(result.error)throw result.error;
+        if(!result.data?.id)throw new Error('Server tidak mengonfirmasi pembaruan investigasi.');
+        o.serverId=result.data.id;
+      }else{
+        const serverId=(window.crypto&&typeof window.crypto.randomUUID==='function')
+          ?window.crypto.randomUUID()
+          :uuidFrom(String(Date.now())+Math.random()+Math.random());
+        result=await sb.from('investigations').insert({...row,id:serverId}).select('id').single();
+        if(result.error)throw result.error;
+        if(!result.data?.id)throw new Error('Server tidak mengembalikan ID investigasi setelah penyimpanan.');
+        o.serverId=result.data.id;
+      }
       o.owner_id=user.id;
-      db.investigations.push(o);
+      if(existing)Object.assign(existing,o);
+      else db.investigations.push(o);
       db.active=o.id;
       db.selectedDisease=o.disease;
       save();
-      alert('Berhasil! Investigasi telah tersimpan di server.');
+      alert(existing?'Berhasil! Perubahan investigasi diperbarui pada server.':'Berhasil! Investigasi baru tersimpan di server.');
       page('dashboard');
       return;
     }catch(error){
       console.error('Gagal menyimpan investigasi ke Supabase:',error);
-      alert('Investigasi BELUM tersimpan ke server. Data formulir tetap tersedia.\n\n'+(error?.message||String(error)));
+      alert('Investigasi BELUM disimpan ke server. Data formulir tetap tersedia dan daftar investigasi tidak diubah.\\n\\n'+(error?.message||String(error)));
       return;
     }
   }
 
-  db.investigations.push(o);
+  if(existing)Object.assign(existing,o);
+  else db.investigations.push(o);
   db.active=o.id;
   db.selectedDisease=o.disease;
   save();
-  alert('Investigasi tersimpan di perangkat ini saja; belum tersimpan ke server.');
+  alert(existing?'Perubahan investigasi diperbarui di perangkat ini saja; belum tersimpan ke server.':'Investigasi tersimpan di perangkat ini saja; belum tersimpan ke server.');
   page('dashboard');
 }
 function dash(){let q=val('search').toLowerCase(),t=val('typeFilter'),r=db.investigations.filter(x=>(!q||x.name.toLowerCase().includes(q))&&(!t||x.type===t));const uniqueFor=rows=>{const m=new Map();rows.forEach((c,i)=>{const id=String(c.id??'').trim(),key=String(c.investigationId??'')+'::'+(id||'__record_'+i);m.set(key,c)});return [...m.values()]};klbRows.innerHTML=r.map(x=>{const records=db.cases.filter(c=>String(c.investigationId)===String(x.id)),unique=uniqueFor(records);return `<tr><td><b>${x.name}</b></td><td>${x.type}</td><td>${x.desa||'-'}, ${x.kec||'-'}</td><td><b>${unique.length}</b><div class="small">${records.length} rekaman sumber</div></td><td>${x.status}</td><td><button onclick="openKlb(this.dataset.investigationId)" data-investigation-id="${esc0(x.id)}">Buka</button></td></tr>`}).join('')||'<tr><td colspan="6">Belum ada investigasi.</td></tr>';let cs=db.cases,uniqueCases=uniqueFor(cs);stats.innerHTML=[['Investigasi',db.investigations.length],['Kasus unik',uniqueCases.length],['Rekaman sumber',cs.length],['Konfirmasi',uniqueCases.filter(c=>c.status==='Konfirmasi').length],['Meninggal',uniqueCases.filter(c=>c.outcome==='Meninggal').length]].map(x=>`<div class="stat"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('')}
@@ -557,7 +584,26 @@ async function syncNow(){
   const user=(await sb.auth.getUser()).data.user;
   if(!user){alert('Silakan login melalui Supabase Auth terlebih dahulu.');return;}
   let ok=0,fail=0;
-  for(const x of db.investigations){const row={id:x.serverId||uuidFrom(x.id),owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',disease_id:x.disease||null,province:x.prov||'Gorontalo',district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,status:x.status||'Berjalan',metadata:{local_id:x.id}};const r=await sb.from('investigations').upsert(row,{onConflict:'id'});if(!r.error){x.serverId=row.id;ok++;}else fail++;}
+  for(const x of db.investigations){
+    if(!x.serverId){
+      console.warn('Investigation sync skipped: serverId is missing; use the validated online save flow instead.',{localId:x.id});
+      fail++;
+      continue;
+    }
+    const row={
+      owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',
+      disease_id:x.disease||null,province:x.prov||'Gorontalo',
+      district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,
+      village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,
+      status:x.status||'Berjalan',
+      metadata:{...(x.metadata||{}),local_id:x.id,local_disease:x.disease||null,
+        food_investigation:x.foodInvestigation||null}
+    };
+    const r=await sb.from('investigations').update(row)
+      .eq('id',x.serverId).eq('owner_id',user.id).select('id').single();
+    if(r.error||!r.data?.id){console.error('Investigation sync update failed; no INSERT fallback was attempted.',r.error);fail++;}
+    else ok++;
+  }
   for(const a of (db.alerts||[])){const row={id:a.serverId||uuidFrom(a.id),owner_id:user.id,disease_id:a.disease||null,epi_week:a.week||null,alert_date:a.date||null,reporting_facility:a.facility||null,count:a.count||0,verification_result:a.result||null,metadata:{local_id:a.id}};const r=await sb.from('alerts').upsert(row,{onConflict:'id'});if(!r.error){a.serverId=row.id;ok++;}else fail++;}
   for(const c of (db.cases||[])){if(!db.investigations.find(i=>i.id===c.investigationId)) continue;const invForCase=db.investigations.find(i=>String(i.id)===String(c.investigationId));/* ID server harus unik per rekaman sumber; case_code tetap menjadi pengenal kasus untuk deduplikasi analitik. Simpan ID lebih dulu agar percobaan ulang memakai ID yang sama. */const row={id:c.serverId||(c.serverId=(window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():uuidFrom(String(Date.now())+Math.random()+Math.random()))),owner_id:user.id,investigation_id:invForCase?.serverId||uuidFrom(c.investigationId),case_code:String(c.id||''),full_name:c.name||'',age:Number(c.age)||null,sex:c.sex||null,onset_date:c.onset||null,status:c.status||null,outcome:c.outcome||null,latitude:c.lat||null,longitude:c.lng||null,questionnaire_response:{...(c.answers||{}),foodCase:c.foodCase||null,priority:c.priority||null}};const r=await sb.from('cases').upsert(row,{onConflict:'id'});if(!r.error)c.serverId=row.id;r.error?fail++:ok++;}
   for(const c of (db.contacts||[])){if(!db.investigations.find(i=>i.id===c.investigationId)) continue;const invForContact=db.investigations.find(i=>String(i.id)===String(c.investigationId));const linkedCase=db.cases.find(x=>String(x.id)===String(c.caseId));const row={id:c.serverId||uuidFrom(c.id),owner_id:user.id,investigation_id:invForContact?.serverId||uuidFrom(c.investigationId),index_case_id:c.caseId?(linkedCase?.serverId||uuidFrom(c.caseId)):null,contact_name:c.name||'',relation:c.relation||null,last_contact_date:c.last||null,monitoring_status:c.status||null,follow_up:c.follow||null,metadata:{local_id:c.id,linked_case_id:c.linkedCaseId||null}};const r=await sb.from('contacts').upsert(row,{onConflict:'id'});if(!r.error){c.serverId=row.id;ok++;}else fail++;}
@@ -602,9 +648,22 @@ async function loadServerOperationalData(){
   }
   const localId=(r,fallback)=>String(r?.metadata?.local_id??fallback??r?.id??'');
   const invMap=new Map();
+  /* A duplicate metadata.local_id makes two server investigations share one local ID.
+     openKlb() resolves by local ID, so that collision can open/edit the wrong server row.
+     Keep the first legacy ID and give every later collision a unique server-derived local ID. */
+  const usedInvestigationLocalIds=new Set();
   const investigations=raw.investigations.map(r=>{
-    const id=localId(r,r.id);invMap.set(String(r.id),id);
-    return {id,name:r.name||'Investigasi tanpa nama',type:r.outbreak_type||'Penyakit Menular',disease:r.metadata?.local_disease||r.disease_id||'campak',prov:r.province||'Gorontalo',kab:r.district||'Gorontalo Utara',kec:r.subdistrict||'',desa:r.village||'',pkm:r.facility||'',date:r.start_date||'',status:r.status||'Berjalan',serverId:r.id,owner_id:r.owner_id,foodInvestigation:r.metadata?.food_investigation||null};
+    const preferredId=localId(r,r.id);
+    let id=preferredId;
+    if(usedInvestigationLocalIds.has(id)){
+      id='server:'+String(r.id);
+      let suffix=1;
+      while(usedInvestigationLocalIds.has(id)){id='server:'+String(r.id)+':'+suffix++;}
+      console.warn('Duplicate investigations.metadata.local_id detected; using a unique server-derived local ID.',{serverId:r.id});
+    }
+    usedInvestigationLocalIds.add(id);
+    invMap.set(String(r.id),id);
+    return {id,name:r.name||'Investigasi tanpa nama',type:r.outbreak_type||'Penyakit Menular',disease:r.metadata?.local_disease||r.disease_id||'campak',prov:r.province||'Gorontalo',kab:r.district||'Gorontalo Utara',kec:r.subdistrict||'',desa:r.village||'',pkm:r.facility||'',date:r.start_date||'',status:r.status||'Berjalan',serverId:r.id,owner_id:r.owner_id,metadata:r.metadata||{},foodInvestigation:r.metadata?.food_investigation||null};
   });
   const caseMap=new Map();
   const cases=raw.cases.map(r=>{
@@ -748,12 +807,19 @@ async function publicQ(){
  if(!sb){const base=new URL('public_survey.html',location.href);base.searchParams.set('investigation',String(inv.id));base.searchParams.set('disease',disease);const url=base.toString();
    modal(`<h2>Kuesioner Publik — Mode Offline</h2><div class="notice">Backend belum aktif. URL ini hanya untuk preview lokal.</div><input value="${esc(url)}" readonly onclick="this.select()"><div id="qrBox" style="text-align:center;margin:15px"></div><button class="primary" onclick="copyText('${esc(url)}')">Salin URL</button> <button onclick="closeAppModal()">Tutup</button>`); makeQR(url); return;}
  const user=(await sb.auth.getUser()).data.user;if(!user){alert('Login online diperlukan untuk membuat public survey.');return;}
- // Pastikan parent investigation benar-benar tersimpan di server sebelum membuat questionnaire/survey.
- // Investigasi hasil pemuatan server memakai serverId; jangan membentuk ulang ID server dari ID lokal.
- const serverInvId=inv.serverId||uuidFrom(inv.id);
- const invRow={id:serverInvId,owner_id:user.id,name:inv.name||'Investigasi tanpa nama',outbreak_type:inv.type||'Penyakit Menular',disease_id:inv.disease||null,province:inv.prov||'Gorontalo',district:inv.kab||'Gorontalo Utara',subdistrict:inv.kec||null,village:inv.desa||null,facility:inv.pkm||null,start_date:inv.date||null,status:inv.status||'Berjalan',metadata:{...(inv.metadata||{}),local_id:String(inv.id)}};
- const ir=await sb.from('investigations').upsert(invRow,{onConflict:'id'}).select('id').single();
- if(ir.error||!ir.data?.id){console.error('Gagal memastikan investigasi server',ir.error);alert('Tidak dapat membuat kuesioner: investigasi belum tersimpan/terbaca di server. '+(ir.error?.message||'ID investigasi server tidak tersedia')+'. Tidak ada kuesioner publik baru yang dibuat.');return;}
+ // Survei publik tetap terkunci selama publicSurveyEnabled bukan true.
+ if(window.GORUT_BACKEND?.publicSurveyEnabled!==true){alert('Pembuatan survei publik dinonaktifkan selama pengujian STAGING. Tidak ada survei atau respons yang dibuat.');return;}
+ // Pastikan investigasi induk sudah dipetakan secara unik; jangan membuat ID server dari ID lokal.
+ let serverInvId=inv.serverId||null;
+ if(!serverInvId){
+   const lookup=await sb.from('investigations').select('id')
+     .eq('owner_id',user.id).eq('metadata->>local_id',String(inv.id)).limit(2);
+   if(lookup.error||lookup.data?.length!==1){alert('Investigasi induk tidak dapat dipetakan secara unik. Pembuatan kuesioner dibatalkan; tidak ada perubahan pada server.');return;}
+   serverInvId=lookup.data[0].id;
+ }
+ const invRow={owner_id:user.id,name:inv.name||'Investigasi tanpa nama',outbreak_type:inv.type||'Penyakit Menular',disease_id:inv.disease||null,province:inv.prov||'Gorontalo',district:inv.kab||'Gorontalo Utara',subdistrict:inv.kec||null,village:inv.desa||null,facility:inv.pkm||null,start_date:inv.date||null,status:inv.status||'Berjalan',metadata:{...(inv.metadata||{}),local_id:String(inv.id)}};
+ const ir=await sb.from('investigations').update(invRow).eq('id',serverInvId).eq('owner_id',user.id).select('id').single();
+ if(ir.error||!ir.data?.id){console.error('Gagal memverifikasi investigasi server',ir.error);alert('Tidak dapat membuat kuesioner: pembaruan/verifikasi investigasi induk gagal. Tidak ada survei publik baru yang dibuat.');return;}
  inv.serverId=ir.data.id;
  const schema={questions:db.questions||[],meta:db.questionMeta||{}};
  const qr=await sb.from('questionnaires').insert({disease_id:disease,name:`PE ${diseases[disease]?.name||disease}`,version:instrumentMeta.release,status:'published',schema_json:schema,source_reference:instrumentMeta.diseaseSpecificBasis,created_by:user.id}).select('id').single();
@@ -5486,4 +5552,96 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   document.addEventListener('DOMContentLoaded',function(){setTimeout(install126,1000)});
   [1800,4000,7500].forEach(function(ms){setTimeout(install126,ms)});
   window.GORUT_V126={version:'v126',features:['KLB investigation registry','active investigation navigation to PE report/research/case dashboards','research dataset generation from active investigation answers','no operational case deletion or overwrite']};
+})();
+
+
+/* v183 — unified investigation tables + resilient open action (STAGING UI only).
+   This layer changes rendering and click handling only; it does not mutate records. */
+(function(){
+  const esc = value => typeof esc0 === 'function'
+    ? esc0(String(value ?? ''))
+    : String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const uniqueCases = rows => {
+    const seen = new Map();
+    (rows || []).forEach((item,index) => {
+      const id=String(item.id ?? '').trim();
+      const key=String(item.investigationId ?? '')+'::'+(id || '__record_'+index);
+      seen.set(key,item);
+    });
+    return [...seen.values()];
+  };
+  window.dash = function(){
+    const investigations=Array.isArray(db.investigations)?db.investigations:[];
+    const cases=Array.isArray(db.cases)?db.cases:[];
+    const q=String(val('search')||'').trim().toLowerCase();
+    const type=val('typeFilter');
+    const status=val('statusFilter');
+    const filtered=investigations.filter(item=>{
+      const name=String(item.name||'').toLowerCase();
+      return (!q||name.includes(q))&&(!type||item.type===type)&&(!status||item.status===status);
+    });
+    const operationalCases=cases.filter(item=>{
+      if(typeof isInvalidTestCaseForDashboard128==='function' && isInvalidTestCaseForDashboard128(item)) return false;
+      if(typeof isSimulationCaseForOps==='function' && isSimulationCaseForOps(item)) return false;
+      return true;
+    });
+    const rowsHtml=filtered.map(item=>{
+      const id=String(item.id??'');
+      const count=uniqueCases(operationalCases.filter(c=>String(c.investigationId)===id)).length;
+      const disease=(typeof diseaseLabel==='function'?diseaseLabel(item.disease):item.disease)||'Belum ditentukan';
+      const location=[item.desa,item.kec].filter(Boolean).join(', ')||'Belum diisi';
+      const updated=item.date||item.updated_at||item.created_at||'-';
+      return '<tr>'+
+        '<td><div class="investigation-name">'+esc(item.name||'Investigasi tanpa nama')+'</div><span class="investigation-sub">'+esc(item.type||'Penyakit Menular')+'</span></td>'+
+        '<td>'+esc(disease)+'</td>'+
+        '<td>'+esc(location)+'</td>'+
+        '<td><span class="case-count">'+count+'</span></td>'+
+        '<td><span class="status-pill">'+esc(item.status||'Berjalan')+'</span></td>'+
+        '<td>'+esc(updated)+'</td>'+
+        '<td><div class="investigation-actions"><button type="button" class="btn-open-investigation" data-open-investigation="'+esc(id)+'">Buka</button>'+
+        '<button type="button" class="btn-delete-investigation" data-delete-investigation="'+esc(id)+'">Hapus</button></div></td>'+
+      '</tr>';
+    }).join('') || '<tr><td colspan="7" class="empty-row">Belum ada investigasi yang sesuai dengan filter.</td></tr>';
+    ['klbRows','investigationRows'].forEach(id=>{
+      const target=document.getElementById(id);
+      if(!target) return;
+      target.innerHTML=rowsHtml;
+      target.querySelectorAll('[data-open-investigation]').forEach(button=>{
+        button.addEventListener('click',()=>{
+          const selectedId=button.getAttribute('data-open-investigation');
+          if(!selectedId || !investigations.some(item=>String(item.id)===selectedId)){
+            alert('Investigasi tidak ditemukan. Daftar tidak diubah.');
+            return;
+          }
+          if(typeof window.openKlb!=='function'){
+            alert('Fungsi pembuka investigasi belum tersedia. Silakan muat ulang aplikasi.');
+            return;
+          }
+          window.openKlb(selectedId);
+        });
+      });
+      target.querySelectorAll('[data-delete-investigation]').forEach(button=>{
+        button.addEventListener('click',()=>{
+          const selectedId=button.getAttribute('data-delete-investigation');
+          if(typeof window.deleteInvestigation==='function') window.deleteInvestigation(selectedId);
+          else if(typeof deleteInvestigation==='function') deleteInvestigation(selectedId);
+          else alert('Fungsi hapus investigasi belum tersedia.');
+        });
+      });
+    });
+    const validUnique=uniqueCases(operationalCases);
+    const statsElement=document.getElementById('stats');
+    if(statsElement){
+      const operationalInvestigations=investigations.filter(item=>
+        !(typeof isSimulationInvestigationForOps==='function' && isSimulationInvestigationForOps(item))
+      ).length;
+      statsElement.innerHTML=[
+        ['Investigasi operasional',operationalInvestigations],
+        ['Kasus valid unik',validUnique.length],
+        ['Kasus konfirmasi',validUnique.filter(item=>item.status==='Konfirmasi').length],
+        ['Kasus meninggal',validUnique.filter(item=>item.outcome==='Meninggal').length]
+      ].map(([label,value])=>'<div class="stat"><small>'+esc(label)+'</small><b>'+value+'</b></div>').join('');
+    }
+  };
+  window.GORUT_V183_UI={version:'v183',features:['unified dashboard and investigation registry','resilient investigation open buttons','status filter','compact responsive layout'],dataMutation:false};
 })();

@@ -1,10 +1,10 @@
-const CACHE='gorut-outbreak-ai-final-v179';
+const CACHE='gorut-outbreak-ai-final-v182';
 const ASSETS=[
   './',
   './index.html',
   './premium.css?v=158',
   './favicon.svg',
-  './app.js?v=179',
+  './app.js?v=182',
   './backend-config.js',
   './manifest.webmanifest',
   './mobile.html',
@@ -32,5 +32,5 @@ self.addEventListener('fetch',event=>{
       caches.open(CACHE).then(cache=>cache.put(event.request,copy));
     }
     return response;
-  }).catch(()=>cached)));
+  }).catch(()=>cached||new Response('Resource tidak tersedia saat offline.',{status:503,statusText:'Service Unavailable',headers:{'Content-Type':'text/plain;charset=UTF-8'}}))));
 });
