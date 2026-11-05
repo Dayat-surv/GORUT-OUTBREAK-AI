@@ -161,6 +161,66 @@ aside nav button{flex:none!important}
 @media(max-width:800px){#lapangan>.card{display:block!important}}
 </style>
 <link rel="stylesheet" href="premium.css?v=158">
+
+<style id="v183-dashboard-investigation-ui">
+/* v183 — compact, readable operational views */
+:root{--ui-ink:#172b42;--ui-muted:#64748b;--ui-line:#dfe7f0;--ui-soft:#f5f8fc;--ui-blue:#1769aa}
+#dashboard .command-hero{padding:20px 22px;border-radius:16px;box-shadow:0 12px 28px #0b1f3318}
+#dashboard .command-hero h2{font-size:clamp(20px,2.2vw,27px);letter-spacing:-.3px}
+#dashboard .command-hero .toolbar button{white-space:nowrap}
+#dashboard .command-stats{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}
+#dashboard .command-stats .stat{padding:12px 14px;border:1px solid var(--ui-line);border-top:3px solid var(--ui-blue);border-radius:12px;box-shadow:0 3px 12px #0b1f3308}
+#dashboard .command-stats .stat small{color:var(--ui-muted);font-weight:700}
+#dashboard .command-stats .stat b{font-size:25px;color:var(--ui-ink);margin-top:3px}
+#dashboard .grid2{gap:12px}
+#dashboard .card h3{margin:0 0 12px;color:var(--ui-ink);font-size:16px}
+#dashboard .toolbar{align-items:center}
+#dashboard .toolbar input,#dashboard .toolbar select{min-width:150px;max-width:220px;flex:1}
+#dashboard .ui-table-wrap,#investigasi .ui-table-wrap{width:100%;overflow:auto;border:1px solid var(--ui-line);border-radius:12px;background:#fff}
+#dashboard table,#investigasi table{border-collapse:separate;border-spacing:0;min-width:760px;width:100%}
+#dashboard th,#investigasi th{position:sticky;top:0;z-index:1;background:#f3f7fb;color:#42566d;font-size:11px;letter-spacing:.35px;text-transform:uppercase;white-space:nowrap}
+#dashboard td,#investigasi td{padding:10px 11px;vertical-align:middle;border-bottom:1px solid #edf1f5;font-size:12px}
+#dashboard tbody tr:hover,#investigasi tbody tr:hover{background:#f7fbff}
+#dashboard tbody tr:last-child td,#investigasi tbody tr:last-child td{border-bottom:0}
+#dashboard .toolbar input,#dashboard .toolbar select{border-radius:9px;background:#fff}
+#investigasi>.investigation-form-card{padding:20px}
+#investigasi>.investigation-form-card h2{margin:0 0 5px;font-size:22px;color:var(--ui-ink)}
+#investigasi>.investigation-form-card>.grid2{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px;margin-top:14px}
+#investigasi .field{margin:4px 0 8px;min-width:0}
+#investigasi .field label{font-size:11px;color:#42566d;letter-spacing:.15px}
+#investigasi input,#investigasi select,#investigasi textarea{min-height:40px;border-color:#d5deea;border-radius:9px;background:#fff}
+#investigasi input:focus,#investigasi select:focus,#investigasi textarea:focus{outline:2px solid #1769aa22;border-color:#1769aa}
+#investigasi #foodInvestigationPanel{grid-column:1/-1!important;border-radius:12px!important}
+#investigasi>.investigation-form-card>button.primary{min-width:140px;margin-top:8px;padding:10px 20px;font-weight:700}
+#investigasi>.investigation-list-card{padding:18px}
+#investigasi>.investigation-list-card h3{margin:0 0 5px;font-size:17px;color:var(--ui-ink)}
+#investigasi>.investigation-list-card .small{margin-bottom:12px;line-height:1.5}
+#investigasi .btn-open-investigation,#dashboard .btn-open-investigation{background:#eaf4ff;color:#125b98;border:1px solid #c9e1f7;font-weight:700;padding:7px 12px;border-radius:8px;white-space:nowrap}
+#investigasi .btn-open-investigation:hover,#dashboard .btn-open-investigation:hover{background:#dceeff}
+#investigasi .btn-delete-investigation,#dashboard .btn-delete-investigation{background:#fff1f1;color:#a52828;border:1px solid #f4caca;padding:7px 10px;border-radius:8px;white-space:nowrap}
+#investigasi .investigation-actions,#dashboard .investigation-actions{display:flex;gap:6px;align-items:center;white-space:nowrap}
+#investigasi .investigation-name,#dashboard .investigation-name{font-weight:700;color:#183653;line-height:1.4;min-width:210px}
+#investigasi .investigation-sub,#dashboard .investigation-sub{display:block;color:var(--ui-muted);font-size:10px;margin-top:3px}
+#investigasi .status-pill,#dashboard .status-pill{display:inline-flex;padding:4px 8px;border-radius:99px;background:#eef5fb;color:#315b7b;font-size:10px;font-weight:700;white-space:nowrap}
+#investigasi .case-count,#dashboard .case-count{font-weight:800;font-size:15px;color:#183653}
+#investigasi .empty-row,#dashboard .empty-row{text-align:center;padding:22px;color:var(--ui-muted)}
+@media(max-width:900px){
+ #investigasi>.investigation-form-card>.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #dashboard .command-hero{display:flex;flex-direction:column;align-items:flex-start}
+ #dashboard .command-hero .toolbar{width:100%}
+}
+@media(max-width:600px){
+ main{padding:12px}
+ #dashboard .command-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #dashboard .command-hero{padding:16px}
+ #dashboard .command-hero .toolbar{display:grid;grid-template-columns:1fr 1fr}
+ #dashboard .toolbar input,#dashboard .toolbar select{max-width:none;min-width:0}
+ #investigasi>.investigation-form-card{padding:14px}
+ #investigasi>.investigation-form-card>.grid2{grid-template-columns:1fr}
+ #investigasi #foodInvestigationPanel{grid-column:1!important}
+ #investigasi>.investigation-list-card{padding:14px}
+}
+</style>
 </head><body>
 <div id="login" class="login" style="display:grid;position:fixed;inset:0;z-index:9999">
   <form class="loginbox" onsubmit="event.preventDefault();window.gorutHandleLogin();">
@@ -196,17 +256,17 @@ aside nav button{flex:none!important}
 <div class="card"><h3>📈 Kurva Onset — Investigasi Aktif</h3><div id="commandEpi"></div><div class="small">Berbasis tanggal onset yang sudah tersedia; bukan pengganti analisis epidemiologis tervalidasi.</div></div>
 <div class="card"><h3>🗺️ Cakupan Spasial</h3><div id="geoBoard"></div><div class="toolbar"><button onclick="page('gis')">Buka GIS Kasus</button><button onclick="renderMap()">Muat Peta</button><button onclick="toggleRBI()">🗺️ Tampilkan/Sembunyikan Batas RBI</button></div></div>
 </div>
-<div class="card"><div class="toolbar"><input id="search" placeholder="Cari investigasi" oninput="dash()"><select id="typeFilter" onchange="dash()"><option value="">Semua tipe</option><option>Penyakit Menular</option><option>Keracunan Makanan</option></select><select id="statusFilter" onchange="dash()"><option value="">Semua status</option><option>Berjalan</option><option>Selesai</option></select></div><h3>🧭 Investigasi Terbaru</h3><table><thead><tr><th>Investigasi</th><th>Penyakit</th><th>Lokasi</th><th>Kasus</th><th>Status</th><th>Update</th><th></th></tr></thead><tbody id="klbRows"></tbody></table></div>
+<div class="card"><div class="toolbar"><input id="search" placeholder="Cari investigasi" oninput="dash()"><select id="typeFilter" onchange="dash()"><option value="">Semua tipe</option><option>Penyakit Menular</option><option>Keracunan Makanan</option></select><select id="statusFilter" onchange="dash()"><option value="">Semua status</option><option>Berjalan</option><option>Selesai</option></select></div><div class="toolbar" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div><h3 style="margin:0">🧭 Investigasi Terbaru</h3><div class="small">Pilih Buka untuk melihat dan memperbarui investigasi yang sama.</div></div><span class="badge">Daftar ringkas</span></div><div class="ui-table-wrap"><table><thead><tr><th>Investigasi</th><th>Penyakit</th><th>Lokasi</th><th>Kasus</th><th>Status</th><th>Update</th><th>Aksi</th></tr></thead><tbody id="klbRows"></tbody></table></div></div>
 <div class="card"><h3>⚡ Akses Cepat</h3><div class="quick-grid"><button onclick="page('lapangan')">📱 Investigasi Lapangan</button><button onclick="page('risiko')">⚠️ Risk Assessment</button><button onclick="page('kasus')">👥 Line Listing</button><button onclick="page('kontak')">🔗 Contact Tracing</button><button onclick="page('spesimen')">🧪 Laboratorium</button><button onclick="page('analisis')">📈 Analisis Epidemiologi</button><button onclick="page('rantai')">🧬 Chain of Transmission</button><button onclick="page('gis')">🗺️ GIS</button><button onclick="page('laporan')">📄 Laporan PE/KLB</button></div></div>
 </section>
 
 <section id="alert" class="page"><div class="card"><h2>Verifikasi Alert SKDR</h2><div class="notice">Alur: alert → verifikasi → PE → respons. Data demo tersimpan lokal sampai backend online tersedia.</div><div class="grid2"><div class="field"><label>Sindrom/Penyakit</label><select id="alertDisease"></select></div><div class="field"><label>Minggu epidemiologi</label><input id="alertWeek" placeholder="M-39"></div><div class="field"><label>Tanggal alert</label><input id="alertDate" type="date"></div><div class="field"><label>Fasilitas pelapor</label><input id="alertFacility"></div><div class="field"><label>Jumlah sinyal/kasus</label><input id="alertCount" type="number"></div><div class="field"><label>Hasil verifikasi</label><select id="alertResult"><option>Belum diverifikasi</option><option>Tidak terverifikasi</option><option>Terverifikasi - perlu PE</option><option>Terverifikasi - KLB/wabah dicurigai</option></select></div></div><button class="primary" onclick="saveAlert()">Simpan Alert</button></div><div class="card"><h3>Daftar Alert</h3><table><thead><tr><th>Tanggal</th><th>Penyakit</th><th>Fasyankes</th><th>Jumlah</th><th>Hasil</th><th></th></tr></thead><tbody id="alertRows"></tbody></table></div></section>
 
-<section id="investigasi" class="page"><div class="card"><h2>Investigasi KLB</h2><div class="grid2">
+<section id="investigasi" class="page"><div class="card investigation-form-card"><h2>🧭 Investigasi KLB</h2><div class="small">Catat identitas, penyakit, lokasi, dan tanggal mulai. Saat membuka data yang sudah ada, perubahan akan memperbarui investigasi tersebut.</div><div class="grid2">
 <div class="field"><label>Nama investigasi</label><input id="inName"></div><div class="field"><label>Tipe wabah</label><select id="inType" onchange="syncInvestigationType()"><option>Penyakit Menular</option><option>Keracunan Makanan</option></select></div><div class="field"><label>Penyakit / Sindrom</label><select id="disease" onchange="selectDisease(this.value)"></select></div>
 <div id="foodInvestigationPanel" class="card" style="display:none;grid-column:1/-1;border:1px solid #e6b35a;background:#fffaf0"><h3>🍱 Modul Investigasi Keracunan Pangan</h3><div class="notice">Modul khusus untuk mencatat kelompok terpapar, waktu konsumsi dan onset, pangan yang dicurigai, sumber/pengelola pangan, higiene sanitasi, dan kebutuhan spesimen.</div><div class="grid2"><div class="field"><label>Nama acara/kegiatan</label><input id="foodEventName"></div><div class="field"><label>Tanggal kejadian</label><input id="foodEventDate" type="date"></div><div class="field"><label>Tempat kejadian/penyajian</label><input id="foodVenue"></div><div class="field"><label>Sumber/pengelola pangan</label><input id="foodSource"></div><div class="field"><label>Waktu konsumsi</label><input id="foodMealTime" type="datetime-local"></div><div class="field"><label>Jumlah terpapar</label><input id="foodExposed" type="number" min="0"></div><div class="field"><label>Jumlah sakit</label><input id="foodIll" type="number" min="0"></div><div class="field"><label>Jumlah meninggal</label><input id="foodDead" type="number" min="0"></div><div class="field"><label>Makanan/minuman dicurigai</label><input id="foodSuspected"></div><div class="field"><label>Penjamah makanan</label><input id="foodHandler"></div><div class="field"><label>Sumber air</label><input id="foodWater"></div><div class="field"><label>Kondisi penyimpanan</label><input id="foodStorage"></div><div class="field" style="grid-column:1/-1"><label>Hipotesis awal sumber/cara terjadinya keracunan</label><textarea id="foodHypothesis" rows="3"></textarea></div></div></div><div class="field"><label>Provinsi</label><input id="prov" value="Gorontalo"></div><div class="field"><label>Kabupaten</label><input id="kab" value="Gorontalo Utara"></div>
 <div class="field"><label>Kecamatan</label><input id="kec"></div><div class="field"><label>Desa/Kelurahan</label><input id="desa"></div><div class="field"><label>Puskesmas</label><input id="pkm"></div><div class="field"><label>Tanggal mulai</label><input id="tgl" type="date"></div></div>
-<button class="primary" onclick="saveKlb()">Simpan</button></div><div class="card"><h3>Daftar Investigasi KLB</h3><div class="small">Daftar investigasi pada halaman ini. Gunakan tombol Hapus hanya setelah memeriksa identitas dan data terkait.</div><div style="overflow-x:auto"><table><thead><tr><th>Investigasi</th><th>Penyakit</th><th>Lokasi</th><th>Kasus</th><th>Status</th><th>Update</th><th>Aksi</th></tr></thead><tbody id="investigationRows"></tbody></table></div></div><div id="chain" class="card"></div></section>
+<button class="primary" onclick="saveKlb()">Simpan</button></div><div class="card investigation-list-card"><h3>Daftar Investigasi KLB</h3><div class="small">Daftar investigasi pada halaman ini. Gunakan tombol Hapus hanya setelah memeriksa identitas dan data terkait.</div><div class="ui-table-wrap"><table><thead><tr><th>Investigasi</th><th>Penyakit</th><th>Lokasi</th><th>Kasus</th><th>Status</th><th>Update</th><th>Aksi</th></tr></thead><tbody id="investigationRows"></tbody></table></div></div><div id="chain" class="card"></div></section>
 
 <section id="kuesioner" class="page"><div class="card"><div class="toolbar" style="align-items:flex-end"><div class="field" style="min-width:260px;max-width:420px;flex:1;margin:0"><label for="qDisease">Cari penyakit — Master Instrumen</label><div style="position:relative;width:100%;max-width:100%"><select id="qDisease" aria-label="Cari dan pilih penyakit untuk Master Instrumen" title="Klik untuk melihat daftar penyakit" style="width:100%;max-width:100%;min-height:44px;padding:9px 42px 9px 12px;appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;background:#fff;border:1px solid #8b9bb0;border-radius:7px" onchange="selectDisease(this.value)"><option value="">Pilih penyakit...</option></select><span aria-hidden="true" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:18px;font-weight:bold;line-height:1;color:#1769aa;pointer-events:none">▼</span></div></div><button class="primary" onclick="loadDiseaseQuestions()">Muat Kuesioner Penyakit</button></div><div class="notice">Kuesioner tersusun dari PE umum + modul spesifik penyakit. Pertanyaan bersyarat ditandai dengan aturan tampil.</div><div class="notice"><b>Master Instrumen v5:</b> PE umum → modul spesifik → conditional logic → validasi → line listing. Gunakan menu Ekspor Instrumen JSON untuk menyimpan struktur instrumen dan versinya.</div></div><div class="grid2"><div class="card"><h2>Bank Pertanyaan</h2><div id="bank"></div><button onclick="customQ()">+ Pertanyaan Kustom</button></div><div class="card"><h2>Pratinjau Kuesioner</h2><button class="primary" onclick="saveQ()">Simpan Kuesioner</button> <button onclick="publicQ()">Bagikan Kuesioner</button> <button onclick="exportQuestionnaire()">Ekspor Instrumen JSON</button> <button onclick="runQuestionnaireAudit()">🧪 Audit Kuesioner</button><div id="preview"></div><div id="qAudit" style="margin-top:12px"></div></div></div></section>
 

@@ -5553,3 +5553,95 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   [1800,4000,7500].forEach(function(ms){setTimeout(install126,ms)});
   window.GORUT_V126={version:'v126',features:['KLB investigation registry','active investigation navigation to PE report/research/case dashboards','research dataset generation from active investigation answers','no operational case deletion or overwrite']};
 })();
+
+
+/* v183 — unified investigation tables + resilient open action (STAGING UI only).
+   This layer changes rendering and click handling only; it does not mutate records. */
+(function(){
+  const esc = value => typeof esc0 === 'function'
+    ? esc0(String(value ?? ''))
+    : String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const uniqueCases = rows => {
+    const seen = new Map();
+    (rows || []).forEach((item,index) => {
+      const id=String(item.id ?? '').trim();
+      const key=String(item.investigationId ?? '')+'::'+(id || '__record_'+index);
+      seen.set(key,item);
+    });
+    return [...seen.values()];
+  };
+  window.dash = function(){
+    const investigations=Array.isArray(db.investigations)?db.investigations:[];
+    const cases=Array.isArray(db.cases)?db.cases:[];
+    const q=String(val('search')||'').trim().toLowerCase();
+    const type=val('typeFilter');
+    const status=val('statusFilter');
+    const filtered=investigations.filter(item=>{
+      const name=String(item.name||'').toLowerCase();
+      return (!q||name.includes(q))&&(!type||item.type===type)&&(!status||item.status===status);
+    });
+    const operationalCases=cases.filter(item=>{
+      if(typeof isInvalidTestCaseForDashboard128==='function' && isInvalidTestCaseForDashboard128(item)) return false;
+      if(typeof isSimulationCaseForOps==='function' && isSimulationCaseForOps(item)) return false;
+      return true;
+    });
+    const rowsHtml=filtered.map(item=>{
+      const id=String(item.id??'');
+      const count=uniqueCases(operationalCases.filter(c=>String(c.investigationId)===id)).length;
+      const disease=(typeof diseaseLabel==='function'?diseaseLabel(item.disease):item.disease)||'Belum ditentukan';
+      const location=[item.desa,item.kec].filter(Boolean).join(', ')||'Belum diisi';
+      const updated=item.date||item.updated_at||item.created_at||'-';
+      return '<tr>'+
+        '<td><div class="investigation-name">'+esc(item.name||'Investigasi tanpa nama')+'</div><span class="investigation-sub">'+esc(item.type||'Penyakit Menular')+'</span></td>'+
+        '<td>'+esc(disease)+'</td>'+
+        '<td>'+esc(location)+'</td>'+
+        '<td><span class="case-count">'+count+'</span></td>'+
+        '<td><span class="status-pill">'+esc(item.status||'Berjalan')+'</span></td>'+
+        '<td>'+esc(updated)+'</td>'+
+        '<td><div class="investigation-actions"><button type="button" class="btn-open-investigation" data-open-investigation="'+esc(id)+'">Buka</button>'+
+        '<button type="button" class="btn-delete-investigation" data-delete-investigation="'+esc(id)+'">Hapus</button></div></td>'+
+      '</tr>';
+    }).join('') || '<tr><td colspan="7" class="empty-row">Belum ada investigasi yang sesuai dengan filter.</td></tr>';
+    ['klbRows','investigationRows'].forEach(id=>{
+      const target=document.getElementById(id);
+      if(!target) return;
+      target.innerHTML=rowsHtml;
+      target.querySelectorAll('[data-open-investigation]').forEach(button=>{
+        button.addEventListener('click',()=>{
+          const selectedId=button.getAttribute('data-open-investigation');
+          if(!selectedId || !investigations.some(item=>String(item.id)===selectedId)){
+            alert('Investigasi tidak ditemukan. Daftar tidak diubah.');
+            return;
+          }
+          if(typeof window.openKlb!=='function'){
+            alert('Fungsi pembuka investigasi belum tersedia. Silakan muat ulang aplikasi.');
+            return;
+          }
+          window.openKlb(selectedId);
+        });
+      });
+      target.querySelectorAll('[data-delete-investigation]').forEach(button=>{
+        button.addEventListener('click',()=>{
+          const selectedId=button.getAttribute('data-delete-investigation');
+          if(typeof window.deleteInvestigation==='function') window.deleteInvestigation(selectedId);
+          else if(typeof deleteInvestigation==='function') deleteInvestigation(selectedId);
+          else alert('Fungsi hapus investigasi belum tersedia.');
+        });
+      });
+    });
+    const validUnique=uniqueCases(operationalCases);
+    const statsElement=document.getElementById('stats');
+    if(statsElement){
+      const operationalInvestigations=investigations.filter(item=>
+        !(typeof isSimulationInvestigationForOps==='function' && isSimulationInvestigationForOps(item))
+      ).length;
+      statsElement.innerHTML=[
+        ['Investigasi operasional',operationalInvestigations],
+        ['Kasus valid unik',validUnique.length],
+        ['Kasus konfirmasi',validUnique.filter(item=>item.status==='Konfirmasi').length],
+        ['Kasus meninggal',validUnique.filter(item=>item.outcome==='Meninggal').length]
+      ].map(([label,value])=>'<div class="stat"><small>'+esc(label)+'</small><b>'+value+'</b></div>').join('');
+    }
+  };
+  window.GORUT_V183_UI={version:'v183',features:['unified dashboard and investigation registry','resilient investigation open buttons','status filter','compact responsive layout'],dataMutation:false};
+})();
