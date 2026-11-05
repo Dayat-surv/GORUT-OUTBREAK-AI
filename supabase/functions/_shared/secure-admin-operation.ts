@@ -68,11 +68,11 @@ export function serveSecureAdminOperation(config: OperationConfig): void {
         const message = String(error.message ?? "");
         const status = /AUTH_REQUIRED/i.test(message)
           ? 401
-          : /NOT_AUTHORIZED|Hanya administrator/i.test(message)
+          : /NOT_AUTHORIZED|EMAIL_MISMATCH|Hanya administrator/i.test(message)
           ? 403
           : /NOT_FOUND|tidak ditemukan/i.test(message)
           ? 404
-          : /pending|terlalu panjang|Akun Auth.*belum tersedia/i.test(message)
+          : /pending|terlalu panjang|EMAIL_NOT_VERIFIED|Akun Auth.*belum tersedia/i.test(message)
           ? 409
           : 500;
         const publicCode =
