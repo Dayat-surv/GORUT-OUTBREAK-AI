@@ -161,6 +161,66 @@ aside nav button{flex:none!important}
 @media(max-width:800px){#lapangan>.card{display:block!important}}
 </style>
 <link rel="stylesheet" href="premium.css?v=158">
+
+<style id="v183-dashboard-investigation-ui">
+/* v183 — compact, readable operational views */
+:root{--ui-ink:#172b42;--ui-muted:#64748b;--ui-line:#dfe7f0;--ui-soft:#f5f8fc;--ui-blue:#1769aa}
+#dashboard .command-hero{padding:20px 22px;border-radius:16px;box-shadow:0 12px 28px #0b1f3318}
+#dashboard .command-hero h2{font-size:clamp(20px,2.2vw,27px);letter-spacing:-.3px}
+#dashboard .command-hero .toolbar button{white-space:nowrap}
+#dashboard .command-stats{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}
+#dashboard .command-stats .stat{padding:12px 14px;border:1px solid var(--ui-line);border-top:3px solid var(--ui-blue);border-radius:12px;box-shadow:0 3px 12px #0b1f3308}
+#dashboard .command-stats .stat small{color:var(--ui-muted);font-weight:700}
+#dashboard .command-stats .stat b{font-size:25px;color:var(--ui-ink);margin-top:3px}
+#dashboard .grid2{gap:12px}
+#dashboard .card h3{margin:0 0 12px;color:var(--ui-ink);font-size:16px}
+#dashboard .toolbar{align-items:center}
+#dashboard .toolbar input,#dashboard .toolbar select{min-width:150px;max-width:220px;flex:1}
+#dashboard .ui-table-wrap,#investigasi .ui-table-wrap{width:100%;overflow:auto;border:1px solid var(--ui-line);border-radius:12px;background:#fff}
+#dashboard table,#investigasi table{border-collapse:separate;border-spacing:0;min-width:760px;width:100%}
+#dashboard th,#investigasi th{position:sticky;top:0;z-index:1;background:#f3f7fb;color:#42566d;font-size:11px;letter-spacing:.35px;text-transform:uppercase;white-space:nowrap}
+#dashboard td,#investigasi td{padding:10px 11px;vertical-align:middle;border-bottom:1px solid #edf1f5;font-size:12px}
+#dashboard tbody tr:hover,#investigasi tbody tr:hover{background:#f7fbff}
+#dashboard tbody tr:last-child td,#investigasi tbody tr:last-child td{border-bottom:0}
+#dashboard .toolbar input,#dashboard .toolbar select{border-radius:9px;background:#fff}
+#investigasi>.card:first-child{padding:20px}
+#investigasi>.card:first-child h2{margin:0 0 5px;font-size:22px;color:var(--ui-ink)}
+#investigasi>.card:first-child>.grid2{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px;margin-top:14px}
+#investigasi .field{margin:4px 0 8px;min-width:0}
+#investigasi .field label{font-size:11px;color:#42566d;letter-spacing:.15px}
+#investigasi input,#investigasi select,#investigasi textarea{min-height:40px;border-color:#d5deea;border-radius:9px;background:#fff}
+#investigasi input:focus,#investigasi select:focus,#investigasi textarea:focus{outline:2px solid #1769aa22;border-color:#1769aa}
+#investigasi #foodInvestigationPanel{grid-column:1/-1!important;border-radius:12px!important}
+#investigasi>.card:first-child>button.primary{min-width:140px;margin-top:8px;padding:10px 20px;font-weight:700}
+#investigasi>.card:nth-child(2){padding:18px}
+#investigasi>.card:nth-child(2) h3{margin:0 0 5px;font-size:17px;color:var(--ui-ink)}
+#investigasi>.card:nth-child(2) .small{margin-bottom:12px;line-height:1.5}
+#investigasi .btn-open-investigation,#dashboard .btn-open-investigation{background:#eaf4ff;color:#125b98;border:1px solid #c9e1f7;font-weight:700;padding:7px 12px;border-radius:8px;white-space:nowrap}
+#investigasi .btn-open-investigation:hover,#dashboard .btn-open-investigation:hover{background:#dceeff}
+#investigasi .btn-delete-investigation,#dashboard .btn-delete-investigation{background:#fff1f1;color:#a52828;border:1px solid #f4caca;padding:7px 10px;border-radius:8px;white-space:nowrap}
+#investigasi .investigation-actions,#dashboard .investigation-actions{display:flex;gap:6px;align-items:center;white-space:nowrap}
+#investigasi .investigation-name,#dashboard .investigation-name{font-weight:700;color:#183653;line-height:1.4;min-width:210px}
+#investigasi .investigation-sub,#dashboard .investigation-sub{display:block;color:var(--ui-muted);font-size:10px;margin-top:3px}
+#investigasi .status-pill,#dashboard .status-pill{display:inline-flex;padding:4px 8px;border-radius:99px;background:#eef5fb;color:#315b7b;font-size:10px;font-weight:700;white-space:nowrap}
+#investigasi .case-count,#dashboard .case-count{font-weight:800;font-size:15px;color:#183653}
+#investigasi .empty-row,#dashboard .empty-row{text-align:center;padding:22px;color:var(--ui-muted)}
+@media(max-width:900px){
+ #investigasi>.card:first-child>.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #dashboard .command-hero{display:flex;flex-direction:column;align-items:flex-start}
+ #dashboard .command-hero .toolbar{width:100%}
+}
+@media(max-width:600px){
+ main{padding:12px}
+ #dashboard .command-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #dashboard .command-hero{padding:16px}
+ #dashboard .command-hero .toolbar{display:grid;grid-template-columns:1fr 1fr}
+ #dashboard .toolbar input,#dashboard .toolbar select{max-width:none;min-width:0}
+ #investigasi>.card:first-child{padding:14px}
+ #investigasi>.card:first-child>.grid2{grid-template-columns:1fr}
+ #investigasi #foodInvestigationPanel{grid-column:1!important}
+ #investigasi>.card:nth-child(2){padding:14px}
+}
+</style>
 </head><body>
 <div id="login" class="login" style="display:grid;position:fixed;inset:0;z-index:9999">
   <form class="loginbox" onsubmit="event.preventDefault();window.gorutHandleLogin();">
