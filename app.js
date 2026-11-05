@@ -5663,3 +5663,93 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   };
   window.GORUT_V183_UI={version:'v183',features:['unified dashboard and investigation registry','resilient investigation open buttons','status filter','compact responsive layout'],dataMutation:false};
 })();
+
+
+/* STAGING FIX 2026-11-06: verified self-service registration flow */
+(function(){
+  'use strict';
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+  window.v45ShowRegister = function(message=''){
+    let modal=document.getElementById('registerModal');
+    if(!modal){modal=document.createElement('div');modal.id='registerModal';document.body.appendChild(modal);}
+    modal.className='modal show';
+    modal.style.display='grid';
+    modal.innerHTML=`
+      <div class="modalbox register-modal" style="max-width:560px">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+          <div><h2 style="margin:0">Daftar Pengguna</h2><p class="small">Buat akun Supabase, verifikasi email, lalu ajukan akses kepada Admin.</p></div>
+          <button type="button" onclick="v45CloseRegister()">✕</button>
+        </div>
+        ${message ? '<div class="notice">'+esc(message)+'</div>' : ''}
+        <div class="field"><label>Nama lengkap *</label><input id="v45SelfName" autocomplete="name" placeholder="Nama lengkap"></div>
+        <div class="field"><label>Email aktif *</label><input id="v45SelfEmail" type="email" autocomplete="email" placeholder="nama@email.com"></div>
+        <div class="field"><label>Kata sandi Supabase *</label><input id="v45SelfPassword" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></div>
+        <div class="field"><label>Nomor WhatsApp</label><input id="v45SelfWhatsapp" inputmode="tel" placeholder="08xxxxxxxxxx"></div>
+        <div class="field"><label>Instansi / fasilitas</label><input id="v45SelfInstitution" placeholder="Puskesmas / Dinas Kesehatan"></div>
+        <div class="notice">1. Daftarkan email. 2. Buka email dan lakukan verifikasi. 3. Kembali ke formulir ini, gunakan email dan kata sandi yang sama, lalu kirim permohonan akses. Akun belum mendapat peran atau akses aplikasi sebelum disetujui Admin.</div>
+        <button class="primary" type="button" style="width:100%" onclick="v45Register()">Daftar / Kirim Permohonan Akses</button>
+        <div id="v45SelfRegStatus" class="notice" style="display:none;margin-top:10px" role="status"></div>
+      </div>`;
+  };
+  window.v45Register = async function(){
+    const status=document.getElementById('v45SelfRegStatus');
+    const show=(message)=>{if(status){status.style.display='block';status.textContent=message;}};
+    const name=(document.getElementById('v45SelfName')?.value||'').trim();
+    const email=(document.getElementById('v45SelfEmail')?.value||'').trim().toLowerCase();
+    const password=document.getElementById('v45SelfPassword')?.value||'';
+    const whatsapp=(document.getElementById('v45SelfWhatsapp')?.value||'').trim();
+    const institution=(document.getElementById('v45SelfInstitution')?.value||'').trim();
+    if(!name||!email||!password){show('Nama, email, dan kata sandi wajib diisi.');return;}
+    if(password.length<8){show('Kata sandi minimal 8 karakter.');return;}
+    if(!window.GORUT_BACKEND?.enabled){show('Backend Supabase belum aktif. Pendaftaran lokal tidak dibuka.');return;}
+    const sb=await window.backendClient();
+    if(!sb){show('Koneksi Supabase belum siap. Muat ulang halaman dan coba kembali.');return;}
+    const button=document.querySelector('#registerModal button.primary');
+    if(button){button.disabled=true;button.textContent='Memproses…';}
+    try{
+      let authUser=(await sb.auth.getUser()).data?.user||null;
+      if(authUser && String(authUser.email||'').toLowerCase()!==email){
+        throw new Error('Sesi Supabase sedang menggunakan email lain. Keluar dari akun tersebut terlebih dahulu.');
+      }
+      if(!authUser){
+        const login=await sb.auth.signInWithPassword({email,password});
+        if(!login.error){
+          authUser=login.data?.user||null;
+        }else if(/email not confirmed|email_not_confirmed/i.test(login.error.message||'')){
+          throw new Error('Email belum diverifikasi. Buka pesan verifikasi dari Supabase, klik tautannya, lalu kirim ulang formulir ini.');
+        }else{
+          const signup=await sb.auth.signUp({email,password,options:{data:{full_name:name,whatsapp,institution}}});
+          if(signup.error){
+            if(/already registered|user already|already exists/i.test(signup.error.message||'')){
+              throw new Error('Akun dengan email ini sudah ada. Jika baru saja mendaftar, verifikasi email terlebih dahulu; setelah itu kirim ulang formulir dengan kata sandi akun yang sama.');
+            }
+            throw new Error('Pembuatan akun Supabase gagal: '+signup.error.message);
+          }
+          authUser=signup.data?.user||null;
+          if(!signup.data?.session){
+            show('Akun Supabase telah diminta dibuat. Periksa email dan klik tautan verifikasi. Setelah terverifikasi, kembali ke sini dan kirim ulang formulir menggunakan email serta kata sandi yang sama. Permohonan akses belum tercatat dan belum ada akses yang diberikan.');
+            return;
+          }
+        }
+      }
+      if(!authUser)throw new Error('Supabase belum memberikan sesi akun. Verifikasi email, lalu coba kembali.');
+      const result=await sb.functions.invoke('create-registration-request',{body:{
+        email,full_name:name,whatsapp,institution,payment_reference:'',note:'Permohonan akses mandiri melalui formulir aplikasi.'
+      }});
+      if(result.error||result.data?.success!==true||!result.data?.data){
+        const code=result.data?.error||result.error?.message||'Respons server tidak valid';
+        throw new Error('Akun terverifikasi, tetapi permohonan akses belum tercatat: '+code+'. Silakan coba kembali.');
+      }
+      const requestId=result.data.data;
+      show('Permohonan akses berhasil tercatat di server. ID: '+requestId+'. Status: MENUNGGU PERSETUJUAN ADMIN. Akun belum memperoleh peran atau akses aplikasi.');
+      try{await sb.auth.signOut();}catch(_){}
+    }catch(error){
+      show(error?.message||'Proses registrasi gagal. Silakan coba kembali.');
+    }finally{
+      if(button){button.disabled=false;button.textContent='Daftar / Kirim Permohonan Akses';}
+    }
+  };
+  window.GORUT_SELF_REGISTRATION_FLOW='supabase-email-verification-admin-approval';
+})();
