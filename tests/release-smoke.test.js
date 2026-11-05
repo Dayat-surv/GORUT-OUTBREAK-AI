@@ -26,6 +26,9 @@ const secureRegistration = read('supabase/migrations/20261105230000_secure_regis
 const registrationEdge = read('supabase/functions/create-registration-request/index.ts');
 const secureHandler = read('supabase/functions/_shared/secure-admin-operation.ts');
 assert.ok(secureHandler.includes('withSupabase(\n    { auth: "user"'), 'shared Edge Function handler must require a verified user session');
+assert.match(secureHandler, /EMAIL_NOT_VERIFIED/, 'unverified registration email must map to a conflict response');
+assert.match(secureHandler, /EMAIL_MISMATCH/, 'registration identity mismatch must be denied');
+assert.match(appJs, /if\(!sign\.data\?\.session\)/, 'registration must wait for email confirmation before creating the request');
 assert.match(registrationEdge, /edge_create_registration_request/, 'registration Edge Function must call the server-only RPC');
 assert.match(secureRegistration, /u\.id = p_actor_id/, 'registration RPC must bind the request to the verified Auth user');
 assert.match(secureRegistration, /email_confirmed_at is null/i, 'registration RPC must reject unverified email accounts');
