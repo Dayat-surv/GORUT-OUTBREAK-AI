@@ -22,7 +22,7 @@ assert.match(appJs, /functions\.invoke\('activate-registration'/, 'activation mu
 assert.match(appJs, /functions\.invoke\('reject-registration'/, 'rejection must use authenticated Edge Function');
 assert.equal((appJs.match(/functions\.invoke\('create-registration-request'/g) || []).length, 2, 'both registration submit handlers must use the secure Edge Function');
 assert.doesNotMatch(appJs, /rpc\('(delete_investigation_bundle|activate_premium_7d|reject_registration|create_registration_request)'/, 'browser must not call privileged registration or admin RPCs directly');
-const secureRegistration = read('supabase/migrations/20261105230000_secure_registration_request_edge_function.sql');
+const secureRegistration = read('supabase/migrations/20261105223113_secure_registration_request_edge_function.sql');
 const registrationEdge = read('supabase/functions/create-registration-request/index.ts');
 const secureHandler = read('supabase/functions/_shared/secure-admin-operation.ts');
 assert.ok(secureHandler.includes('withSupabase(\n    { auth: "user"'), 'shared Edge Function handler must require a verified user session');
