@@ -17,18 +17,18 @@ assert.match(sw, /gorut-outbreak-ai-final-v182/, 'service worker cache version m
 assert.match(sw, /app\.js\?v=182/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
-assert.match(appJs, /functions\\.invoke\\('delete-investigation'/, 'delete must use authenticated Edge Function');
-assert.match(appJs, /functions\\.invoke\\('activate-registration'/, 'activation must use authenticated Edge Function');
-assert.match(appJs, /functions\\.invoke\\('reject-registration'/, 'rejection must use authenticated Edge Function');
-assert.equal((appJs.match(/functions\\.invoke\\('create-registration-request'/g) || []).length, 2, 'both registration submit handlers must use the secure Edge Function');
-assert.doesNotMatch(appJs, /rpc\\('(delete_investigation_bundle|activate_premium_7d|reject_registration|create_registration_request)'/, 'browser must not call privileged registration or admin RPCs directly');
+assert.match(appJs, /functions\.invoke\('delete-investigation'/, 'delete must use authenticated Edge Function');
+assert.match(appJs, /functions\.invoke\('activate-registration'/, 'activation must use authenticated Edge Function');
+assert.match(appJs, /functions\.invoke\('reject-registration'/, 'rejection must use authenticated Edge Function');
+assert.equal((appJs.match(/functions\.invoke\('create-registration-request'/g) || []).length, 2, 'both registration submit handlers must use the secure Edge Function');
+assert.doesNotMatch(appJs, /rpc\('(delete_investigation_bundle|activate_premium_7d|reject_registration|create_registration_request)'/, 'browser must not call privileged registration or admin RPCs directly');
 const secureRegistration = read('supabase/migrations/20261105230000_secure_registration_request_edge_function.sql');
 const registrationEdge = read('supabase/functions/create-registration-request/index.ts');
 assert.match(registrationEdge, /auth: "user"/, 'registration Edge Function must require a verified user session');
 assert.match(registrationEdge, /edge_create_registration_request/, 'registration Edge Function must call the server-only RPC');
-assert.match(secureRegistration, /u\\.id = p_actor_id/, 'registration RPC must bind the request to the verified Auth user');
+assert.match(secureRegistration, /u\.id = p_actor_id/, 'registration RPC must bind the request to the verified Auth user');
 assert.match(secureRegistration, /email_confirmed_at is null/i, 'registration RPC must reject unverified email accounts');
-assert.match(secureRegistration, /grant execute on function public\\.edge_create_registration_request[\\s\\S]*to service_role/i, 'registration RPC must be executable only by service_role');
+assert.match(secureRegistration, /grant execute on function public\.edge_create_registration_request[\s\S]*to service_role/i, 'registration RPC must be executable only by service_role');
 try { new Function(appJs); } catch (error) {
   throw new Error('app.js has a syntax error: ' + error.message);
 }
