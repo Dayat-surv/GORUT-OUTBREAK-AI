@@ -24,7 +24,8 @@ assert.equal((appJs.match(/functions\.invoke\('create-registration-request'/g) |
 assert.doesNotMatch(appJs, /rpc\('(delete_investigation_bundle|activate_premium_7d|reject_registration|create_registration_request)'/, 'browser must not call privileged registration or admin RPCs directly');
 const secureRegistration = read('supabase/migrations/20261105230000_secure_registration_request_edge_function.sql');
 const registrationEdge = read('supabase/functions/create-registration-request/index.ts');
-assert.match(registrationEdge, /auth: "user"/, 'registration Edge Function must require a verified user session');
+const secureHandler = read('supabase/functions/_shared/secure-admin-operation.ts');
+assert.match(secureHandler, /withSupabase\\(\\s*\\{ auth: "user" \\}/, 'shared Edge Function handler must require a verified user session');
 assert.match(registrationEdge, /edge_create_registration_request/, 'registration Edge Function must call the server-only RPC');
 assert.match(secureRegistration, /u\.id = p_actor_id/, 'registration RPC must bind the request to the verified Auth user');
 assert.match(secureRegistration, /email_confirmed_at is null/i, 'registration RPC must reject unverified email accounts');
