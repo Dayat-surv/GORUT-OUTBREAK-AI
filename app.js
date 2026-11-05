@@ -584,7 +584,26 @@ async function syncNow(){
   const user=(await sb.auth.getUser()).data.user;
   if(!user){alert('Silakan login melalui Supabase Auth terlebih dahulu.');return;}
   let ok=0,fail=0;
-  for(const x of db.investigations){const row={id:x.serverId||uuidFrom(x.id),owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',disease_id:x.disease||null,province:x.prov||'Gorontalo',district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,status:x.status||'Berjalan',metadata:{local_id:x.id}};const r=await sb.from('investigations').upsert(row,{onConflict:'id'});if(!r.error){x.serverId=row.id;ok++;}else fail++;}
+  for(const x of db.investigations){
+    if(!x.serverId){
+      console.warn('Investigation sync skipped: serverId is missing; use the validated online save flow instead.',{localId:x.id});
+      fail++;
+      continue;
+    }
+    const row={
+      owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',
+      disease_id:x.disease||null,province:x.prov||'Gorontalo',
+      district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,
+      village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,
+      status:x.status||'Berjalan',
+      metadata:{...(x.metadata||{}),local_id:x.id,local_disease:x.disease||null,
+        food_investigation:x.foodInvestigation||null}
+    };
+    const r=await sb.from('investigations').update(row)
+      .eq('id',x.serverId).eq('owner_id',user.id).select('id').single();
+    if(r.error||!r.data?.id){console.error('Investigation sync update failed; no INSERT fallback was attempted.',r.error);fail++;}
+    else ok++;
+  }
   for(const a of (db.alerts||[])){const row={id:a.serverId||uuidFrom(a.id),owner_id:user.id,disease_id:a.disease||null,epi_week:a.week||null,alert_date:a.date||null,reporting_facility:a.facility||null,count:a.count||0,verification_result:a.result||null,metadata:{local_id:a.id}};const r=await sb.from('alerts').upsert(row,{onConflict:'id'});if(!r.error){a.serverId=row.id;ok++;}else fail++;}
   for(const c of (db.cases||[])){if(!db.investigations.find(i=>i.id===c.investigationId)) continue;const invForCase=db.investigations.find(i=>String(i.id)===String(c.investigationId));/* ID server harus unik per rekaman sumber; case_code tetap menjadi pengenal kasus untuk deduplikasi analitik. Simpan ID lebih dulu agar percobaan ulang memakai ID yang sama. */const row={id:c.serverId||(c.serverId=(window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():uuidFrom(String(Date.now())+Math.random()+Math.random()))),owner_id:user.id,investigation_id:invForCase?.serverId||uuidFrom(c.investigationId),case_code:String(c.id||''),full_name:c.name||'',age:Number(c.age)||null,sex:c.sex||null,onset_date:c.onset||null,status:c.status||null,outcome:c.outcome||null,latitude:c.lat||null,longitude:c.lng||null,questionnaire_response:{...(c.answers||{}),foodCase:c.foodCase||null,priority:c.priority||null}};const r=await sb.from('cases').upsert(row,{onConflict:'id'});if(!r.error)c.serverId=row.id;r.error?fail++:ok++;}
   for(const c of (db.contacts||[])){if(!db.investigations.find(i=>i.id===c.investigationId)) continue;const invForContact=db.investigations.find(i=>String(i.id)===String(c.investigationId));const linkedCase=db.cases.find(x=>String(x.id)===String(c.caseId));const row={id:c.serverId||uuidFrom(c.id),owner_id:user.id,investigation_id:invForContact?.serverId||uuidFrom(c.investigationId),index_case_id:c.caseId?(linkedCase?.serverId||uuidFrom(c.caseId)):null,contact_name:c.name||'',relation:c.relation||null,last_contact_date:c.last||null,monitoring_status:c.status||null,follow_up:c.follow||null,metadata:{local_id:c.id,linked_case_id:c.linkedCaseId||null}};const r=await sb.from('contacts').upsert(row,{onConflict:'id'});if(!r.error){c.serverId=row.id;ok++;}else fail++;}
@@ -788,12 +807,19 @@ async function publicQ(){
  if(!sb){const base=new URL('public_survey.html',location.href);base.searchParams.set('investigation',String(inv.id));base.searchParams.set('disease',disease);const url=base.toString();
    modal(`<h2>Kuesioner Publik — Mode Offline</h2><div class="notice">Backend belum aktif. URL ini hanya untuk preview lokal.</div><input value="${esc(url)}" readonly onclick="this.select()"><div id="qrBox" style="text-align:center;margin:15px"></div><button class="primary" onclick="copyText('${esc(url)}')">Salin URL</button> <button onclick="closeAppModal()">Tutup</button>`); makeQR(url); return;}
  const user=(await sb.auth.getUser()).data.user;if(!user){alert('Login online diperlukan untuk membuat public survey.');return;}
- // Pastikan parent investigation benar-benar tersimpan di server sebelum membuat questionnaire/survey.
- // Investigasi hasil pemuatan server memakai serverId; jangan membentuk ulang ID server dari ID lokal.
- const serverInvId=inv.serverId||uuidFrom(inv.id);
- const invRow={id:serverInvId,owner_id:user.id,name:inv.name||'Investigasi tanpa nama',outbreak_type:inv.type||'Penyakit Menular',disease_id:inv.disease||null,province:inv.prov||'Gorontalo',district:inv.kab||'Gorontalo Utara',subdistrict:inv.kec||null,village:inv.desa||null,facility:inv.pkm||null,start_date:inv.date||null,status:inv.status||'Berjalan',metadata:{...(inv.metadata||{}),local_id:String(inv.id)}};
- const ir=await sb.from('investigations').upsert(invRow,{onConflict:'id'}).select('id').single();
- if(ir.error||!ir.data?.id){console.error('Gagal memastikan investigasi server',ir.error);alert('Tidak dapat membuat kuesioner: investigasi belum tersimpan/terbaca di server. '+(ir.error?.message||'ID investigasi server tidak tersedia')+'. Tidak ada kuesioner publik baru yang dibuat.');return;}
+ // Survei publik tetap terkunci selama publicSurveyEnabled bukan true.
+ if(window.GORUT_BACKEND?.publicSurveyEnabled!==true){alert('Pembuatan survei publik dinonaktifkan selama pengujian STAGING. Tidak ada survei atau respons yang dibuat.');return;}
+ // Pastikan investigasi induk sudah dipetakan secara unik; jangan membuat ID server dari ID lokal.
+ let serverInvId=inv.serverId||null;
+ if(!serverInvId){
+   const lookup=await sb.from('investigations').select('id')
+     .eq('owner_id',user.id).eq('metadata->>local_id',String(inv.id)).limit(2);
+   if(lookup.error||lookup.data?.length!==1){alert('Investigasi induk tidak dapat dipetakan secara unik. Pembuatan kuesioner dibatalkan; tidak ada perubahan pada server.');return;}
+   serverInvId=lookup.data[0].id;
+ }
+ const invRow={owner_id:user.id,name:inv.name||'Investigasi tanpa nama',outbreak_type:inv.type||'Penyakit Menular',disease_id:inv.disease||null,province:inv.prov||'Gorontalo',district:inv.kab||'Gorontalo Utara',subdistrict:inv.kec||null,village:inv.desa||null,facility:inv.pkm||null,start_date:inv.date||null,status:inv.status||'Berjalan',metadata:{...(inv.metadata||{}),local_id:String(inv.id)}};
+ const ir=await sb.from('investigations').update(invRow).eq('id',serverInvId).eq('owner_id',user.id).select('id').single();
+ if(ir.error||!ir.data?.id){console.error('Gagal memverifikasi investigasi server',ir.error);alert('Tidak dapat membuat kuesioner: pembaruan/verifikasi investigasi induk gagal. Tidak ada survei publik baru yang dibuat.');return;}
  inv.serverId=ir.data.id;
  const schema={questions:db.questions||[],meta:db.questionMeta||{}};
  const qr=await sb.from('questionnaires').insert({disease_id:disease,name:`PE ${diseases[disease]?.name||disease}`,version:instrumentMeta.release,status:'published',schema_json:schema,source_reference:instrumentMeta.diseaseSpecificBasis,created_by:user.id}).select('id').single();

@@ -12,9 +12,9 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=181/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v181/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=181/, 'service worker must precache the release application script');
+assert.match(index, /app\.js\?v=182/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v182/, 'service worker cache version must match the release');
+assert.match(sw, /app\.js\?v=182/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 try { new Function(appJs); } catch (error) {
@@ -31,6 +31,13 @@ assert.match(appJs, /function newKlb\(\)\{db\.active=null/, 'starting a new inve
 assert.match(appJs, /const editingId=db\.active/, 'save must capture the active investigation ID before building the form payload');
 assert.match(appJs, /usedInvestigationLocalIds=new Set\(\)/, 'server hydration must guard duplicate investigation local IDs');
 assert.match(appJs, /Duplicate investigations\.metadata\.local_id detected/, 'duplicate local IDs must be logged and remapped to a unique server-derived ID');
+assert.match(appJs, /Investigation sync skipped: serverId is missing/, 'general sync must fail closed when an investigation has no known server ID');
+assert.match(appJs, /from\('investigations'\)\.update\(row\)[\s\S]*?\.eq\('id',x\.serverId\)/, 'general sync must update investigations by their stable server ID');
+assert.doesNotMatch(appJs, /from\('investigations'\)\.upsert\(row,\{onConflict:'id'\}\)/, 'general sync must not upsert investigation rows');
+assert.match(appJs, /metadata:\{\.\.\.\(x\.metadata\|\|\{\}\),local_id:x\.id/, 'general sync must preserve investigation metadata');
+assert.doesNotMatch(appJs, /from\('investigations'\)\.upsert\(/, 'no application flow may upsert investigation rows');
+assert.match(appJs, /publicSurveyEnabled!==true/, 'public survey creation must remain disabled unless explicitly enabled');
+assert.match(appJs, /from\('investigations'\)\.update\(invRow\)[\s\S]*?\.eq\('id',serverInvId\)/, 'public questionnaire parent verification must update only the validated server investigation');
 assert.match(appJs, /if\(!result\.data\?\.id\)throw new Error/, 'investigation save must fail closed without a returned server ID');
 assert.match(appJs, /Investigasi BELUM disimpan ke server/, 'server save errors must not be reported as successful local saves');
 assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation metadata must be restored after server reload');
