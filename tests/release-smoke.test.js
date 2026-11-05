@@ -61,7 +61,7 @@ assert.match(appJs, /public_surveys/, 'delete confirmation must include linked p
 assert.match(appJs, /survey_responses/, 'delete confirmation must include linked survey response counts');
 assert.match(appJs, /Seluruh ID survei belum dapat diverifikasi/, 'delete confirmation must fail closed when survey ID pagination is incomplete');
 assert.match(appJs, /ID investigasi server belum tersedia/, 'server deletion must fail closed when investigation ID mapping is missing');
-assert.match(appJs, /rpc\('delete_investigation_bundle'/, 'authenticated investigation deletion must call the atomic server RPC');
+assert.match(appJs, /functions\.invoke\('delete-investigation'/, 'investigation deletion must use the authenticated Edge Function');
 assert.match(appJs, /if\(!serverSummary\|\|serverSummary\.deleted!==true\)/, 'local records must remain unless the server confirms deletion');
 assert.match(deleteMigration, /security definer/i, 'bundle deletion must execute atomically despite survey-response RLS');
 assert.match(deleteMigration, /auth\.uid\(\)/, 'bundle deletion must require an authenticated user');
