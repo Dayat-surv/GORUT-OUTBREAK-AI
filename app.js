@@ -5676,6 +5676,9 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     if(!modal){modal=document.createElement('div');modal.id='registerModal';document.body.appendChild(modal);}
     modal.className='modal show';
     modal.style.display='grid';
+    modal.style.position='fixed';
+    modal.style.inset='0';
+    modal.style.zIndex='10001';
     modal.innerHTML=`
       <div class="modalbox register-modal" style="max-width:560px">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
