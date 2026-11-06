@@ -3,10 +3,12 @@ on:
   pull_request:
     branches:
       - production/port-staging-fixes-20261101
+      - staging/investigation-save-e2e-20261104
       - main
   push:
     branches:
       - feature/investigation-delete-confirm-20261104
+      - staging/secure-edge-registration-cutover-20261105
 jobs:
   smoke:
     runs-on: ubuntu-latest

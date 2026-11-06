@@ -17,6 +17,22 @@ assert.match(sw, /gorut-outbreak-ai-final-v182/, 'service worker cache version m
 assert.match(sw, /app\.js\?v=182/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
+assert.match(appJs, /functions\.invoke\('delete-investigation'/, 'delete must use authenticated Edge Function');
+assert.match(appJs, /functions\.invoke\('activate-registration'/, 'activation must use authenticated Edge Function');
+assert.match(appJs, /functions\.invoke\('reject-registration'/, 'rejection must use authenticated Edge Function');
+assert.equal((appJs.match(/functions\.invoke\('create-registration-request'/g) || []).length, 3, 'all registration request handlers, including verified self-service registration, must use the secure Edge Function');
+assert.doesNotMatch(appJs, /rpc\('(delete_investigation_bundle|activate_premium_7d|reject_registration|create_registration_request)'/, 'browser must not call privileged registration or admin RPCs directly');
+const secureRegistration = read('supabase/migrations/20261105223113_secure_registration_request_edge_function.sql');
+const registrationEdge = read('supabase/functions/create-registration-request/index.ts');
+const secureHandler = read('supabase/functions/_shared/secure-admin-operation.ts');
+assert.ok(secureHandler.includes('withSupabase(\n    { auth: "user"'), 'shared Edge Function handler must require a verified user session');
+assert.match(secureHandler, /EMAIL_NOT_VERIFIED/, 'unverified registration email must map to a conflict response');
+assert.match(secureHandler, /EMAIL_MISMATCH/, 'registration identity mismatch must be denied');
+assert.match(appJs, /if\(!sign\.data\?\.session\)/, 'registration must wait for email confirmation before creating the request');
+assert.match(registrationEdge, /edge_create_registration_request/, 'registration Edge Function must call the server-only RPC');
+assert.match(secureRegistration, /u\.id = p_actor_id/, 'registration RPC must bind the request to the verified Auth user');
+assert.match(secureRegistration, /email_confirmed_at is null/i, 'registration RPC must reject unverified email accounts');
+assert.match(secureRegistration, /grant execute on function public\.edge_create_registration_request[\s\S]*to service_role/i, 'registration RPC must be executable only by service_role');
 try { new Function(appJs); } catch (error) {
   throw new Error('app.js has a syntax error: ' + error.message);
 }
@@ -48,7 +64,7 @@ assert.match(appJs, /public_surveys/, 'delete confirmation must include linked p
 assert.match(appJs, /survey_responses/, 'delete confirmation must include linked survey response counts');
 assert.match(appJs, /Seluruh ID survei belum dapat diverifikasi/, 'delete confirmation must fail closed when survey ID pagination is incomplete');
 assert.match(appJs, /ID investigasi server belum tersedia/, 'server deletion must fail closed when investigation ID mapping is missing');
-assert.match(appJs, /rpc\('delete_investigation_bundle'/, 'authenticated investigation deletion must call the atomic server RPC');
+assert.match(appJs, /functions\.invoke\('delete-investigation'/, 'investigation deletion must use the authenticated Edge Function');
 assert.match(appJs, /if\(!serverSummary\|\|serverSummary\.deleted!==true\)/, 'local records must remain unless the server confirms deletion');
 assert.match(deleteMigration, /security definer/i, 'bundle deletion must execute atomically despite survey-response RLS');
 assert.match(deleteMigration, /auth\.uid\(\)/, 'bundle deletion must require an authenticated user');
