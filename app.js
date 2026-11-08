@@ -2050,7 +2050,12 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   window.v45Approve=function(id){const users=readUsers();const u=users.find(x=>x.id===id);if(!u)return alert('User tidak ditemukan.');u.status='aktif';u.approvedAt=new Date().toISOString();writeUsers(users);renderV45Admin();alert('Akun '+u.name+' sekarang DIIZINKAN login.');};
   window.v45Reject=function(id){const users=readUsers();const u=users.find(x=>x.id===id);if(!u)return;u.status='ditolak';writeUsers(users);renderV45Admin();};
   function renderV45Admin(){
-    const sec=document.getElementById('admin');if(!sec)return; let box=document.getElementById('v45UserAdmin');if(!box){box=document.createElement('div');box.id='v45UserAdmin';box.className='card';sec.insertBefore(box,sec.firstElementChild)}
+    const sec=document.getElementById('admin');if(!sec)return;
+    let box=document.getElementById('v45UserAdmin');
+    // Supabase Auth accounts are active after email verification; do not show the
+    // retired local WhatsApp/Admin-approval workflow in backend mode.
+    if(window.GORUT_BACKEND?.enabled){if(box)box.remove();return;}
+    if(!box){box=document.createElement('div');box.id='v45UserAdmin';box.className='card';sec.insertBefore(box,sec.firstElementChild)}
     if(window.GORUT_USER?.role!=='admin'){box.innerHTML='<div class="notice">Menu persetujuan pengguna hanya tersedia untuk Admin.</div>';return}
     const users=readUsers(); const pending=users.filter(u=>u.role!=='admin'&&u.status==='menunggu');
     box.innerHTML='<div class="toolbar" style="justify-content:space-between"><div><h2 style="margin:0">👥 Persetujuan Pengguna v45</h2><div class="small">Setelah Admin menjawab "silahkan" melalui WhatsApp, tandai akun sebagai DIIZINKAN agar pengguna dapat login. Tidak ada pembayaran atau masa berlaku.</div></div><button onclick="renderV45Admin()">↻ Refresh</button></div>'+
