@@ -2118,7 +2118,7 @@ function installLogin(){
     const isAdmin=/^(admin|admin_kabupaten|super_admin|administrator)$/.test(role);
     document.querySelectorAll('nav button').forEach(b=>{
       const action=b.getAttribute('onclick')||'';
-      if(/page\\(['"]admin['"]/.test(action)) b.style.display=isAdmin?'':'none';
+      if(action.includes("page('admin'")||action.includes('page("admin"')) b.style.display=isAdmin?'':'none';
     });
     const sec=document.getElementById('admin');
     if(sec)sec.style.display=isAdmin?'block':'none';
