@@ -2111,8 +2111,31 @@ function installLogin(){
   window.renderQ=function(){oldRenderQ();ensureQuestionIds();};
   // Disable obsolete v43 open-access overrides and expose admin panel after login.
   window.enforceAccess=function(){return !!window.GORUT_USER};
-  // Semua kategori pengguna memiliki hak akses menu yang sama, termasuk menu Admin.
-  window.setRoleUI=function(){document.querySelectorAll('nav button').forEach(b=>{b.style.display='block'});const sec=document.getElementById('admin');if(sec)sec.style.display='block'};
+  // Role Petugas tidak boleh membuka menu/panel administrasi. RLS tetap menjadi
+  // lapisan otorisasi utama; UI ini hanya menyelaraskan navigasi dengan profil server.
+  window.setRoleUI=function(){
+    const role=String(window.GORUT_USER?.role||'').trim().toLowerCase();
+    const isAdmin=/^(admin|admin_kabupaten|super_admin|administrator)$/.test(role);
+    document.querySelectorAll('nav button').forEach(b=>{
+      const action=b.getAttribute('onclick')||'';
+      if(/page\\(['"]admin['"]/.test(action)) b.style.display=isAdmin?'':'none';
+    });
+    const sec=document.getElementById('admin');
+    if(sec)sec.style.display=isAdmin?'block':'none';
+    return isAdmin;
+  };
+  const v45OriginalPage=window.page;
+  if(typeof v45OriginalPage==='function'){
+    window.page=function(id){
+      const role=String(window.GORUT_USER?.role||'').trim().toLowerCase();
+      const isAdmin=/^(admin|admin_kabupaten|super_admin|administrator)$/.test(role);
+      if(String(id)==='admin'&&!isAdmin){
+        alert('Menu Administrasi hanya tersedia untuk akun Admin.');
+        return;
+      }
+      return v45OriginalPage.apply(this,arguments);
+    };
+  }
   const oldLogout=window.logout;window.logout=v45Logout;
   const oldV29Logout=window.v29Logout;window.v29Logout=v45Logout;
   const oldSubmit=window.submitRegistration;window.submitRegistration=window.v45Register;
