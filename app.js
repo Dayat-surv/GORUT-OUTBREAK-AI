@@ -1957,7 +1957,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       const wa=(document.getElementById('v45RegWa')?.value||'').trim();
       const institution=(document.getElementById('v45RegInstitution')?.value||'').trim();
       if(!name||!email||!pw)return alert('Nama lengkap, email, dan kata sandi wajib diisi.');
-      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return alert('Format email tidak valid.');
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return alert('Format email tidak valid.');
       if(pw.length<8)return alert('Kata sandi minimal 8 karakter.');
       const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution,facility:institution}}});
       if(sign.error)return alert('Pendaftaran akun gagal: '+sign.error.message);
