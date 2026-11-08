@@ -1924,22 +1924,56 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     const hint=document.getElementById('v45LoginHint'); if(hint)hint.textContent=role==='admin'?(ensureAdminSetup()?'Login sebagai Admin. Admin memiliki akses penuh dan mengelola persetujuan pengguna.':'Buat akun Admin pertama dengan nama dan password, lalu login.'):'Akun harus berstatus DIIZINKAN setelah Admin menjawab "silahkan" melalui WhatsApp.';
   };
   window.v45ShowRegister=function(){
-    if(window.GORUT_BACKEND?.enabled)return alert('Pendaftaran lokal dinonaktifkan. Admin harus menyiapkan akun melalui Supabase Auth dan mengisi profil serta peran pengguna di server.');
     let m=document.getElementById('registerModal');
     if(!m){m=document.createElement('div');m.id='registerModal';document.body.appendChild(m)}
     m.style.display='grid'; m.className='modal show';
-    m.innerHTML='<div class="modalbox register-modal"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2 style="margin:0">Daftar Pengguna</h2><p class="small">Tidak ada pembayaran, masa akses, atau biaya. Pendaftaran hanya memerlukan nama, password, nomor WhatsApp dan jenis pengguna.</p></div><button onclick="v45CloseRegister()">✕</button></div>'+      '<div class="field"><label>Nama User *</label><input id="v45RegName" placeholder="Nama lengkap/user"></div>'+      '<div class="field"><label>Password *</label><input id="v45RegPass" type="password" placeholder="Minimal 6 karakter"></div>'+      '<div class="field"><label>Nomor WhatsApp *</label><input id="v45RegWa" inputmode="tel" placeholder="08xxxxxxxxxx"></div>'+      '<div class="field"><label>Jenis Pengguna *</label><select id="v45RegRole"><option value="puskesmas_rs">Surveilans Puskesmas dan Rumah Sakit</option><option value="dinkes_kab">Surveilans Dinkes Kabupaten</option><option value="dinkes_prov">Surveilans Dinkes Provinsi</option></select></div>'+      '<div class="notice"><b>Langkah persetujuan:</b> setelah mendaftar, klik tombol WhatsApp Admin dengan pesan otomatis <i>"Izin Admin, saya mau login pada aplikasi Outbreak."</i>. Setelah Admin menjawab <b>silahkan</b>, Admin mengaktifkan akun pada menu Admin.</div>'+      '<button class="primary" onclick="v45Register()">Daftarkan User</button> <button class="btn-whatsapp" onclick="v45RegisterAndWA()">💬 Daftar + WhatsApp Admin</button><div id="v45RegMsg" class="notice" style="display:none;margin-top:10px"></div></div>';
+    if(window.GORUT_BACKEND?.enabled){
+      m.innerHTML='<div class="modalbox register-modal"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2 style="margin:0">Daftar Akun Gratis</h2><p class="small">Akses aplikasi gratis tanpa batas waktu. Cukup buat akun dan verifikasi email; tidak perlu persetujuan Admin atau aktivasi Premium.</p></div><button onclick="v45CloseRegister()">✕</button></div>'+
+      '<div class="field"><label>Nama lengkap *</label><input id="v45RegName" autocomplete="name" placeholder="Nama lengkap"></div>'+
+      '<div class="field"><label>Email aktif *</label><input id="v45RegEmail" type="email" autocomplete="email" placeholder="nama@email.com"></div>'+
+      '<div class="field"><label>Kata sandi *</label><input id="v45RegPass" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></div>'+
+      '<div class="field"><label>Nomor WhatsApp</label><input id="v45RegWa" inputmode="tel" autocomplete="tel" placeholder="08xxxxxxxxxx"></div>'+
+      '<div class="field"><label>Instansi / fasilitas</label><input id="v45RegInstitution" placeholder="Puskesmas / Dinas Kesehatan / Rumah Sakit"></div>'+
+      '<div class="notice">Setelah mendaftar, buka email dan klik tautan verifikasi. Sesudah email terverifikasi, login dan akses langsung aktif sebagai <b>petugas</b>. Hak Admin tidak dapat dipilih saat pendaftaran.</div>'+
+      '<button class="primary" onclick="v45Register()">Buat Akun Gratis</button><div id="v45RegMsg" class="notice" style="display:none;margin-top:10px"></div></div>';
+      return;
+    }
+    m.innerHTML='<div class="modalbox register-modal"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2 style="margin:0">Daftar Pengguna (Mode Lokal)</h2><p class="small">Akses lokal tanpa batas waktu pada browser/perangkat ini. Data tidak tersimpan di server dan tidak disinkronkan.</p></div><button onclick="v45CloseRegister()">✕</button></div>'+
+      '<div class="field"><label>Nama User *</label><input id="v45RegName" placeholder="Nama lengkap/user"></div>'+
+      '<div class="field"><label>Password *</label><input id="v45RegPass" type="password" placeholder="Minimal 6 karakter"></div>'+
+      '<div class="field"><label>Nomor WhatsApp *</label><input id="v45RegWa" inputmode="tel" placeholder="08xxxxxxxxxx"></div>'+
+      '<div class="field"><label>Jenis Pengguna *</label><select id="v45RegRole"><option value="puskesmas_rs">Surveilans Puskesmas dan Rumah Sakit</option><option value="dinkes_kab">Surveilans Dinkes Kabupaten</option><option value="dinkes_prov">Surveilans Dinkes Provinsi</option></select></div>'+
+      '<div class="notice">Akun mode lokal langsung aktif pada perangkat ini. Mode lokal hanya untuk latihan; gunakan akun Supabase untuk data operasional.</div>'+
+      '<button class="primary" onclick="v45Register()">Daftarkan User</button><div id="v45RegMsg" class="notice" style="display:none;margin-top:10px"></div></div>';
   };
   window.v45CloseRegister=function(){const m=document.getElementById('registerModal');if(m){m.style.display='none';m.className='modal'}};
   window.v45Register=async function(openWA=false){
-    if(window.GORUT_BACKEND?.enabled)return alert('Pendaftaran lokal dinonaktifkan saat backend aktif. Gunakan proses pembuatan akun Supabase yang dikelola administrator.');
+    if(window.GORUT_BACKEND?.enabled){
+      const sb=await backendClient();
+      if(!sb)return alert('Layanan akun Supabase belum siap. Coba muat ulang halaman.');
+      const name=(document.getElementById('v45RegName')?.value||'').trim();
+      const email=(document.getElementById('v45RegEmail')?.value||'').trim().toLowerCase();
+      const pw=document.getElementById('v45RegPass')?.value||'';
+      const wa=(document.getElementById('v45RegWa')?.value||'').trim();
+      const institution=(document.getElementById('v45RegInstitution')?.value||'').trim();
+      if(!name||!email||!pw)return alert('Nama lengkap, email, dan kata sandi wajib diisi.');
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return alert('Format email tidak valid.');
+      if(pw.length<8)return alert('Kata sandi minimal 8 karakter.');
+      const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution,facility:institution}}});
+      if(sign.error)return alert('Pendaftaran akun gagal: '+sign.error.message);
+      const msg=document.getElementById('v45RegMsg');
+      if(msg){
+        msg.style.display='block';
+        msg.innerHTML='<b>Akun berhasil dibuat.</b><br>Periksa email <b>'+esc45(email)+'</b> dan klik tautan verifikasi. Setelah terverifikasi, login untuk langsung menggunakan aplikasi secara gratis tanpa persetujuan Admin atau aktivasi 7 hari.';
+      }
+      return sign.data?.user?.id||true;
+    }
     const name=(document.getElementById('v45RegName')?.value||'').trim(),pw=document.getElementById('v45RegPass')?.value||'',wa=(document.getElementById('v45RegWa')?.value||'').trim(),role=document.getElementById('v45RegRole')?.value;
     if(!name||!pw||!wa||!role)return alert('Nama, password, WhatsApp dan jenis pengguna wajib diisi.');
     if(pw.length<6)return alert('Password minimal 6 karakter.');
     const users=readUsers(); if(users.some(u=>u.name.toLowerCase()===name.toLowerCase()&&u.role!==role))return alert('Nama user sudah terdaftar. Gunakan nama yang berbeda.');
-    const id='USR-'+Date.now(); users.push({id,name,passwordHash:await hash45(pw),whatsapp:wa,role,status:'menunggu',requestedAt:new Date().toISOString(),approvedAt:null}); writeUsers(users);
-    const msg=document.getElementById('v45RegMsg'); if(msg){msg.style.display='block';msg.innerHTML='<b>Pendaftaran berhasil.</b> Status akun: <b>MENUNGGU IZIN ADMIN</b>.<br>ID: <code>'+esc45(id)+'</code><br>Silakan klik WhatsApp Admin dan tunggu Admin menjawab "silahkan".';}
-    if(openWA)window.open('https://wa.me/'+WA+'?text='+encodeURIComponent(WA_TEXT),'_blank','noopener');
+    const id='USR-'+Date.now(); users.push({id,name,passwordHash:await hash45(pw),whatsapp:wa,role,status:'aktif',requestedAt:new Date().toISOString(),approvedAt:new Date().toISOString(),expiresAt:null}); writeUsers(users);
+    const msg=document.getElementById('v45RegMsg'); if(msg){msg.style.display='block';msg.innerHTML='<b>Pendaftaran berhasil.</b> Akun mode lokal langsung aktif pada perangkat ini dan tidak memiliki masa kedaluwarsa.';}
     return id;
   };
   window.v45RegisterAndWA=function(){return v45Register(true)};
@@ -1957,6 +1991,10 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       if(auth.error)return showLogin('Login Supabase gagal: '+auth.error.message);
       const user=auth.data?.user;
       if(!user){await sb.auth.signOut();return showLogin('Supabase tidak mengembalikan pengguna yang valid.');}
+      if(!user.email_confirmed_at){
+        await sb.auth.signOut();
+        return showLogin('Email belum diverifikasi. Buka email dari Supabase, klik tautan verifikasi, lalu login kembali.');
+      }
       const pr=await sb.from('profiles').select('role,full_name,facility').eq('id',user.id).maybeSingle();
       if(pr.error||!pr.data?.role){
         await sb.auth.signOut();
@@ -2012,7 +2050,12 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   window.v45Approve=function(id){const users=readUsers();const u=users.find(x=>x.id===id);if(!u)return alert('User tidak ditemukan.');u.status='aktif';u.approvedAt=new Date().toISOString();writeUsers(users);renderV45Admin();alert('Akun '+u.name+' sekarang DIIZINKAN login.');};
   window.v45Reject=function(id){const users=readUsers();const u=users.find(x=>x.id===id);if(!u)return;u.status='ditolak';writeUsers(users);renderV45Admin();};
   function renderV45Admin(){
-    const sec=document.getElementById('admin');if(!sec)return; let box=document.getElementById('v45UserAdmin');if(!box){box=document.createElement('div');box.id='v45UserAdmin';box.className='card';sec.insertBefore(box,sec.firstElementChild)}
+    const sec=document.getElementById('admin');if(!sec)return;
+    let box=document.getElementById('v45UserAdmin');
+    // Supabase Auth accounts are active after email verification; do not show the
+    // retired local WhatsApp/Admin-approval workflow in backend mode.
+    if(window.GORUT_BACKEND?.enabled){if(box)box.remove();return;}
+    if(!box){box=document.createElement('div');box.id='v45UserAdmin';box.className='card';sec.insertBefore(box,sec.firstElementChild)}
     if(window.GORUT_USER?.role!=='admin'){box.innerHTML='<div class="notice">Menu persetujuan pengguna hanya tersedia untuk Admin.</div>';return}
     const users=readUsers(); const pending=users.filter(u=>u.role!=='admin'&&u.status==='menunggu');
     box.innerHTML='<div class="toolbar" style="justify-content:space-between"><div><h2 style="margin:0">👥 Persetujuan Pengguna v45</h2><div class="small">Setelah Admin menjawab "silahkan" melalui WhatsApp, tandai akun sebagai DIIZINKAN agar pengguna dapat login. Tidak ada pembayaran atau masa berlaku.</div></div><button onclick="renderV45Admin()">↻ Refresh</button></div>'+
@@ -2074,7 +2117,29 @@ function installLogin(){
   // Disable obsolete v43 open-access overrides and expose admin panel after login.
   window.enforceAccess=function(){return !!window.GORUT_USER};
   // Semua kategori pengguna memiliki hak akses menu yang sama, termasuk menu Admin.
-  window.setRoleUI=function(){document.querySelectorAll('nav button').forEach(b=>{b.style.display='block'});const sec=document.getElementById('admin');if(sec)sec.style.display='block'};
+  window.setRoleUI=function(){
+    const role=String(window.GORUT_USER?.role||'').trim().toLowerCase();
+    const isAdmin=/^(admin|admin_kabupaten|super_admin|administrator)$/.test(role);
+    document.querySelectorAll('nav button').forEach(b=>{
+      const action=b.getAttribute('onclick')||'';
+      if(action.includes("page('admin'")||action.includes('page("admin"')) b.style.display=isAdmin?'':'none';
+    });
+    const sec=document.getElementById('admin');
+    if(sec)sec.style.display=isAdmin?'block':'none';
+    return isAdmin;
+  };
+  const v45OriginalPage=window.page;
+  if(typeof v45OriginalPage==='function'){
+    window.page=function(id){
+      const role=String(window.GORUT_USER?.role||'').trim().toLowerCase();
+      const isAdmin=/^(admin|admin_kabupaten|super_admin|administrator)$/.test(role);
+      if(String(id)==='admin'&&!isAdmin){
+        alert('Menu Administrasi hanya tersedia untuk akun Admin.');
+        return;
+      }
+      return v45OriginalPage.apply(this,arguments);
+    };
+  }
   const oldLogout=window.logout;window.logout=v45Logout;
   const oldV29Logout=window.v29Logout;window.v29Logout=v45Logout;
   const oldSubmit=window.submitRegistration;window.submitRegistration=window.v45Register;
@@ -3012,6 +3077,12 @@ window.renderDemographyV49=function(){
       if(userResult.error||!user){
         window.GORUT_USER=null;GORUT_USER=null;
         displayLogin56('Sesi Supabase tidak valid atau telah berakhir. Silakan login kembali.');removePayment56();return;
+      }
+      if(!user.email_confirmed_at){
+        try{await sb.auth.signOut()}catch(signOutError){}
+        window.GORUT_USER=null;GORUT_USER=null;
+        displayLogin56('Email belum diverifikasi. Silakan buka email konfirmasi Supabase, lalu login kembali.');
+        removePayment56();return;
       }
       const profileResult=await sb.from('profiles').select('role,full_name,facility').eq('id',user.id).maybeSingle();
       if(profileResult.error){
