@@ -554,7 +554,40 @@ window.gorutHandleLogin = async function () {
   };
   window.v30RefreshAdmin=async function(){
     var box=document.getElementById('v30AdminContent');
-    if(box)box.innerHTML='<div class="notice"><b>Manajemen registrasi dan aktivasi akses sementara dinonaktifkan.</b><br>'+notice+'<br><br>Informasi pengguna dan audit akses akan ditinjau melalui prosedur audit terpisah. Tidak ada tindakan aktivasi atau penolakan akun yang dapat dilakukan dari panel ini.</div>';
+    if(!box)return;
+    var role=String(window.GORUT_USER&&window.GORUT_USER.role||'').toLowerCase();
+    if(!/^(admin|admin_kabupaten|super_admin|administrator)$/.test(role)){
+      box.innerHTML='<div class="notice">Panel administrasi hanya tersedia untuk akun Admin.</div>';
+      return;
+    }
+    var sb=typeof window.backendClient==='function'?await window.backendClient():null;
+    if(!sb){box.innerHTML='<div class="notice">Koneksi Supabase STAGING belum tersedia.</div>';return;}
+    box.innerHTML='<div class="notice">Memuat ringkasan Admin (mode hanya-baca)…</div>';
+    var results=await Promise.all([
+      sb.from('subscriptions').select('id,user_id,plan_code,status,starts_at,expires_at,activated_at').order('created_at',{ascending:false}),
+      sb.from('profiles').select('id,full_name,role,facility,created_at').order('created_at',{ascending:false}),
+      sb.from('audit_log').select('id,actor_id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(20)
+    ]);
+    var err=results.find(function(x){return x.error;});
+    if(err){box.innerHTML='<div class="notice">Gagal memuat ringkasan Admin: '+String(err.error.message||'Kesalahan query').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];})+'</div>';return;}
+    var S=results[0].data||[],P=results[1].data||[],L=results[2].data||[];
+    var esc=function(x){return String(x==null?'—':x).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});};
+    var active=S.filter(function(x){return x.status==='active'&&x.expires_at&&new Date(x.expires_at)>new Date();}).length;
+    var fmt=function(x){return x?new Date(x).toLocaleString('id-ID'):'—';};
+    box.innerHTML='<div class="v30-admin-grid">'+
+      '<div class="v30-stat"><small>Subscription aktif</small><strong>'+active+'</strong></div>'+
+      '<div class="v30-stat"><small>Total pengguna</small><strong>'+P.length+'</strong></div>'+
+      '<div class="v30-stat"><small>Audit terbaru</small><strong>'+L.length+'</strong></div></div>'+
+      '<div class="card" style="margin-top:14px"><h3>👥 Pengguna</h3><div style="overflow:auto"><table><thead><tr><th>Nama</th><th>Role</th><th>Fasilitas</th><th>Dibuat</th></tr></thead><tbody>'+
+      (P.map(function(x){return '<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.role)+'</td><td>'+esc(x.facility)+'</td><td>'+fmt(x.created_at)+'</td></tr>';}).join('')||'<tr><td colspan="4">Belum ada pengguna.</td></tr>')+
+      '</tbody></table></div></div>'+
+      '<div class="card" style="margin-top:14px"><h3>🧾 Subscription</h3><div style="overflow:auto"><table><thead><tr><th>User ID</th><th>Paket</th><th>Status</th><th>Mulai</th><th>Berakhir</th></tr></thead><tbody>'+
+      (S.map(function(x){return '<tr><td>'+esc(x.user_id)+'</td><td>'+esc(x.plan_code)+'</td><td>'+esc(x.status)+'</td><td>'+fmt(x.starts_at)+'</td><td>'+fmt(x.expires_at)+'</td></tr>';}).join('')||'<tr><td colspan="5">Belum ada data subscription.</td></tr>')+
+      '</tbody></table></div></div>'+
+      '<div class="card" style="margin-top:14px"><h3>🔎 Audit Trail</h3><div style="overflow:auto"><table><thead><tr><th>Waktu</th><th>Aksi</th><th>Entitas</th><th>ID</th></tr></thead><tbody>'+
+      (L.map(function(x){return '<tr><td>'+fmt(x.created_at)+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.entity_type)+'</td><td>'+esc(x.entity_id)+'</td></tr>';}).join('')||'<tr><td colspan="4">Belum ada catatan audit.</td></tr>')+
+      '</tbody></table></div></div>'+
+      '<div class="notice" style="margin-top:12px">Mode STAGING hanya-baca. Registrasi, aktivasi, penolakan, dan perubahan subscription tetap dinonaktifkan.</div>';
   };
   function applyGuard(){
     var backendBadge=document.getElementById('backendBadge');
