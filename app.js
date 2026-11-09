@@ -5410,7 +5410,40 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   var oldRender=window.render;
   if(typeof oldRender==='function')window.render=function(){var out=oldRender.apply(this,arguments);setTimeout(function(){renderRegistry126();renderContext126()},80);return out};
   var oldSaveKlb=window.saveKlb;
-  if(typeof oldSaveKlb==='function')window.saveKlb=function(){var out=oldSaveKlb.apply(this,arguments);setTimeout(function(){renderRegistry126()},100);return out};
+  async function persistCreatedInvestigation126(inv){
+    var badge=E('backendBadge'),detail=E('backendDetail');
+    try{
+      var cfg=window.GORUT_BACKEND||{};
+      if(!cfg.enabled)throw new Error('Backend STAGING tidak aktif; investigasi hanya tersimpan lokal.');
+      var sb=await backendClient();
+      if(!sb)throw new Error('Koneksi Supabase tidak tersedia.');
+      var auth=await sb.auth.getUser();
+      var user=auth&&auth.data&&auth.data.user;
+      if(auth&&auth.error)throw auth.error;
+      if(!user)throw new Error('Sesi login Supabase tidak ditemukan. Silakan login ulang.');
+      var serverId=inv.serverId||(window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():uuidFrom(String(inv.id)+'-'+String(user.id)));
+      var row={id:serverId,owner_id:user.id,name:inv.name,outbreak_type:inv.type||'Penyakit Menular',disease_id:inv.disease||null,province:inv.prov||'Gorontalo',district:inv.kab||'Gorontalo Utara',subdistrict:inv.kec||null,village:inv.desa||null,facility:inv.pkm||null,start_date:inv.date||null,status:inv.status||'Berjalan',metadata:{local_id:inv.id,source:'saveKlb_petugas_staging'}};
+      var result=await sb.from('investigations').insert(row).select('id').single();
+      if(result.error)throw result.error;
+      inv.serverId=result.data.id;
+      if(typeof save==='function')save();
+      if(badge)badge.textContent='Backend: tersinkron';
+      if(detail)detail.textContent='Investigasi berhasil disimpan ke Supabase untuk akun yang sedang login.';
+      setTimeout(function(){if(typeof renderRegistry126==='function')renderRegistry126()},100);
+    }catch(err){
+      if(badge)badge.textContent='Backend: gagal menyimpan';
+      if(detail)detail.textContent='Investigasi belum tersimpan di server: '+(err&&err.message?err.message:String(err))+'. Data lokal tidak dihapus.';
+      alert('Investigasi belum berhasil disimpan ke server STAGING.\n\n'+(err&&err.message?err.message:String(err))+'\n\nData lokal tidak dihapus. Jangan mengulang penyimpanan sebelum hasil ini diperiksa.');
+    }
+  }
+  if(typeof oldSaveKlb==='function')window.saveKlb=function(){
+    var before=String(db.active||'');
+    var out=oldSaveKlb.apply(this,arguments);
+    var created=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)&&String(x.id)!==before});
+    if(created)persistCreatedInvestigation126(created);
+    setTimeout(function(){renderRegistry126()},100);
+    return out;
+  };
   document.addEventListener('DOMContentLoaded',function(){setTimeout(install126,1000)});
   [1800,4000,7500].forEach(function(ms){setTimeout(install126,ms)});
   window.GORUT_V126={version:'v126',features:['KLB investigation registry','active investigation navigation to PE report/research/case dashboards','research dataset generation from active investigation answers','no operational case deletion or overwrite']};
