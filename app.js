@@ -5436,7 +5436,46 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       alert('Investigasi belum berhasil disimpan ke server STAGING.\n\n'+(err&&err.message?err.message:String(err))+'\n\nData lokal tidak dihapus. Jangan mengulang penyimpanan sebelum hasil ini diperiksa.');
     }
   }
+  async function persistUpdatedInvestigation126(inv,patch){
+    var badge=E('backendBadge'),detail=E('backendDetail');
+    try{
+      var cfg=window.GORUT_BACKEND||{};
+      if(!cfg.enabled)throw new Error('Backend STAGING tidak aktif; pembaruan tidak dikirim.');
+      var sb=await backendClient();
+      if(!sb)throw new Error('Koneksi Supabase tidak tersedia.');
+      var auth=await sb.auth.getUser();
+      var user=auth&&auth.data&&auth.data.user;
+      if(auth&&auth.error)throw auth.error;
+      if(!user)throw new Error('Sesi login Supabase tidak ditemukan. Silakan login ulang.');
+      if(!inv.serverId)throw new Error('ID server investigasi tidak ditemukan; pembaruan dihentikan agar tidak membuat duplikat.');
+      var row={name:patch.name,outbreak_type:patch.type||'Penyakit Menular',disease_id:patch.disease||null,province:patch.prov||'Gorontalo',district:patch.kab||'Gorontalo Utara',subdistrict:patch.kec||null,village:patch.desa||null,facility:patch.pkm||null,start_date:patch.date||null,status:inv.status||'Berjalan',metadata:{local_id:inv.id,source:'saveKlb_petugas_staging_edit'}};
+      var result=await sb.from('investigations').update(row).eq('id',String(inv.serverId)).eq('owner_id',user.id).select('id').single();
+      if(result.error)throw result.error;
+      if(!result.data||!result.data.id)throw new Error('Tidak ada baris yang diperbarui. Periksa kepemilikan dan kebijakan akses.');
+      Object.assign(inv,patch);
+      if(typeof save==='function')save();
+      if(badge)badge.textContent='Backend: tersinkron';
+      if(detail)detail.textContent='Perubahan investigasi berhasil diperbarui di Supabase untuk akun yang sedang login.';
+      if(typeof page==='function')page('dashboard');
+      setTimeout(function(){if(typeof renderRegistry126==='function')renderRegistry126()},100);
+    }catch(err){
+      if(badge)badge.textContent='Backend: gagal memperbarui';
+      if(detail)detail.textContent='Perubahan investigasi belum tersimpan di server: '+(err&&err.message?err.message:String(err))+'. Data server lama tetap dipertahankan.';
+      alert('Perubahan investigasi belum berhasil diperbarui di server STAGING.\\n\\n'+(err&&err.message?err.message:String(err))+'\\n\\nData server lama tetap dipertahankan. Jangan mengulang sebelum hasil ini diperiksa.');
+    }
+  }
   if(typeof oldSaveKlb==='function')window.saveKlb=function(){
+    var active=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)});
+    if(active&&active.serverId){
+      var patch={name:val('inName')||'Investigasi Baru',type:val('inType'),disease:val('disease')||db.selectedDisease||'campak',prov:val('prov'),kab:val('kab'),kec:val('kec'),desa:val('desa'),pkm:val('pkm'),date:val('tgl')||new Date().toISOString().slice(0,10)};
+      if(patch.type==='Keracunan Makanan'){
+        patch.disease='keracunan-pangan';
+        patch.foodInvestigation={eventName:val('foodEventName'),eventDate:val('foodEventDate'),venue:val('foodVenue'),foodSource:val('foodSource'),mealTime:val('foodMealTime'),exposed:+val('foodExposed')||0,ill:+val('foodIll')||0,dead:+val('foodDead')||0,suspectedFood:val('foodSuspected'),foodHandler:val('foodHandler'),waterSource:val('foodWater'),storage:val('foodStorage'),initialHypothesis:val('foodHypothesis')};
+      }
+      db.selectedDisease=patch.disease;
+      persistUpdatedInvestigation126(active,patch);
+      return;
+    }
     var before=String(db.active||'');
     var out=oldSaveKlb.apply(this,arguments);
     var created=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)&&String(x.id)!==before});
