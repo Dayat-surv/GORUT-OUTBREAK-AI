@@ -1899,7 +1899,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
       '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
-      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v67</div>'+
+      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v183</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
