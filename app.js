@@ -1372,7 +1372,9 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
     if(label)label.textContent=email.length>24?email.slice(0,22)+'…':email;
     const role=String(window.GORUT_USER.role||'petugas');
     if(pill){pill.className='access-pill';pill.textContent='ROLE: '+role.toUpperCase();}
-    if(body)body.innerHTML=`<div style="font-weight:800">${escV(email)}</div><div class="small" style="margin-top:3px">Role Supabase: ${escV(role)}</div><hr style="border:0;border-top:1px solid #e5e7eb;margin:10px 0"><div><b>Status autentikasi:</b> Sesi Supabase aktif</div><div style="margin-top:6px"><b>Otorisasi:</b> Berdasarkan role profil dan kebijakan RLS</div><div class="security-note-v29" style="margin-top:10px">Status langganan/premium tidak digunakan untuk menentukan akses operasional STAGING.</div>`;
+    const profileName=window.GORUT_USER.displayName||window.GORUT_USER.full_name||email;
+    const facility=window.GORUT_USER.facility||'Belum diisi';
+    if(body)body.innerHTML=`<div style="font-weight:800">${escV(profileName)}</div><div class="small" style="margin-top:3px">${escV(email)}</div><div style="margin-top:8px"><b>Role Supabase:</b> ${escV(role)}</div><div style="margin-top:6px"><b>Instansi / Fasilitas:</b> ${escV(facility)}</div><hr style="border:0;border-top:1px solid #e5e7eb;margin:10px 0"><div><b>Status autentikasi:</b> Sesi Supabase aktif</div><div style="margin-top:6px"><b>Otorisasi:</b> Berdasarkan role profil dan kebijakan RLS</div><div class="security-note-v29" style="margin-top:10px">Status langganan/premium tidak digunakan untuk menentukan akses operasional STAGING.</div>`;
     if(V29.timer)clearInterval(V29.timer);
   }
   window.showV29AccessDashboard=function(){
