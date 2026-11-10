@@ -1,0 +1,38 @@
+name: STAGING validation
+
+on:
+  push:
+    branches:
+      - staging/backend-auth-e2e-20261028
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout STAGING
+        uses: actions/checkout@v4
+        with:
+          ref: staging/backend-auth-e2e-20261028
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check sw.js
+          node --check public-survey-integration.js
+      - name: Run research snapshot regression tests
+        run: node tests/research-snapshot-valid-case.test.js
+      - name: Run isolated GIS test-mode regression tests
+        run: node tests/gis-test-mode.test.js
+      - name: Run release smoke tests
+        run: node tests/release-smoke.test.js
+      - name: Run Supabase RPC static security checks
+        run: node tests/supabase-rpc-static.test.js
+      - name: Run Supabase validation SQL safety checks
+        run: node tests/validation-sql-static.test.js
