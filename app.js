@@ -5411,6 +5411,25 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   var oldRender=window.render;
   if(typeof oldRender==='function')window.render=function(){var out=oldRender.apply(this,arguments);setTimeout(function(){renderRegistry126();renderContext126()},80);return out};
   var oldSaveKlb=window.saveKlb;
+  /* v150: umpan balik visual aksesibel untuk hasil simpan investigasi. */
+  function showSaveFeedback126(message){
+    try{
+      var old=E('v150SaveFeedback');
+      if(old&&old.parentNode)old.parentNode.removeChild(old);
+      var node=document.createElement('div');
+      node.id='v150SaveFeedback';
+      node.setAttribute('role','status');
+      node.setAttribute('aria-live','polite');
+      node.textContent=String(message||'Perubahan berhasil disimpan.');
+      node.style.cssText='position:fixed;right:20px;bottom:20px;z-index:100000;max-width:min(420px,calc(100vw - 40px));padding:13px 17px;background:#14532d;color:#fff;border:1px solid #166534;border-radius:10px;box-shadow:0 8px 28px #0003;font:600 14px/1.45 system-ui,sans-serif;';
+      document.body.appendChild(node);
+      window.clearTimeout(window.__v150SaveFeedbackTimer);
+      window.__v150SaveFeedbackTimer=window.setTimeout(function(){
+        var current=E('v150SaveFeedback');
+        if(current&&current.parentNode)current.parentNode.removeChild(current);
+      },5000);
+    }catch(feedbackError){console.warn('Notifikasi simpan tidak dapat ditampilkan:',feedbackError);}
+  }
   async function persistCreatedInvestigation126(inv){
     var badge=E('backendBadge'),detail=E('backendDetail');
     try{
@@ -5430,6 +5449,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       if(typeof save==='function')save();
       if(badge)badge.textContent='Backend: tersinkron';
       if(detail)detail.textContent='Investigasi berhasil disimpan ke Supabase untuk akun yang sedang login.';
+      showSaveFeedback126('Investigasi berhasil disimpan ke server STAGING.');
       setTimeout(function(){if(typeof renderRegistry126==='function')renderRegistry126()},100);
     }catch(err){
       if(badge)badge.textContent='Backend: gagal menyimpan';
@@ -5457,6 +5477,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       if(typeof save==='function')save();
       if(badge)badge.textContent='Backend: tersinkron';
       if(detail)detail.textContent='Perubahan investigasi berhasil diperbarui di Supabase untuk akun yang sedang login.';
+      showSaveFeedback126('Perubahan investigasi berhasil disimpan ke server STAGING.');
       if(typeof page==='function')page('dashboard');
       setTimeout(function(){if(typeof renderRegistry126==='function')renderRegistry126()},100);
     }catch(err){
