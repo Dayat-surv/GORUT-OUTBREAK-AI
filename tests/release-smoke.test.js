@@ -19,6 +19,9 @@ assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium st
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
 assert.match(appJs, /from\('survey_responses'\)\.select\('id,payload'\)/, 'survey response hydration must select the real survey_responses primary key');
+assert.match(appJs, /food_investigation:patch\.foodInvestigation\?\?inv\.foodInvestigation\?\?null/, 'food-poisoning investigation details must be persisted in investigation metadata on edit');
+assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation details must be hydrated from server metadata after reload');
+assert.match(appJs, /food_investigation:inv\.foodInvestigation\|\|null/, 'new food-poisoning investigations must persist their detail payload');
 assert.match(appJs, /surveyAnswerByResponseId\.set\(String\(response\.id\),response\.payload\)/, 'stored questionnaire answers must be mapped to cases by exact response ID');
 assert.doesNotMatch(appJs, /from\('survey_responses'\)\.select\('response_id,payload'\)/, 'app must not query a nonexistent response_id table column');
 
