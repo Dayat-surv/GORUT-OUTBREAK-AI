@@ -12,9 +12,9 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=159/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=181/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v181/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=181/, 'service worker must precache the release application script');
+assert.match(index, /app\\.js\\?v=182/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v182/, 'service worker cache version must match the release');
+assert.match(sw, /app\\.js\\?v=182/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=159/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
@@ -27,6 +27,11 @@ assert.match(appJs, /queueSync\('investigations'\)/, 'new investigations must en
 assert.match(appJs, /await syncNow\(\)/, 'new investigations must attempt server synchronization before the user leaves the save flow');
 assert.match(appJs, /food_investigation:x\.foodInvestigation\|\|null/, 'food-investigation details must be included in server metadata');
 assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-investigation details must be restored after server reload');
+assert.match(appJs, /const activeId=db\.active;const existingIndex=activeId==null\?-1:/, 'saving an existing investigation must resolve the active record instead of always creating a new one');
+assert.match(appJs, /db\.investigations\[existingIndex\]=o/, 'editing must replace the existing investigation in place');
+assert.match(appJs, /id:existing\?existing\.id:Date\.now\(\)/, 'editing must preserve the existing investigation ID');
+assert.match(appJs, /Investigasi yang sedang diedit tidak ditemukan[\s\S]*Penyimpanan dibatalkan/, 'editing a missing active record must fail closed rather than create a duplicate');
+assert.match(appJs, /Perubahan investigasi berhasil disimpan dan dikonfirmasi tersinkron ke server PRODUKSI/, 'edit flow must confirm server synchronization');
 
 const newInvestigationStart = appJs.indexOf('function newKlb(){');
 const saveInvestigationStart = appJs.indexOf('function saveKlb()', newInvestigationStart);
