@@ -10,14 +10,19 @@ const index = read('index.html');
 const manifest = JSON.parse(read('manifest.webmanifest'));
 const sw = read('sw.js');
 
-assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
+assert.match(index, /premium\.css\?v=159/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=178/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v178/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=178/, 'service worker must precache the release application script');
-assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
+assert.match(index, /app\.js\?v=179/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v179/, 'service worker cache version must match the release');
+assert.match(sw, /app\.js\?v=179/, 'service worker must precache the release application script');
+assert.match(sw, /premium\.css\?v=159/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
+assert.match(appJs, /data-open-investigation/, 'dashboard investigation rows must use explicit open handlers');
+assert.match(appJs, /data-delete-investigation/, 'dashboard investigation rows must use explicit delete handlers');
+assert.match(appJs, /Investigasi operasional/, 'dashboard must distinguish operational investigations');
+assert.match(appJs, /Simulasi \/ staging/, 'dashboard must report simulation investigations separately');
+
 const newInvestigationStart = appJs.indexOf('function newKlb(){');
 const saveInvestigationStart = appJs.indexOf('function saveKlb()', newInvestigationStart);
 assert.ok(newInvestigationStart >= 0 && saveInvestigationStart > newInvestigationStart, 'new investigation and save handlers must exist');

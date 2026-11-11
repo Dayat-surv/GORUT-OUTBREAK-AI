@@ -50,3 +50,60 @@ img{max-width:100%}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 @media print{html{scroll-behavior:auto}aside,.topbar-v29,.no-print{display:none!important}main{margin:0!important;padding:0!important;max-width:none!important}.card{box-shadow:none!important;border-color:#ddd!important}}
+
+
+/* v183 — compact, accessible Dashboard + Investigasi KLB presentation only */
+#dashboard .command-hero{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:clamp(18px,2.5vw,28px);border:1px solid #d8e5f1;
+  background:linear-gradient(125deg,#f2f8ff 0%,#fff 62%,#f0fbfa 100%);
+  box-shadow:0 12px 30px #102b4610
+}
+#dashboard .command-hero h2{font-size:clamp(21px,2.2vw,29px);letter-spacing:-.035em;color:#102b46}
+#dashboard .command-hero p{max-width:680px;line-height:1.55}
+#dashboard .command-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:14px 0 18px}
+#dashboard .command-stats .stat{
+  min-width:0;padding:15px 16px;border:1px solid #e1eaf2;border-radius:15px;
+  background:linear-gradient(180deg,#fff,#f8fbfe);box-shadow:0 5px 18px #102b4609
+}
+#dashboard .command-stats .stat small{display:block;color:#63758a;font-size:12px;font-weight:650;line-height:1.35;min-height:30px}
+#dashboard .command-stats .stat b{display:block;margin-top:5px;color:#123a5b;font-size:27px;line-height:1.1;font-weight:800}
+#dashboard .grid2>.card,#dashboard>.card{border:1px solid #e2eaf2;border-radius:16px;box-shadow:0 6px 20px #102b4608}
+#dashboard #klbRows tr:hover,#investigasi #investigationRows tr:hover{background:#f4f9fe}
+#dashboard #klbRows td:first-child,#investigasi #investigationRows td:first-child{min-width:210px;max-width:370px;overflow-wrap:anywhere}
+#dashboard #klbRows td,#investigasi #investigationRows td{padding:11px 10px;vertical-align:middle}
+#dashboard .v183-row-actions,#investigasi .v183-row-actions{white-space:nowrap}
+#dashboard .v183-row-actions button,#investigasi .v183-row-actions button{min-height:34px;padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700}
+#dashboard .v183-open,#investigasi .v183-open{background:#eaf4ff;color:#155b91;border:1px solid #c6def3}
+.v183-status{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;background:#edf7f1;color:#236344;font-size:11px;font-weight:750;white-space:nowrap}
+#investigasi>.card:first-child{padding:clamp(16px,2.4vw,25px);border:1px solid #dce7f0;border-radius:17px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 8px 24px #102b4609}
+#investigasi>.card:first-child>h2{display:flex;align-items:center;gap:10px;margin:0 0 18px;color:#123a5b;font-size:24px}
+#investigasi>.card:first-child .grid2{gap:13px 16px}
+#investigasi .field{min-width:0}
+#investigasi .field label{display:block;margin-bottom:6px;color:#344b61;font-size:12px;font-weight:750}
+#investigasi input,#investigasi select,#investigasi textarea{width:100%;min-height:42px;border:1px solid #d6e1eb;border-radius:10px;background:#fff;padding:9px 11px}
+#investigasi>.card:first-child>button.primary{min-width:150px;margin-top:14px;padding:11px 22px;border-radius:10px;font-weight:750}
+#investigasi>.card:nth-child(2){padding:clamp(14px,2vw,22px);border:1px solid #dce7f0;border-radius:17px;box-shadow:0 8px 24px #102b4609}
+#investigasi>.card:nth-child(2)>h3{margin:0 0 6px;color:#123a5b;font-size:19px}
+#investigasi>.card:nth-child(2)>.small{margin-bottom:12px;line-height:1.5;color:#64748b}
+#investigasi>.card:nth-child(2)>div[style*="overflow-x"]{border:1px solid #e4ebf2;border-radius:12px}
+#investigasi table,#dashboard table{border-collapse:separate;border-spacing:0;width:100%}
+#investigasi table thead th,#dashboard table thead th{position:sticky;top:0;z-index:1;background:#f2f6fa;color:#41566b;font-size:11px;letter-spacing:.035em;text-transform:uppercase}
+#investigasi table tbody tr+tr td,#dashboard table tbody tr+tr td{border-top:1px solid #edf1f5}
+#investigasi #investigationRows td:first-child{font-weight:650}
+@media(max-width:1050px){#dashboard .command-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:800px){
+  #dashboard .command-hero{display:block}
+  #dashboard .command-hero>.toolbar{margin-top:14px!important;flex-wrap:wrap}
+  #dashboard .command-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #investigasi>.card:first-child .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #investigasi>.card:nth-child(2)>div[style*="overflow-x"]{overflow-x:auto}
+  #investigasi table{min-width:760px}
+}
+@media(max-width:520px){
+  #dashboard .command-stats{gap:8px}
+  #dashboard .command-stats .stat{padding:11px}
+  #dashboard .command-stats .stat b{font-size:23px}
+  #investigasi>.card:first-child .grid2{grid-template-columns:1fr}
+  #investigasi>.card:first-child>h2{font-size:21px}
+}
