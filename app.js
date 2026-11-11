@@ -3069,6 +3069,13 @@ window.renderDemographyV49=function(){
     const badge=E56('roleBadge');if(badge)badge.textContent='Login diperlukan';
   }
   async function restoreSession56(){
+    /* Recovery link owns this page until the user explicitly saves a new password. */
+    if(window.__GORUT_PASSWORD_RECOVERY_ACTIVE){
+      const login=E56('login');if(login){login.style.display='grid';login.style.position='fixed';login.style.inset='0';login.style.zIndex='99999';}
+      const app=E56('app');if(app)app.style.display='none';
+      removePayment56();
+      return;
+    }
     const cfg=window.GORUT_BACKEND||{};
     if(!cfg.enabled){
       window.GORUT_USER=null;GORUT_USER=null;
