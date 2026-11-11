@@ -3069,6 +3069,9 @@ window.renderDemographyV49=function(){
     const badge=E56('roleBadge');if(badge)badge.textContent='Login diperlukan';
   }
   async function restoreSession56(){
+    /* Detect recovery from the redirect URL synchronously; do not wait for Supabase auth events. */
+    const recoveryUrl56=(()=>{try{const q=new URLSearchParams(window.location.search);return q.has('password-recovery')||String(window.location.hash||'').includes('type=recovery')}catch(e){return false}})();
+    if(recoveryUrl56)window.__GORUT_PASSWORD_RECOVERY_ACTIVE=true;
     /* Recovery link owns this page until the user explicitly saves a new password. */
     if(window.__GORUT_PASSWORD_RECOVERY_ACTIVE){
       const login=E56('login');if(login){login.style.display='grid';login.style.position='fixed';login.style.inset='0';login.style.zIndex='99999';}
