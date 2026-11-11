@@ -18,6 +18,13 @@ assert.match(sw, /app\.js\?v=184/, 'service worker must precache the release app
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
+const newInvestigationStart = appJs.indexOf('function newKlb(){');
+const saveInvestigationStart = appJs.indexOf('function saveKlb()', newInvestigationStart);
+assert.ok(newInvestigationStart >= 0 && saveInvestigationStart > newInvestigationStart, 'new investigation and save handlers must exist');
+const newInvestigationHandler = appJs.slice(newInvestigationStart, saveInvestigationStart);
+assert.match(index, /onclick="newKlb\(\)">\+ Investigasi Baru/, 'dashboard must expose the new investigation action');
+assert.match(newInvestigationHandler, /db\.active=null;/, 'starting a new investigation must clear the previously selected record');
+assert.match(newInvestigationHandler, /save\(\);/, 'the cleared active selection must persist before the new form is saved');
 assert.match(appJs, /from\('survey_responses'\)\.select\('id,payload'\)/, 'survey response hydration must select the real survey_responses primary key');
 assert.match(appJs, /food_investigation:patch\.foodInvestigation\?\?inv\.foodInvestigation\?\?null/, 'food-poisoning investigation details must be persisted in investigation metadata on edit');
 assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation details must be hydrated from server metadata after reload');
