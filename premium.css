@@ -106,3 +106,39 @@ html,body{max-width:100%;overflow-x:hidden}
   #login .login-brand-logos img{width:48px;height:48px}
   #login .loginbox h2{font-size:21px}
 }
+
+
+/* v185 — keep password recovery confirmation action visible */
+#login .loginbox{
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+#passwordRecoveryPanel{
+  display:block;
+  padding-bottom:10px;
+}
+#passwordRecoveryPanel button.primary{
+  display:block!important;
+  position:sticky;
+  bottom:0;
+  z-index:5;
+  min-height:48px;
+  margin-top:12px!important;
+  padding:13px 16px!important;
+  border:1px solid #14558b;
+  border-radius:10px;
+  background:linear-gradient(135deg,#1769aa,#14558b)!important;
+  color:#fff!important;
+  box-shadow:0 -5px 16px #ffffffdd,0 5px 14px #1769aa33;
+  visibility:visible!important;
+  opacity:1!important;
+}
+#passwordRecoveryPanel button.primary:focus-visible{
+  outline:3px solid #65b8ff;
+  outline-offset:3px;
+}
+@media(max-height:700px){
+  #login.login{align-items:flex-start}
+  #login .loginbox{max-height:calc(100dvh - 16px);margin:0 auto}
+  #passwordRecoveryPanel button.primary{min-height:46px}
+}
