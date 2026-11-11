@@ -12,8 +12,8 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=159/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\\.js\\?v=180/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v179/, 'service worker cache version must match the release');
+assert.match(index, /app\.js\?v=180/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v180/, 'service worker cache version must match the release');
 assert.match(sw, /app\\.js\\?v=180/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=159/, 'service worker must precache premium styling');
 const appJs = read('app.js');
