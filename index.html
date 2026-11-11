@@ -448,6 +448,8 @@ window.gorutHandleLogin = async function () {
     if(el){el.style.display='block';el.textContent=text;el.style.background=ok?'#ecfdf3':'#eff6ff';el.style.borderLeftColor=ok?'#16803c':'#1769aa';}
   }
   function showRecovery(){
+    /* Keep auth-session restoration from replacing the recovery form with the dashboard. */
+    window.__GORUT_PASSWORD_RECOVERY_ACTIVE=true;
     /* Pemulihan harus tampil meski aplikasi sebelumnya masih menyimpan sesi lokal/demo. */
     var login=document.getElementById('login');
     var app=document.getElementById('app');
