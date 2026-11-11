@@ -14,7 +14,7 @@ assert.match(index, /premium\.css\?v=158/, 'main page must load the premium rele
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
 assert.match(index, /app\.js\?v=184\.5/, 'main page must load the current cache-busted application script');
 assert.match(sw, /gorut-outbreak-ai-final-v184\.5/, 'service worker cache version must match the current release');
-assert.match(sw, /app\\.js\\?v=184\\.5/, 'service worker must precache the exact current application script');
+assert.match(sw, /app\.js\?v=184\.5/, 'service worker must precache the exact current application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
