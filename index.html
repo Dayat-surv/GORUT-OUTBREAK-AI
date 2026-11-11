@@ -348,7 +348,7 @@ paparan → outcome"></textarea></div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="backend-config.js" onerror="window.GORUT_BACKEND={enabled:false}"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://unpkg.com/esri-leaflet@3.0.16/dist/esri-leaflet.js"></script>
-<script src="app.js?v=184.1"></script>
+<script src="app.js?v=184.2"></script>
 <script>
 /* v149: clarify research snapshot behavior for records explicitly excluded as invalid test data. */
 (function(){
@@ -455,15 +455,15 @@ window.gorutHandleLogin = async function () {
     if(app)app.style.display='none';
     var panel=document.getElementById('passwordRecoveryPanel');
     if(panel)panel.style.display='block';
-    var pass=document.getElementById('password');
+    var pass=document.getElementById('password')||document.getElementById('v45LoginPass');
     if(pass&&pass.closest('.field'))pass.closest('.field').style.display='none';
-    var submit=document.getElementById('loginSubmit');if(submit)submit.style.display='none';
-    var email=document.getElementById('email');if(email)email.removeAttribute('required');
+    var submit=document.getElementById('loginSubmit')||document.querySelector('#login button[onclick="v45Login()"]');if(submit)submit.style.display='none';
+    var email=document.getElementById('email')||document.getElementById('v45LoginName');if(email)email.removeAttribute('required');
     var newPass=document.getElementById('newPassword');if(newPass)newPass.focus();
   }
   window.gorutRequestPasswordReset=async function(){
-    var email=(document.getElementById('email')?.value||'').trim();
-    if(!email){showMsg('Masukkan email akun terlebih dahulu, lalu pilih “Lupa kata sandi?”.',false);document.getElementById('email')?.focus();return;}
+    var email=(document.getElementById('v45LoginName')?.value||document.getElementById('email')?.value||'').trim();
+    if(!email){showMsg('Masukkan email akun Supabase terlebih dahulu, lalu pilih “Lupa kata sandi?”.',false);(document.getElementById('v45LoginName')||document.getElementById('email'))?.focus();return;}
     try{
       var sb=await client();
       var redirectTo=window.location.origin+window.location.pathname+'?password-recovery=1';
@@ -491,8 +491,8 @@ window.gorutHandleLogin = async function () {
       if(r.error)throw r.error;
       showMsg('Kata sandi berhasil diperbarui. Silakan masuk menggunakan email dan kata sandi baru.',true);
       document.getElementById('passwordRecoveryPanel').style.display='none';
-      var pass=document.getElementById('password');if(pass){pass.closest('.field').style.display='';pass.value='';}
-      var submit=document.getElementById('loginSubmit');if(submit)submit.style.display='';
+      var pass=document.getElementById('password')||document.getElementById('v45LoginPass');if(pass){if(pass.closest('.field'))pass.closest('.field').style.display='';pass.value='';}
+      var submit=document.getElementById('loginSubmit')||document.querySelector('#login button[onclick="v45Login()"]');if(submit)submit.style.display='';
       document.getElementById('newPassword').value='';document.getElementById('newPasswordConfirm').value='';
       await sb.auth.signOut();
     }catch(e){console.error('Password update failed',e);showMsg('Kata sandi belum diperbarui: '+(e.message||String(e)),false);}
