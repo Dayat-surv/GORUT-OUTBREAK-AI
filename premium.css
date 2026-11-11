@@ -50,3 +50,59 @@ img{max-width:100%}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 @media print{html{scroll-behavior:auto}aside,.topbar-v29,.no-print{display:none!important}main{margin:0!important;padding:0!important;max-width:none!important}.card{box-shadow:none!important;border-color:#ddd!important}}
+
+
+/* v184 — compact, responsive authentication and password-recovery panel */
+html,body{max-width:100%;overflow-x:hidden}
+#login.login{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  min-height:100vh;
+  min-height:100dvh;
+  height:auto;
+  padding:16px;
+  overflow-x:hidden;
+  overflow-y:auto;
+  align-items:center;
+  justify-items:center;
+}
+#login .loginbox{
+  box-sizing:border-box;
+  display:block;
+  width:min(440px,calc(100vw - 32px));
+  max-width:100%;
+  min-width:0;
+  max-height:calc(100vh - 32px);
+  max-height:calc(100dvh - 32px);
+  overflow-x:hidden;
+  overflow-y:auto;
+  margin:auto;
+  padding:clamp(18px,4vw,28px);
+}
+#login .loginbox>*{max-width:100%;min-width:0}
+#login .loginbox input,
+#login .loginbox button{box-sizing:border-box;width:100%;max-width:100%;min-width:0}
+#login .loginbox .field{width:100%;min-width:0}
+#login .loginbox h2{font-size:clamp(21px,5vw,27px);overflow-wrap:anywhere}
+#passwordRecoveryPanel{width:100%;min-width:0;overflow-wrap:anywhere}
+@media(max-width:560px){
+  #login.login{padding:10px;align-items:flex-start}
+  #login .loginbox{
+    width:calc(100vw - 20px);
+    max-height:calc(100dvh - 20px);
+    margin:0 auto;
+    padding:18px;
+    border-radius:18px;
+  }
+  #login .login-brand-logos{margin-bottom:8px}
+  #login .login-brand-logos img{width:58px;height:58px}
+  #login .loginbox p{font-size:12px;line-height:1.45}
+}
+@media(max-height:620px){
+  #login.login{align-items:flex-start;padding-top:8px;padding-bottom:8px}
+  #login .loginbox{max-height:calc(100dvh - 16px);margin:0 auto}
+  #login .login-brand-logos{margin-bottom:6px}
+  #login .login-brand-logos img{width:48px;height:48px}
+  #login .loginbox h2{font-size:21px}
+}
