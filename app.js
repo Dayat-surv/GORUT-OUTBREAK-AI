@@ -2828,7 +2828,7 @@ window.renderDemographyV49=function(){
   const oldIntel=window.runDiseaseIntelligence;
   window.runDiseaseIntelligence=function(){if(oldIntel)oldIntel();setTimeout(()=>{injectIntel();renderFlow()},30)};
   const oldPage=window.page;
-  window.page=function(id,b){oldPage(id,b);setTimeout(()=>{if(id==='intel'){injectIntel();renderFlow()}if(id==='demografi')window.renderRbiEpiMapV51();if(id==='laporan')injectReportDemoField()},120)};
+  window.page=function(id,b){oldPage(id,b);setTimeout(()=>{if(id==='intel'){injectIntel();renderFlow()}if(id==='demografi')window.renderRbiEpiMapV51();/* v49 wrapper already injects the report field; avoid out-of-scope call */},120)};
   setTimeout(()=>{try{injectIntel();renderFlow()}catch(e){}},900);
 })();
 (function(){
