@@ -1901,7 +1901,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
       '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
-      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v77</div>'+
+      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v179</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
@@ -2076,7 +2076,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
   }
   function installBrandingV77(){
   document.documentElement.setAttribute('data-gorut-brand','v77');
-  const t=document.querySelector('title'); if(t) t.textContent='GORUT-OUTBREAK AI v77 — Surveilans Epidemiologi Gorontalo Utara';
+  const t=document.querySelector('title'); if(t) t.textContent='GORUT-OUTBREAK AI v179 — Surveilans Epidemiologi Gorontalo Utara';
 }
 function installLogin(){
     // Retire v43 open-access startup and restore the requested login page.
@@ -4025,7 +4025,7 @@ try{installBrandingV77();}catch(e){}
 
 /* ==================== v77 — PREMIUM DASHBOARD + DATA ENTRY UX ==================== */
 (function(){
-  const V='v77';
+  const V='v179';
   function E(id){return document.getElementById(id)}
   function injectDashboardWorkspace(){
     const dash=E('dashboard'); if(!dash || E('v77Workspace')) return;
