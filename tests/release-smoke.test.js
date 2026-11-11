@@ -12,13 +12,16 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=183/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v183/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=183/, 'service worker must precache the release application script');
+assert.match(index, /app\.js\?v=184/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v184/, 'service worker cache version must match the release');
+assert.match(sw, /app\.js\?v=184/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
 assert.match(appJs, /from\('survey_responses'\)\.select\('id,payload'\)/, 'survey response hydration must select the real survey_responses primary key');
+assert.match(appJs, /food_investigation:patch\.foodInvestigation\?\?inv\.foodInvestigation\?\?null/, 'food-poisoning investigation details must be persisted in investigation metadata on edit');
+assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation details must be hydrated from server metadata after reload');
+assert.match(appJs, /food_investigation:inv\.foodInvestigation\|\|null/, 'new food-poisoning investigations must persist their detail payload');
 assert.match(appJs, /surveyAnswerByResponseId\.set\(String\(response\.id\),response\.payload\)/, 'stored questionnaire answers must be mapped to cases by exact response ID');
 assert.doesNotMatch(appJs, /from\('survey_responses'\)\.select\('response_id,payload'\)/, 'app must not query a nonexistent response_id table column');
 
