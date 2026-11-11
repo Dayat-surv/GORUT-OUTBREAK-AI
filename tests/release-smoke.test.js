@@ -12,9 +12,9 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=159/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=180/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v180/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=180/, 'service worker must precache the release application script');
+assert.match(index, /app\.js\?v=181/, 'main page must use the release cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v181/, 'service worker cache version must match the release');
+assert.match(sw, /app\.js\?v=181/, 'service worker must precache the release application script');
 assert.match(sw, /premium\.css\?v=159/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
@@ -22,6 +22,11 @@ assert.match(appJs, /data-open-investigation/, 'dashboard investigation rows mus
 assert.match(appJs, /data-delete-investigation/, 'dashboard investigation rows must use explicit delete handlers');
 assert.match(appJs, /Investigasi operasional/, 'dashboard must distinguish operational investigations');
 assert.match(appJs, /Simulasi \/ staging/, 'dashboard must report simulation investigations separately');
+assert.match(appJs, /async function saveKlb\(\)/, 'saving an investigation must await server persistence');
+assert.match(appJs, /queueSync\('investigations'\)/, 'new investigations must enter the synchronization queue');
+assert.match(appJs, /await syncNow\(\)/, 'new investigations must attempt server synchronization before the user leaves the save flow');
+assert.match(appJs, /food_investigation:x\.foodInvestigation\|\|null/, 'food-investigation details must be included in server metadata');
+assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-investigation details must be restored after server reload');
 
 const newInvestigationStart = appJs.indexOf('function newKlb(){');
 const saveInvestigationStart = appJs.indexOf('function saveKlb()', newInvestigationStart);
