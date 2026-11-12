@@ -1154,7 +1154,74 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
   window.deleteSpecimen=function(id){if(!confirmDelete('spesimen '+id))return;db.specimens=(db.specimens||[]).filter(x=>String(x.id)!==String(id));save();specimens();render()}
   window.deleteFieldVisit=function(id){if(!confirmDelete('kunjungan '+id))return;db.fieldVisits=(db.fieldVisits||[]).filter(x=>String(x.id)!==String(id));save();fieldVisits();render()}
   window.deleteAlert=function(id){if(!confirmDelete('alert '+id))return;db.alerts=(db.alerts||[]).filter(x=>String(x.id)!==String(id));save();alerts();render()}
-  window.deleteInvestigation=function(id){if(!confirmDelete('investigasi ini'))return;db.investigations=db.investigations.filter(x=>String(x.id)!==String(id));db.cases=db.cases.filter(x=>String(x.investigationId)!==String(id));db.contacts=(db.contacts||[]).filter(x=>String(x.investigationId)!==String(id));db.specimens=(db.specimens||[]).filter(x=>String(x.investigationId)!==String(id));db.fieldVisits=(db.fieldVisits||[]).filter(x=>String(x.investigationId)!==String(id));if(String(db.active)===String(id))db.active=db.investigations[0]?.id||null;save();render()}
+  window.deleteInvestigation=async function(id){
+    const inv=db.investigations.find(x=>String(x.id)===String(id));
+    if(!inv){alert('Investigasi tidak ditemukan atau daftar sudah diperbarui.');return;}
+    const label=String(inv.name||('Investigasi '+id));
+    let sb=null,serverId=null,serverSummary=null;
+    try{
+      sb=await backendClient();
+      if(sb){
+        const auth=await sb.auth.getUser();
+        if(auth.error||!auth.data?.user)throw new Error('Sesi login tidak valid. Silakan masuk kembali sebelum menghapus investigasi.');
+        serverId=String(inv.serverId||'').trim();
+        if(!serverId)throw new Error('ID investigasi server belum tersedia. Muat ulang data dari server sebelum mencoba menghapus; tidak ada data yang diubah.');
+        const verify=await sb.from('investigations').select('id',{count:'exact',head:true}).eq('id',serverId);
+        if(verify.error)throw verify.error;
+        if(!verify.count)throw new Error('Investigasi tidak ditemukan pada server dengan ID yang dipetakan. Penghapusan dibatalkan.');
+        const countForServer=async function(table){
+          const result=await sb.from(table).select('id',{count:'exact',head:true}).eq('investigation_id',serverId);
+          if(result.error)throw result.error;
+          return Number(result.count||0);
+        };
+        const counts=await Promise.all([
+          countForServer('cases'),
+          countForServer('contacts'),
+          countForServer('specimens'),
+          countForServer('field_visits'),
+          sb.from('public_surveys').select('id',{count:'exact'}).eq('investigation_id',serverId)
+        ]);
+        if(counts[4].error)throw counts[4].error;
+        const surveyIds=(counts[4].data||[]).map(row=>row.id);
+        if(Number(counts[4].count||0)!==surveyIds.length)throw new Error('Seluruh ID survei belum dapat diverifikasi. Muat ulang data atau hubungi administrator; penghapusan dibatalkan.');
+        let responseCount=0;
+        if(surveyIds.length){
+          const responses=await sb.from('survey_responses').select('id',{count:'exact',head:true}).in('survey_id',surveyIds);
+          if(responses.error)throw responses.error;
+          responseCount=Number(responses.count||0);
+        }
+        serverSummary={cases:counts[0],contacts:counts[1],specimens:counts[2],field_visits:counts[3],public_surveys:surveyIds.length,survey_responses:responseCount};
+        const prompt='HAPUS INVESTIGASI: '+label+'?\n\nJumlah data terkait yang diverifikasi langsung dari server dan akan ikut dihapus: kasus ('+serverSummary.cases+'), kontak ('+serverSummary.contacts+'), spesimen ('+serverSummary.specimens+'), kunjungan lapangan ('+serverSummary.field_visits+'), survei publik ('+serverSummary.public_surveys+'), respons survei ('+serverSummary.survey_responses+').\n\nCatatan: jumlah server mencakup rekaman yang mungkin tidak tampil pada daftar operasional karena penyaringan data simulasi/uji.\n\nPenghapusan permanen dan tidak dapat dibatalkan.';
+        if(!window.confirm(prompt))return;
+        const result=await sb.functions.invoke('delete-investigation',{body:{investigation_id:serverId}});
+        if(result.error)throw result.error;
+        serverSummary=result.data?.data||null;
+        if(!serverSummary||serverSummary.deleted!==true)throw new Error('Server belum mengonfirmasi penghapusan. Data lokal tidak diubah.');
+      }else{
+        const linked={
+          cases:(db.cases||[]).filter(x=>String(x.investigationId)===String(id)).length,
+          contacts:(db.contacts||[]).filter(x=>String(x.investigationId)===String(id)).length,
+          specimens:(db.specimens||[]).filter(x=>String(x.investigationId)===String(id)).length,
+          fieldVisits:(db.fieldVisits||[]).filter(x=>String(x.investigationId)===String(id)).length
+        };
+        const prompt='HAPUS INVESTIGASI LOKAL: '+label+'?\n\nData lokal yang ikut dihapus: kasus ('+linked.cases+'), kontak ('+linked.contacts+'), spesimen ('+linked.specimens+'), kunjungan lapangan ('+linked.fieldVisits+').\n\nMode lokal tidak menghapus data pada server.';
+        if(!window.confirm(prompt))return;
+      }
+      db.investigations=db.investigations.filter(x=>String(x.id)!==String(id));
+      db.cases=(db.cases||[]).filter(x=>String(x.investigationId)!==String(id));
+      db.contacts=(db.contacts||[]).filter(x=>String(x.investigationId)!==String(id));
+      db.specimens=(db.specimens||[]).filter(x=>String(x.investigationId)!==String(id));
+      db.fieldVisits=(db.fieldVisits||[]).filter(x=>String(x.investigationId)!==String(id));
+      if(String(db.active)===String(id))db.active=db.investigations[0]?.id||null;
+      save();
+      await render();
+      const summary=serverSummary?'\nServer: '+(serverSummary.cases||0)+' kasus, '+(serverSummary.contacts||0)+' kontak, '+(serverSummary.specimens||0)+' spesimen, '+(serverSummary.field_visits||0)+' kunjungan, '+(serverSummary.public_surveys||0)+' survei dan '+(serverSummary.survey_responses||0)+' respons ikut dihapus.':'\nMode lokal: penghapusan hanya berlaku pada perangkat ini.';
+      alert('Investigasi "'+label+'" berhasil dihapus.'+summary);
+    }catch(error){
+      console.error('Gagal menghapus investigasi:',error);
+      alert('Penghapusan gagal. Data lokal tidak diubah.\n'+(error?.message||String(error)));
+    }
+  }
 
   /* Override list renderers to expose delete buttons. */
   const oldCases=window.cases; window.cases=function(){
@@ -1232,19 +1299,29 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
     const name=val('regName').trim(),wa=val('regWhatsapp').trim(),email=val('regEmail').trim().toLowerCase(),pw=val('regPassword'),inst=val('regInstitution').trim(),ref=val('regPaymentRef').trim(),note=val('regNote').trim();
     if(!name||!wa||!email||!pw)return alert('Nama, WhatsApp, email, dan kata sandi wajib diisi.');
     if(pw.length<8)return alert('Kata sandi minimal 8 karakter untuk akun produksi.');
-    const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
-    if(sign.error){return alert('Registrasi akun gagal: '+sign.error.message);}
-    const rr=await sb.rpc('create_registration_request',{p_email:email,p_full_name:name,p_whatsapp:wa,p_institution:inst,p_payment_reference:ref,p_note:note});
-    if(rr.error){return alert('Akun berhasil dibuat, tetapi permintaan akses belum tercatat: '+rr.error.message);}
-    const rid=rr.data;
+    let currentUser=(await sb.auth.getUser()).data?.user||null;
+    if(currentUser&&String(currentUser.email||'').toLowerCase()!==email)return alert('Anda sedang masuk dengan email berbeda. Keluar terlebih dahulu, lalu gunakan email pendaftaran yang sesuai.');
+    if(!currentUser){
+      const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
+      if(sign.error)return alert('Registrasi akun gagal: '+sign.error.message);
+      currentUser=sign.data?.user||null;
+      if(!sign.data?.session){
+        return alert('Akun berhasil dibuat. Konfirmasikan email, lalu masuk menggunakan akun tersebut dan kirim ulang formulir permohonan akses. Belum ada permohonan akses yang dicatat.');
+      }
+    }
+    const rr=await sb.functions.invoke('create-registration-request',{body:{email,full_name:name,whatsapp:wa,institution:inst,payment_reference:ref,note}});
+    if(rr.error||rr.data?.success!==true||!rr.data?.data)return alert('Akun berhasil dibuat, tetapi permohonan akses belum tercatat: '+(rr.error?.message||rr.data?.error||'respons server tidak valid'));
+    const rid=rr.data.data;
     const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(rid)}%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(wa)}%0AInstansi: ${encodeURIComponent(inst)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(ref)}`;
     const box=document.getElementById('registerMsg');box.style.display='block';box.innerHTML=`Permintaan akses <b>${esc0(rid)}</b> sudah tercatat di server dan menunggu verifikasi admin.<br><br><a href="https://wa.me/6282290150334?text=${msg}" target="_blank" rel="noopener"><button class="btn-whatsapp">Kirim Konfirmasi WhatsApp</button></a><br><span class="small">Jika verifikasi email Supabase aktif, silakan konfirmasi email terlebih dahulu sebelum masuk.</span>`;
   };
   window.activateRegistrationV28=async function(id){
     const sb=await backendClient();if(!sb)return alert('Backend produksi belum dikonfigurasi.');
-    const r=await sb.rpc('activate_premium_7d',{p_registration_id:id});
+    const r=await sb.functions.invoke('activate-registration',{body:{registration_id:id}});
     if(r.error)return alert('Aktivasi gagal: '+r.error.message);
-    alert(`Akses Akses aktif sampai ${new Date(r.data.expires_at).toLocaleString('id-ID')}`);renderAdminV28();
+    const payload=r.data?.data;
+    if(!payload?.expires_at)return alert('Aktivasi belum dikonfirmasi oleh server.');
+    alert(`Akses aktif sampai ${new Date(payload.expires_at).toLocaleString('id-ID')}`);renderAdminV28();
   };
   window.renderAdminV28=async function(){
     const el=document.getElementById('v28RegList');if(!el)return;const sb=await backendClient();
@@ -1379,11 +1456,19 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
     const name=val('regName').trim(),wa=val('regWhatsapp').trim(),email=val('regEmail').trim().toLowerCase(),pw=val('regPassword'),inst=val('regInstitution').trim(),ref=val('regPaymentRef').trim(),note=val('regNote').trim();
     if(!name||!wa||!email||!pw)return alert('Nama, WhatsApp, email, dan kata sandi wajib diisi.');
     if(pw.length<8)return alert('Kata sandi minimal 8 karakter.');
-    const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
-    if(sign.error)return alert('Registrasi akun gagal: '+sign.error.message);
-    const rr=await sb.rpc('create_registration_request',{p_email:email,p_full_name:name,p_whatsapp:wa,p_institution:inst,p_payment_reference:ref,p_note:note});
-    if(rr.error)return alert('Akun dibuat tetapi permintaan akses gagal dicatat: '+rr.error.message);
-    const rid=rr.data; const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(rid)}%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(wa)}%0AInstansi: ${encodeURIComponent(inst)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(ref)}`;
+    let currentUser=(await sb.auth.getUser()).data?.user||null;
+    if(currentUser&&String(currentUser.email||'').toLowerCase()!==email)return alert('Anda sedang masuk dengan email berbeda. Keluar terlebih dahulu, lalu gunakan email pendaftaran yang sesuai.');
+    if(!currentUser){
+      const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
+      if(sign.error)return alert('Registrasi akun gagal: '+sign.error.message);
+      currentUser=sign.data?.user||null;
+      if(!sign.data?.session){
+        return alert('Akun berhasil dibuat. Konfirmasikan email, lalu masuk menggunakan akun tersebut dan kirim ulang formulir permohonan akses. Belum ada permohonan akses yang dicatat.');
+      }
+    }
+    const rr=await sb.functions.invoke('create-registration-request',{body:{email,full_name:name,whatsapp:wa,institution:inst,payment_reference:ref,note}});
+    if(rr.error||rr.data?.success!==true||!rr.data?.data)return alert('Akun berhasil dibuat, tetapi permohonan akses belum tercatat: '+(rr.error?.message||rr.data?.error||'respons server tidak valid'));
+    const rid=rr.data.data; const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(rid)}%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(wa)}%0AInstansi: ${encodeURIComponent(inst)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(ref)}`;
     const box=document.getElementById('registerMsg');box.style.display='block';box.innerHTML=`Permintaan <b>${esc0(rid)}</b> tercatat di server dan menunggu verifikasi admin.<br><br><a href="https://wa.me/6282290150334?text=${msg}" target="_blank" rel="noopener"><button class="btn-whatsapp">Kirim Konfirmasi WhatsApp</button></a>`;
   };
   /* Start selectors after DOM is ready. */
@@ -1470,7 +1555,7 @@ async function access(){
  const r=await sb.from('my_access_status').select('*').single(); return r.error?{has_access:false,is_admin:false,error:r.error.message}:{...r.data,source:'server'};
 }
 function badge(s){const k=String(s||'pending').toLowerCase();return `<span class="v30-status ${esc(k)}">${esc(k)}</span>`}
-window.v30RejectRegistration=async function(id){if(!confirm('Tolak registrasi ini?'))return;const sb=await window.backendClient();if(!sb)return alert('Backend belum dikonfigurasi.');const r=await sb.rpc('reject_registration',{p_registration_id:id,p_reason:'Ditolak oleh admin'});if(r.error)return alert('Gagal: '+r.error.message);await window.v30RefreshAdmin()};
+window.v30RejectRegistration=async function(id){if(!confirm('Tolak registrasi ini?'))return;const sb=await window.backendClient();if(!sb)return alert('Backend belum dikonfigurasi.');const r=await sb.functions.invoke('reject-registration',{body:{registration_id:id,reason:'Ditolak oleh admin'}});if(r.error)return alert('Gagal: '+r.error.message);if(r.data?.success!==true)return alert('Penolakan belum dikonfirmasi oleh server.');await window.v30RefreshAdmin()};
 window.v30RefreshAdmin=async function(){
  const box=document.getElementById('v30AdminContent');if(!box)return;const a=await access();if(!a.is_admin){box.innerHTML='<div class="security-note-v29">Panel administrasi hanya untuk admin.</div>';return}
  const sb=await window.backendClient();if(!sb){box.innerHTML='<div class="notice">Backend belum dikonfigurasi.</div>';return}
