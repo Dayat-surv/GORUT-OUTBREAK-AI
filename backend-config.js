@@ -1,4 +1,4 @@
-// STAGING ONLY — values from the separate GORUT-OUTBREAK-AI-STAGING project.
+// STAGING ONLY — isolated functional-test preview based on latest verified STAGING code.
 // Never use a production URL/key here and NEVER use service_role/secret keys.
 // Keep both flags false until isolated staging schema and E2E checks are ready.
 window.GORUT_BACKEND = {
