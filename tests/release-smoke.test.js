@@ -17,6 +17,18 @@ assert.match(sw, /gorut-outbreak-ai-final-v184\.6/, 'service worker cache versio
 assert.match(sw, /app\.js\?v=184\.6/, 'service worker must precache the exact current application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
+assert.match(appJs, /functions\\.invoke\\('delete-investigation'/, 'investigation deletion must use the authenticated Edge Function');
+assert.match(appJs, /if\\(!serverSummary\\|\\|serverSummary.deleted!==true\\)/, 'local investigation data must remain unchanged unless the server confirms deletion');
+assert.match(appJs, /ID investigasi server belum tersedia/, 'server deletion must fail closed when the server ID mapping is missing');
+assert.match(appJs, /functions\\.invoke\\('create-registration-request'/, 'legacy registration request handlers must use the authenticated Edge Function');
+assert.match(appJs, /functions\\.invoke\\('activate-registration'/, 'registration activation must use the authenticated Edge Function');
+assert.match(appJs, /functions\\.invoke\\('reject-registration'/, 'registration rejection must use the authenticated Edge Function');
+assert.doesNotMatch(appJs, /\\.rpc\\('(delete_investigation_bundle|activate_premium_7d|reject_registration|create_registration_request)'/, 'browser code must not call legacy privileged RPCs directly');
+const deleteStart = appJs.indexOf('window.deleteInvestigation=async function(id){');
+const deleteEnd = appJs.indexOf('\\n\\n  /* Override list renderers', deleteStart);
+const deleteHandler = appJs.slice(deleteStart, deleteEnd);
+assert.ok(deleteStart >= 0 && deleteEnd > deleteStart, 'server-backed investigation delete handler must exist');
+assert.ok(deleteHandler.indexOf('if(!serverSummary||serverSummary.deleted!==true)') < deleteHandler.indexOf('db.investigations=db.investigations.filter'), 'local deletion must occur only after explicit server confirmation');
 const publicSurvey = read('public_survey.html');
 const newInvestigationStart = appJs.indexOf('function newKlb(){');
 const saveInvestigationStart = appJs.indexOf('async function saveKlb()', newInvestigationStart);
