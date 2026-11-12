@@ -12,14 +12,14 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=184\.5/, 'main page must load the current cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v184\.5/, 'service worker cache version must match the current release');
-assert.match(sw, /app\.js\?v=184\.5/, 'service worker must precache the exact current application script');
+assert.match(index, /app\.js\?v=184\.6/, 'main page must load the current cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v184\.6/, 'service worker cache version must match the current release');
+assert.match(sw, /app\.js\?v=184\.6/, 'service worker must precache the exact current application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
 const newInvestigationStart = appJs.indexOf('function newKlb(){');
-const saveInvestigationStart = appJs.indexOf('function saveKlb()', newInvestigationStart);
+const saveInvestigationStart = appJs.indexOf('async function saveKlb()', newInvestigationStart);
 assert.ok(newInvestigationStart >= 0 && saveInvestigationStart > newInvestigationStart, 'new investigation and save handlers must exist');
 const newInvestigationHandler = appJs.slice(newInvestigationStart, saveInvestigationStart);
 assert.match(index, /onclick="newKlb\(\)">\+ Investigasi Baru/, 'dashboard must expose the new investigation action');
@@ -29,6 +29,11 @@ assert.match(appJs, /from\('survey_responses'\)\.select\('id,payload'\)/, 'surve
 assert.match(appJs, /food_investigation:patch\.foodInvestigation\?\?inv\.foodInvestigation\?\?null/, 'food-poisoning investigation details must be persisted in investigation metadata on edit');
 assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null/, 'food-poisoning investigation details must be hydrated from server metadata after reload');
 assert.match(appJs, /food_investigation:inv\.foodInvestigation\|\|null/, 'new food-poisoning investigations must persist their detail payload');
+assert.match(appJs, /async function saveKlb\(\)/, 'investigation save handler must await server synchronization');
+assert.match(appJs, /if\(activeId!=null&&existingIndex<0\)/, 'editing a missing investigation must abort instead of creating a duplicate');
+assert.match(appJs, /if\(existingIndex>=0\)db\.investigations\[existingIndex\]=o;\\s*else db\.investigations\.push\(o\)/, 'editing must replace the existing record while new investigations append once');
+assert.match(appJs, /queueSync\('investigations'\)/, 'investigation changes must enter the sync queue');
+assert.match(appJs, /server STAGING/, 'sync confirmation must identify the STAGING environment');
 assert.match(appJs, /surveyAnswerByResponseId\.set\(String\(response\.id\),response\.payload\)/, 'stored questionnaire answers must be mapped to cases by exact response ID');
 assert.doesNotMatch(appJs, /from\('survey_responses'\)\.select\('response_id,payload'\)/, 'app must not query a nonexistent response_id table column');
 
