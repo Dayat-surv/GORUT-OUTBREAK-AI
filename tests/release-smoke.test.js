@@ -31,7 +31,7 @@ assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null
 assert.match(appJs, /food_investigation:inv\.foodInvestigation\|\|null/, 'new food-poisoning investigations must persist their detail payload');
 assert.match(appJs, /async function saveKlb\(\)/, 'investigation save handler must await server synchronization');
 assert.match(appJs, /if\(activeId!=null&&existingIndex<0\)/, 'editing a missing investigation must abort instead of creating a duplicate');
-assert.match(appJs, /if\(existingIndex>=0\)db\.investigations\[existingIndex\]=o;\\s*else db\.investigations\.push\(o\)/, 'editing must replace the existing record while new investigations append once');
+assert.match(appJs, /if\(existingIndex>=0\)db\.investigations\[existingIndex\]=o;\s*else db\.investigations\.push\(o\)/, 'editing must replace the existing record while new investigations append once');
 assert.match(appJs, /queueSync\('investigations'\)/, 'investigation changes must enter the sync queue');
 assert.match(appJs, /server STAGING/, 'sync confirmation must identify the STAGING environment');
 assert.match(appJs, /surveyAnswerByResponseId\.set\(String\(response\.id\),response\.payload\)/, 'stored questionnaire answers must be mapped to cases by exact response ID');
