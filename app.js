@@ -2252,8 +2252,28 @@ function installLogin(){
   function qId(q,i){return 'v45q_'+(q.id||('Q_'+i)).replace(/[^a-zA-Z0-9_]/g,'_')+'_'+i}
   function qField(q,i,answers){const id=qId(q,i),v=answers?.[q.id]??answers?.[q.label]??'';if(q.type==='choice')return '<select id="'+id+'"><option value="">Pilih...</option>'+((q.options||[]).map(o=>'<option '+(String(o)===String(v)?'selected':'')+'>'+esc45(o)+'</option>').join(''))+'</select>';if(q.type==='textarea')return '<textarea id="'+id+'" rows="2">'+esc45(v)+'</textarea>';return '<input id="'+id+'" type="'+(q.type==='number'?'number':q.type==='date'?'date':'text')+'" value="'+esc45(v)+'">'}
   function collectQ45(){const qs=db.questions||[],a={};qs.forEach((q,i)=>{if(!q.id)q.id='Q_'+i;const e=document.getElementById(qId(q,i));if(e)a[q.id]=e.value;});return a}
+  function ensureCaseQuestionnaire(c={}){
+    const diseaseId=c.disease||act()?.disease||db.selectedDisease;
+    if(!diseaseId||!diseases[diseaseId])return;
+    const selector=document.getElementById('qDisease');
+    const loadedDisease=db.questionMeta?.disease;
+    if(loadedDisease!==diseaseId||!Array.isArray(db.questions)||!db.questions.length){
+      db.selectedDisease=diseaseId;
+      if(selector)selector.value=diseaseId;
+      if(typeof window.loadDiseaseQuestions==='function'){
+        window.loadDiseaseQuestions();
+      }else{
+        const d=diseases[diseaseId];
+        db.questions=[...baseQ.map(q=>buildQuestion(q[1],q[0])),...d.q.map(x=>buildQuestion(x,'Spesifik — '+d.name))];
+        db.questionMeta={disease:diseaseId,diseaseName:d.name,group:d.group,version:instrumentMeta.release,validationStatus:'Perlu validasi akhir sebelum digunakan sebagai formulir resmi'};
+        save();
+      }
+    }else{
+      db.selectedDisease=diseaseId;
+    }
+  }
   function ensureQuestionIds(){(db.questions||[]).forEach((q,i)=>{if(!q.id)q.id='Q_'+String(i+1).padStart(3,'0')});}
-  function questionnaireCasePanel(c={}){ensureQuestionIds();const qs=db.questions||[];if(!qs.length)return '<div class="notice">Belum ada kuesioner aktif. Buka menu Kuesioner → pilih penyakit → Muat Kuesioner.</div>';return '<div class="card" style="margin-top:10px;border-left:4px solid #1769aa"><h4>📋 Kuesioner Epidemiologi Terintegrasi</h4><p class="small">Semua jawaban disimpan pada <code>case.answers</code>, digunakan oleh variable dictionary/analisis dan ikut dibawa ke sinkronisasi backend.</p>'+qs.map((q,i)=>'<div class="field"><label>'+esc45((i+1)+'. '+q.label)+(q.required?' *':'')+'</label>'+qField(q,i,c.answers||{})+'<small class="small">'+esc45(q.cat||'PE')+' · '+esc45(q.version||'')+'</small></div>').join('')+'</div>'}
+  function questionnaireCasePanel(c={}){ensureCaseQuestionnaire(c);ensureQuestionIds();const qs=db.questions||[];if(!qs.length)return '<div class="notice">Belum ada kuesioner aktif. Buka menu Kuesioner → pilih penyakit → Muat Kuesioner.</div>';return '<div class="card" style="margin-top:10px;border-left:4px solid #1769aa"><h4>📋 Kuesioner Epidemiologi Terintegrasi</h4><p class="small">Semua jawaban disimpan pada <code>case.answers</code>, digunakan oleh variable dictionary/analisis dan ikut dibawa ke sinkronisasi backend.</p>'+qs.map((q,i)=>'<div class="field"><label>'+esc45((i+1)+'. '+q.label)+(q.required?' *':'')+'</label>'+qField(q,i,c.answers||{})+'<small class="small">'+esc45(q.cat||'PE')+' · '+esc45(q.version||'')+'</small></div>').join('')+'</div>'}
   function coreFromAnswers(c,a){const find=(...labels)=>{for(const q of (db.questions||[])){if(labels.some(l=>String(q.label).toLowerCase()===l.toLowerCase())){const v=a[q.id];if(v!==undefined&&v!=='')return v}}return ''};
     if(!c.id)c.id=find('ID Kasus'); if(!c.name)c.name=find('Nama lengkap'); if(!c.age)c.age=Number(find('Umur'))||0; if(!c.sex)c.sex=find('Jenis kelamin'); if(!c.onset)c.onset=find('Tanggal onset gejala'); if(!c.status)c.status=find('Status kasus'); if(!c.outcome)c.outcome=find('Keadaan akhir','Outcome','Status kesehatan');
     c.address=c.address||find('Alamat lengkap');c.desa=c.desa||find('Desa/Kelurahan');c.kec=c.kec||find('Kecamatan');c.kab=c.kab||find('Kabupaten');c.prov=c.prov||find('Provinsi');c.pkm=c.pkm||find('Puskesmas');c.lat=c.lat??(Number(find('Latitude'))||null);c.lng=c.lng??(Number(find('Longitude'))||null);return c;
