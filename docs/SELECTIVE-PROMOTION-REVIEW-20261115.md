@@ -152,3 +152,12 @@ Penyesuaian khusus schema Production:
 Pemeriksaan file di GitHub mengonfirmasi seluruh 6 file kode/migrasi dan dokumen paket tersimpan di branch. Ini merupakan pemeriksaan isi repositori, bukan hasil kompilasi Deno, uji migrasi, atau uji runtime.
 
 **Belum dilakukan:** migration tidak dijalankan di proyek mana pun; Edge Functions tidak dideploy; endpoint Production belum dibuat; belum ada data atau konfigurasi Production yang diubah. Deployment memerlukan persetujuan eksplisit terpisah karena endpoint akan langsung aktif setelah deploy.
+
+
+### Pemeriksaan lanjutan 15 November 2026
+- Kolom semua tabel yang disentuh migrasi kandidat telah dicocokkan dengan schema Production melalui metadata PostgreSQL.
+- Penghapusan investigasi kini menolak operasi jika ditemukan child record atau survei terkait dengan owner/creator berbeda. Hal ini mencegah penghapusan lintas akun bila ada inkonsistensi relasi.
+- Snapshot ulang Production: 9 investigations, 5 cases, 0 contacts, 0 specimens, 0 field_visits, 0 registration_requests, 0 active public_surveys; Production masih tidak memiliki Edge Functions.
+- Snapshot data konsisten dengan audit sebelumnya. Tidak ada migrasi, deploy, grant, perubahan secret, atau operasi tulis pada Production.
+
+**Gerbang masih tertutup:** belum ada kompilasi Deno, uji migrasi di clone database, atau uji runtime. Paket hanya kandidat source code. Jangan deploy atau menerapkan migration sebelum semua uji matriks pada dokumen persiapan selesai dan persetujuan eksplisit diberikan.
