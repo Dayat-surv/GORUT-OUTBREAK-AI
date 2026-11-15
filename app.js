@@ -739,8 +739,14 @@ function exportChain(){const payload={investigation:act(),cases:chainCases(),con
 
 // v11 Public Survey: creates a published questionnaire + active survey linked to investigation.
 async function publicQ(){
- const inv=act(), disease=db.selectedDisease||'campak', sb=await backendClient();
+ const inv=act(), disease=db.selectedDisease||'campak';
  if(!inv){alert('Pilih investigasi terlebih dahulu.');return;}
+ const surveyConfig=window.GORUT_BACKEND||{};
+ if(surveyConfig.enabled!==true||surveyConfig.publicSurveyEnabled!==true){
+   modal('<h2>Kuesioner Online Dinonaktifkan</h2><div class="notice">Fitur kuesioner publik STAGING sedang dinonaktifkan selama audit keamanan. Backend Supabase dapat tetap aktif untuk sinkronisasi internal. Tidak ada tautan survei yang dibuat dan tidak ada data yang dikirim.</div><button onclick="closeAppModal()">Tutup</button>');
+   return;
+ }
+ const sb=await backendClient();
  if(!sb){const base=new URL('public_survey.html',location.href);base.searchParams.set('investigation',String(inv.id));base.searchParams.set('disease',disease);const url=base.toString();
    modal(`<h2>Kuesioner Publik — Mode Offline</h2><div class="notice">Backend belum aktif. URL ini hanya untuk preview lokal.</div><input value="${esc(url)}" readonly onclick="this.select()"><div id="qrBox" style="text-align:center;margin:15px"></div><button class="primary" onclick="copyText('${esc(url)}')">Salin URL</button> <button onclick="closeAppModal()">Tutup</button>`); makeQR(url); return;}
  const user=(await sb.auth.getUser()).data.user;if(!user){alert('Login online diperlukan untuk membuat public survey.');return;}
