@@ -2060,7 +2060,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       '<div id="loginMsg" class="notice" style="display:none" role="alert"></div>'+
       '<button class="primary" style="width:100%;margin-top:4px" onclick="v45Login()">🔐 Login</button>'+(window.GORUT_BACKEND?.enabled?'<button type="button" class="btn-ghost" style="width:100%;margin-top:8px" onclick="window.gorutRequestPasswordReset()">Lupa kata sandi?</button>':'')+(window.GORUT_BACKEND?.enabled?'':'<button class="btn-ghost" style="width:100%;margin-top:8px" onclick="demoLogin()">🚀 Masuk Gratis / Mode Lokal</button>')+
       '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+
-      '<button class="btn-ghost" style="flex:1" onclick="v45ShowRegister()">📝 Daftar Akun Gratis</button>'+
+      '<button class="btn-ghost" style="flex:1" onclick="window.gorutOpenRegister()">📝 Daftar Akun Gratis</button>'+
       (window.GORUT_BACKEND?.enabled?'':'<a href="https://wa.me/'+WA+'?text='+encodeURIComponent(WA_TEXT)+'" target="_blank" rel="noopener" style="flex:1;text-decoration:none"><button class="btn-whatsapp" style="width:100%">💬 WhatsApp Admin</button></a>')+'</div>'+
       '<div id="v45LoginHint" class="small" style="margin-top:12px">'+(window.GORUT_BACKEND?.enabled?'Akun terverifikasi dapat login langsung tanpa persetujuan Admin atau aktivasi Premium.':'Mode lokal: akun hanya berlaku pada browser ini. Hubungkan backend STAGING untuk akun server.')+'</div>'+
       '<div id="passwordRecoveryPanel" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid #dbe3ec;text-align:left">'+
