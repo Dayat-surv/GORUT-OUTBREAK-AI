@@ -9,22 +9,20 @@ const end = app.indexOf('\nfunction ', start + 30);
 assert.ok(start >= 0 && end > start, 'syncNow function must exist');
 const sync = app.slice(start, end);
 
-// Every child collection must report an orphan as a failed sync item.
-// Otherwise syncNow could clear its queue and claim success while silently
-// skipping data that has no corresponding parent investigation.
-const orphanGuards = [
-  'if(!db.investigations.find(i=>i.id===c.investigationId)){fail++;continue;}',
-  'if(!db.investigations.find(i=>String(i.id)===String(s.investigationId))){fail++;continue;}',
-  'if(!db.investigations.find(i=>i.id==v.investigationId)){fail++;continue;}'
-];
-assert.equal(sync.split(orphanGuards[0]).length - 1, 2,
-  'cases and contacts must each count an orphan as a sync failure');
-assert.equal(sync.split(orphanGuards[1]).length - 1, 1,
-  'specimens must count an orphan as a sync failure');
-assert.equal(sync.split(orphanGuards[2]).length - 1, 1,
-  'field visits must count an orphan as a sync failure');
-assert.equal((sync.match(/fail\+\+;continue;/g) || []).length, 4,
-  'all four child collection skip paths must increment the failure count');
+// Child records must use the actual server ID of their parent. Never fabricate
+// a foreign key from a local ID when the parent upsert has not succeeded.
+assert.match(sync, /const invForCase=db\.investigations\.find\(i=>String\(i\.id\)===String\(c\.investigationId\)\);if\(!invForCase\?\.serverId\)\{fail\+\+;continue;\}/,
+  'cases must match local parent IDs as strings and require the real server investigation ID');
+assert.match(sync, /const invForContact=db\.investigations\.find\(i=>String\(i\.id\)===String\(c\.investigationId\)\);const linkedCase=c\.caseId\?db\.cases\.find\(x=>String\(x\.id\)===String\(c\.caseId\)\):null;if\(!invForContact\?\.serverId\|\|\(c\.caseId&&!linkedCase\?\.serverId\)\)\{fail\+\+;continue;\}/,
+  'contacts must require real server IDs for their investigation and any linked case');
+assert.match(sync, /const invForSpecimen=db\.investigations\.find\(i=>String\(i\.id\)===String\(s\.investigationId\)\);const linkedSpecimenCase=s\.caseId\?db\.cases\.find\(x=>String\(x\.id\)===String\(s\.caseId\)\):null;if\(!invForSpecimen\?\.serverId\|\|\(s\.caseId&&!linkedSpecimenCase\?\.serverId\)\)\{fail\+\+;continue;\}/,
+  'specimens must require real server IDs for their investigation and any linked case');
+assert.match(sync, /const invForVisit=db\.investigations\.find\(i=>String\(i\.id\)===String\(v\.investigationId\)\);if\(!invForVisit\?\.serverId\)\{fail\+\+;continue;\}/,
+  'field visits must match local parent IDs as strings and require the real server investigation ID');
+assert.match(sync, /index_case_id:c\.caseId\?linkedCase\.serverId:null/,
+  'contacts must not fabricate a foreign key when the linked case has no server ID');
+assert.match(sync, /case_id:s\.caseId\?linkedSpecimenCase\.serverId:null/,
+  'specimens must not fabricate a foreign key when the linked case has no server ID');
 assert.match(sync, /if\(fail===0\)\{syncQueue=\[\];/,
   'the sync queue may only be cleared when there are no failed or skipped records');
 
