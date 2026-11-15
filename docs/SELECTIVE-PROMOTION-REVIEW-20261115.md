@@ -122,13 +122,11 @@ Health Advisor tidak mengembalikan lint.
 4. Jangan mengubah grants SECURITY DEFINER Production hanya berdasarkan peringatan advisor; evaluasi kebutuhan aplikasi dan jalur pemanggilan lebih dahulu.
 5. Production memiliki data operasional (9 investigations dan 5 cases pada snapshot audit). Semua perubahan tetap memerlukan backup, rencana rollback, dan persetujuan eksplisit.
 
-## 7. Status setelah audit
-- Pemeriksaan skema, kebijakan, fungsi, grants, Edge Functions, dan advisor Production: selesai secara read-only.
-- Kompatibilitas frontend STAGING dengan Production: belum lulus karena dependensi Edge Functions belum tersedia di Production.
-- Perubahan database Production: nihil.
-- Deployment Production: nihil.
-- Branch `main`: tidak diubah.
-- Branch promosi hanya berisi dokumentasi audit; belum ada kode runtime yang dipromosikan.
+## 7. Status setelah audit awal
+- Pemeriksaan skema, kebijakan, fungsi, grants, Edge Functions, dan advisor Production selesai secara read-only.
+- Pada tahap audit awal, kompatibilitas frontend STAGING belum lulus karena dependensi Edge Functions belum tersedia di Production.
+- Pada tahap audit awal, belum ada perubahan database atau deployment Production.
+- Branch `main` tidak diubah. Catatan ini kemudian diperbarui oleh bagian 9 setelah port selektif dan uji kandidat.
 
 
 ## 8. Paket kandidat empat Edge Functions Production disiapkan (belum aktif)
@@ -161,3 +159,47 @@ Pemeriksaan file di GitHub mengonfirmasi seluruh 6 file kode/migrasi dan dokumen
 - Snapshot data konsisten dengan audit sebelumnya. Tidak ada migrasi, deploy, grant, perubahan secret, atau operasi tulis pada Production.
 
 **Gerbang masih tertutup:** belum ada kompilasi Deno, uji migrasi di clone database, atau uji runtime. Paket hanya kandidat source code. Jangan deploy atau menerapkan migration sebelum semua uji matriks pada dokumen persiapan selesai dan persetujuan eksplisit diberikan.
+
+
+## 9. Audit lanjutan, perbaikan selektif, dan uji kandidat (15 November 2026)
+
+### Perbaikan pada branch release
+Audit membuktikan bahwa kandidat Edge Functions awal belum dipanggil oleh frontend Production berbasis main. Empat operasi masih menggunakan RPC lama atau hanya memodifikasi state lokal. Untuk menutup celah integrasi tersebut, perubahan STAGING dipindahkan secara selektif ke app.js pada branch release:
+- registrasi: create-registration-request melalui Edge Function; jika sign-up belum memberi session, pengguna diminta mengonfirmasi email dan login sebelum mengirim permohonan;
+- aktivasi: activate-registration melalui Edge Function;
+- penolakan: reject-registration melalui Edge Function;
+- penghapusan: delete-investigation melalui Edge Function, dengan verifikasi session dan serverId serta konfirmasi server sebelum state lokal dihapus.
+
+Tidak ada salinan penuh app.js STAGING. backend-config.js tetap konfigurasi Production dari main.
+
+### Hardening SQL
+- Registrasi memakai pg_advisory_xact_lock untuk mencegah permohonan ganda akibat retry serentak, dan deduplikasi dibatasi pada user_id yang sama.
+- Penghapusan mengunci parent dan child rows sebelum pemeriksaan.
+- Penghapusan memasukkan kontak dan spesimen yang terhubung tidak langsung melalui kasus, serta menolak relasi lintas investigasi.
+- Uji metadata Production read-only menunjukkan semua kolom yang dirujuk tersedia. Foreign key Production menunjukkan kontak dapat merujuk kasus melalui index_case_id dan spesimen melalui case_id. Snapshot saat audit menemukan nol record yang hanya terhubung melalui kasus, tetapi fungsi tetap mengantisipasi kondisi tersebut.
+- Dependency npm:@supabase/server dipatok pada 1.9.2.
+
+### Bukti uji otomatis
+GitHub Actions run #1: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/43697019083 — **SUCCESS** pada kedua job:
+1. validate: node --check app.js, pemeriksaan kontrak keamanan statis, dan deno check pada keempat Edge Functions.
+2. postgres-integration: migrasi diterapkan pada PostgreSQL 17 disposable dengan skema sintetis; uji positif/negatif registrasi, email belum terverifikasi, aktivasi/penolakan Admin, larangan non-admin, penghapusan bundle, kepemilikan berbeda, dan relasi lintas investigasi lulus. Data uji di-rollback.
+
+Cakupan ini membuktikan sintaks/tipe Edge Function dan logika PostgreSQL pada skema sintetis. Ini **bukan** clone Supabase Production dan tidak membuktikan RLS aktual, validasi JWT platform, runtime Edge Functions Supabase, CORS browser, konfigurasi secrets, atau uji end-to-end browser.
+
+### Temuan Production yang masih terbuka
+Security Advisor (read-only, 15 Nov 2026):
+- Lima fungsi SECURITY DEFINER lama masih dapat dipanggil authenticated: activate_premium_7d, create_registration_request, get_my_public_survey_submissions, is_admin, reject_registration. Fungsi tersebut memiliki guard internal, tetapi perlu review independen terhadap grants dan jalur pemanggilan. Tidak ada grant Production yang diubah.
+- Leaked Password Protection masih nonaktif pada paket Free.
+
+Performance Advisor:
+- 12 foreign key tanpa covering index (INFO);
+- 4 index belum terpakai (INFO);
+- satu multiple permissive SELECT policy pada profiles (WARN).
+Health Advisor tidak menemukan lint.
+
+### Status kandidat saat ini
+- Lulus: frontend JavaScript parse; TypeScript/Deno check; static assertions; migrasi PostgreSQL 17 disposable; synthetic positive/negative SQL tests.
+- Belum lulus: Supabase Edge Runtime/Auth/JWT end-to-end, validasi RLS pada lingkungan Supabase terisolasi, uji browser, backup/restore rehearsal, peer review independen legacy SECURITY DEFINER grants, dan final release review.
+- Production Supabase: tidak berubah; tidak ada migrasi atau Edge Function yang dideploy.
+- main dan GitHub Pages: tidak berubah.
+- Belum ada PR, merge, atau deployment. Kandidat tetap pada branch release/production-selective-20261115.
