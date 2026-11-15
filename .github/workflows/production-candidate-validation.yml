@@ -33,3 +33,39 @@ jobs:
           deno check supabase/functions/reject-registration/index.ts
           deno check supabase/functions/delete-investigation/index.ts
           deno check supabase/functions/create-registration-request/index.ts
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: candidate_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d candidate_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout candidate branch
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Create synthetic Production-shaped schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d candidate_test -v ON_ERROR_STOP=1 -f supabase/validation/production_candidate_test_schema.sql
+      - name: Apply candidate migration to disposable PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d candidate_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115090000_production_edge_operations_candidate.sql
+      - name: Run synthetic positive and negative database tests
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d candidate_test -v ON_ERROR_STOP=1 -f supabase/validation/production_candidate_test_cases.sql
