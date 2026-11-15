@@ -2252,9 +2252,16 @@ function installLogin(){
   function qId(q,i){return 'v45q_'+(q.id||('Q_'+i)).replace(/[^a-zA-Z0-9_]/g,'_')+'_'+i}
   function qField(q,i,answers){const id=qId(q,i),v=answers?.[q.id]??answers?.[q.label]??'';if(q.type==='choice')return '<select id="'+id+'"><option value="">Pilih...</option>'+((q.options||[]).map(o=>'<option '+(String(o)===String(v)?'selected':'')+'>'+esc45(o)+'</option>').join(''))+'</select>';if(q.type==='textarea')return '<textarea id="'+id+'" rows="2">'+esc45(v)+'</textarea>';return '<input id="'+id+'" type="'+(q.type==='number'?'number':q.type==='date'?'date':'text')+'" value="'+esc45(v)+'">'}
   function collectQ45(){const qs=db.questions||[],a={};qs.forEach((q,i)=>{if(!q.id)q.id='Q_'+i;const e=document.getElementById(qId(q,i));if(e)a[q.id]=e.value;});return a}
+  function resolveCaseDiseaseId(value){
+    if(value==null||value==='')return '';
+    const raw=String(value).trim();
+    if(diseases[raw])return raw;
+    const found=Object.entries(diseases).find(([id,d])=>String(d.name).trim().toLowerCase()===raw.toLowerCase());
+    return found?found[0]:'';
+  }
   function ensureCaseQuestionnaire(c={}){
-    const diseaseId=c.disease||act()?.disease||db.selectedDisease;
-    if(!diseaseId||!diseases[diseaseId])return;
+    const diseaseId=resolveCaseDiseaseId(c.disease)||resolveCaseDiseaseId(act()?.disease)||resolveCaseDiseaseId(db.selectedDisease);
+    if(!diseaseId)return;
     const selector=document.getElementById('qDisease');
     const loadedDisease=db.questionMeta?.disease;
     if(loadedDisease!==diseaseId||!Array.isArray(db.questions)||!db.questions.length){
