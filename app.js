@@ -1105,28 +1105,55 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
         const verify=await sb.from('investigations').select('id',{count:'exact',head:true}).eq('id',serverId);
         if(verify.error)throw verify.error;
         if(!verify.count)throw new Error('Investigasi tidak ditemukan pada server dengan ID yang dipetakan. Penghapusan dibatalkan.');
+        const caseRows=await sb.from('cases').select('id',{count:'exact'}).eq('investigation_id',serverId);
+        if(caseRows.error)throw caseRows.error;
+        const caseIds=(caseRows.data||[]).map(row=>row.id);
+        if(Number(caseRows.count||0)!==caseIds.length)throw new Error('Seluruh ID kasus belum dapat diverifikasi. Muat ulang data atau hubungi administrator; penghapusan dibatalkan.');
         const countForServer=async function(table){
           const result=await sb.from(table).select('id',{count:'exact',head:true}).eq('investigation_id',serverId);
           if(result.error)throw result.error;
           return Number(result.count||0);
         };
+        const countByCase=async function(table,column){
+          if(!caseIds.length)return 0;
+          const result=await sb.from(table).select('id',{count:'exact',head:true}).in(column,caseIds);
+          if(result.error)throw result.error;
+          return Number(result.count||0);
+        };
+        const countOverlap=async function(table,column){
+          if(!caseIds.length)return 0;
+          const result=await sb.from(table).select('id',{count:'exact',head:true}).eq('investigation_id',serverId).in(column,caseIds);
+          if(result.error)throw result.error;
+          return Number(result.count||0);
+        };
         const counts=await Promise.all([
-          countForServer('cases'),
+          Promise.resolve(caseIds.length),
           countForServer('contacts'),
           countForServer('specimens'),
+          countByCase('contacts','index_case_id'),
+          countOverlap('contacts','index_case_id'),
+          countByCase('specimens','case_id'),
+          countOverlap('specimens','case_id'),
           countForServer('field_visits'),
           sb.from('public_surveys').select('id',{count:'exact'}).eq('investigation_id',serverId)
         ]);
-        if(counts[4].error)throw counts[4].error;
-        const surveyIds=(counts[4].data||[]).map(row=>row.id);
-        if(Number(counts[4].count||0)!==surveyIds.length)throw new Error('Seluruh ID survei belum dapat diverifikasi. Muat ulang data atau hubungi administrator; penghapusan dibatalkan.');
+        if(counts[8].error)throw counts[8].error;
+        const surveyIds=(counts[8].data||[]).map(row=>row.id);
+        if(Number(counts[8].count||0)!==surveyIds.length)throw new Error('Seluruh ID survei belum dapat diverifikasi. Muat ulang data atau hubungi administrator; penghapusan dibatalkan.');
         let responseCount=0;
         if(surveyIds.length){
           const responses=await sb.from('survey_responses').select('id',{count:'exact',head:true}).in('survey_id',surveyIds);
           if(responses.error)throw responses.error;
           responseCount=Number(responses.count||0);
         }
-        serverSummary={cases:counts[0],contacts:counts[1],specimens:counts[2],field_visits:counts[3],public_surveys:surveyIds.length,survey_responses:responseCount};
+        serverSummary={
+          cases:counts[0],
+          contacts:counts[1]+counts[3]-counts[4],
+          specimens:counts[2]+counts[5]-counts[6],
+          field_visits:counts[7],
+          public_surveys:surveyIds.length,
+          survey_responses:responseCount
+        };
         const prompt='HAPUS INVESTIGASI: '+label+'?\n\nJumlah data terkait yang diverifikasi langsung dari server dan akan ikut dihapus: kasus ('+serverSummary.cases+'), kontak ('+serverSummary.contacts+'), spesimen ('+serverSummary.specimens+'), kunjungan lapangan ('+serverSummary.field_visits+'), survei publik ('+serverSummary.public_surveys+'), respons survei ('+serverSummary.survey_responses+').\n\nCatatan: jumlah server mencakup rekaman yang mungkin tidak tampil pada daftar operasional karena penyaringan data simulasi/uji.\n\nPenghapusan permanen dan tidak dapat dibatalkan.';
         if(!window.confirm(prompt))return;
         const result=await sb.functions.invoke('delete-investigation',{body:{investigation_id:serverId}});
