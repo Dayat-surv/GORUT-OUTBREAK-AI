@@ -172,6 +172,16 @@ begin
   if not found then raise exception 'INVESTIGATION_NOT_FOUND'; end if;
   if v_owner_id is distinct from p_actor_id then raise exception 'NOT_AUTHORIZED'; end if;
 
+  -- Fail closed if any linked row is owned by another account. The Production
+  -- schema does not enforce owner consistency with a composite foreign key.
+  if exists (select 1 from public.cases where investigation_id = p_investigation_id and owner_id is distinct from p_actor_id)
+     or exists (select 1 from public.contacts where investigation_id = p_investigation_id and owner_id is distinct from p_actor_id)
+     or exists (select 1 from public.specimens where investigation_id = p_investigation_id and owner_id is distinct from p_actor_id)
+     or exists (select 1 from public.field_visits where investigation_id = p_investigation_id and owner_id is distinct from p_actor_id)
+     or exists (select 1 from public.public_surveys where investigation_id = p_investigation_id and created_by is distinct from p_actor_id) then
+    raise exception 'RELATED_RECORD_OWNER_MISMATCH';
+  end if;
+
   select count(*) into v_case_count from public.cases where investigation_id = p_investigation_id;
   select count(*) into v_contact_count from public.contacts where investigation_id = p_investigation_id;
   select count(*) into v_specimen_count from public.specimens where investigation_id = p_investigation_id;
