@@ -6,7 +6,7 @@ Tanggal pemeriksaan: 15 November 2026
 - Repository: `Dayat-surv/GORUT-OUTBREAK-AI`
 - Lingkungan yang diuji: STAGING
 - Branch STAGING: `staging/backend-auth-e2e-20261028`
-- Commit HEAD STAGING yang diperiksa: `0b423c9b592abbbc1c5b18e49ae91ac38060abcc`
+- Commit HEAD STAGING yang diperiksa: `16444940c93ee458fe9bbe9e8730705eb136fb39`
 - Branch Production: `main`
 - Commit HEAD `main` saat perbandingan: `0bce6e12a84cae6e7179266e7eed9ecc2634986b`
 - Merge base: `9e8fd19a24da3975706e758d45864de47637125d`
@@ -16,7 +16,7 @@ Snapshot ini adalah catatan audit STAGING, bukan persetujuan deployment Producti
 ## 2. Temuan perbandingan branch
 
 Perbandingan GitHub menunjukkan kedua branch telah divergen:
-- STAGING 104 commit di depan `main`.
+- STAGING 107 commit di depan `main`.
 - `main` 11 commit di depan STAGING.
 - Workflow GitHub Pages pada `.github/workflows/pages.yml` melakukan deployment dari branch `main`.
 
@@ -55,8 +55,11 @@ Publishable key tidak dicatat dalam dokumen ini. Kedua flag dan konfigurasi Prod
 4. Definisi RPC runtime telah diperiksa secara read-only. Fungsi bersifat `SECURITY DEFINER`, `search_path` dikosongkan, pemanggilan langsung dibatasi ke `service_role` (hak EXECUTE untuk `anon`, `authenticated`, dan `PUBLIC` tidak ada), dan fungsi membandingkan `investigations.owner_id` dengan `p_actor_id` sebelum penghapusan. Edge Function meneruskan actor ID yang berasal dari JWT; uji lintas-akun sebelumnya juga menghasilkan 403 `NOT_AUTHORIZED`.
 5. Cakupan penghapusan yang ditinjau mencakup kasus, kontak, spesimen, kunjungan lapangan, survei publik, dan respons survei. Relasi FK yang diperiksa menunjukkan kasus dan survei memakai `NO ACTION`, sehingga RPC menghapus child rows terkait secara eksplisit sebelum parent. Kontak/spesimen juga memiliki relasi kasus dengan `SET NULL`, tetapi seluruh data investigasi dihapus melalui RPC yang sama.
 6. Pada `syncNow()`, validasi hasil `auth.getUser()` ditambahkan dan exception tak terduga kini ditangkap; pesan status menjelaskan bahwa antrean lokal dipertahankan. Regression test untuk auth guard, penanganan exception, dan empat jalur orphan ditambahkan.
-7. Pengujian yang tercatat bukan pengganti audit penetrasi independen, peninjauan seluruh kode baris demi baris, atau uji beban.
-8. Tidak ada migrasi, konfigurasi, maupun data Production yang diubah dalam audit ini.
+7. Audit lanjutan relasi induk-anak menemukan bahwa fallback `uuidFrom(localId)` pada FK kasus kontak/spesimen dapat membentuk ID yang tidak merujuk pada baris server. Kode STAGING kini mensyaratkan `serverId` investigasi induk sebelum mengirim kasus/kontak/spesimen/kunjungan; untuk kontak dan spesimen yang memiliki `caseId`, server ID kasus yang sebenarnya juga wajib tersedia. Pencocokan ID lokal dinormalisasi melalui `String(...)`; FK kasus tidak lagi direkayasa dari ID lokal. Jika induk belum tersinkron, item dihitung gagal dan antrean tidak dibersihkan.
+8. Regression test diperluas untuk memastikan seluruh empat jalur child memerlukan server ID induk yang sah dan tidak membentuk FK kasus palsu. Run terbaru `https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/43704273307` pada HEAD `16444940c93ee458fe9bbe9e8730705eb136fb39` berstatus **success**; seluruh tujuh langkah workflow lulus. Satu run sebelumnya gagal karena assertion test lama masih mengharapkan pola guard lama; test diperbarui pada commit berikutnya dan run terbaru lulus.
+9. Pengujian otomatis ini memverifikasi guard dan bentuk kode secara statis; belum menggantikan uji runtime sinkronisasi parsial dengan akun browser STAGING dan data uji terkontrol.
+10. Pengujian yang tercatat bukan pengganti audit penetrasi independen, peninjauan seluruh kode baris demi baris, atau uji beban.
+11. Tidak ada migrasi, konfigurasi, maupun data Production yang diubah dalam audit ini.
 
 ## 6. Gerbang wajib sebelum promosi ke Production
 
@@ -89,6 +92,6 @@ Publishable key tidak dicatat dalam dokumen ini. Kedua flag dan konfigurasi Prod
 
 ## 8. Keputusan gerbang saat ini
 
-**STATUS: STAGING FUNCTIONAL TESTS PASSED; MANUAL ACCESS-CONTROL TESTS PASSED; DELETE EDGE FUNCTION/RPC REVIEWED; AUTOMATED CI PASSED ON HEAD 0b423c9; RESIDUAL SECURITY FINDING OPEN (LEAKED PASSWORD PROTECTION); PRODUCTION RELEASE NOT APPROVED.**
+**STATUS: STAGING AUTOMATED CI PASSED ON HEAD 1644494; SYNC PARENT-ID GUARDS ADDED; DELETE EDGE FUNCTION/RPC REVIEWED; RUNTIME BROWSER SYNC RETEST PENDING; RESIDUAL SECURITY FINDING OPEN (LEAKED PASSWORD PROTECTION); PRODUCTION RELEASE NOT APPROVED.**
 
 Dokumen ini hanya ditambahkan ke branch STAGING. Tidak ada perubahan pada branch `main`, GitHub Pages Production, proyek Supabase Production, atau data operasional Production.
