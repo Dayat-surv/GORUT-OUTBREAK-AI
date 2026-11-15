@@ -1396,11 +1396,19 @@ const _v24Init=initResearch;initResearch=function(){_v24Init();if(researchState.
     const name=val('regName').trim(),wa=val('regWhatsapp').trim(),email=val('regEmail').trim().toLowerCase(),pw=val('regPassword'),inst=val('regInstitution').trim(),ref=val('regPaymentRef').trim(),note=val('regNote').trim();
     if(!name||!wa||!email||!pw)return alert('Nama, WhatsApp, email, dan kata sandi wajib diisi.');
     if(pw.length<8)return alert('Kata sandi minimal 8 karakter.');
-    const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
-    if(sign.error)return alert('Registrasi akun gagal: '+sign.error.message);
-    const rr=await sb.rpc('create_registration_request',{p_email:email,p_full_name:name,p_whatsapp:wa,p_institution:inst,p_payment_reference:ref,p_note:note});
-    if(rr.error)return alert('Akun dibuat tetapi permintaan akses gagal dicatat: '+rr.error.message);
-    const rid=rr.data; const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(rid)}%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(wa)}%0AInstansi: ${encodeURIComponent(inst)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(ref)}`;
+    let currentUser=(await sb.auth.getUser()).data?.user||null;
+    if(currentUser&&String(currentUser.email||'').toLowerCase()!==email)return alert('Anda sedang masuk dengan email berbeda. Keluar terlebih dahulu, lalu gunakan email pendaftaran yang sesuai.');
+    if(!currentUser){
+      const sign=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,whatsapp:wa,institution:inst}}});
+      if(sign.error)return alert('Registrasi akun gagal: '+sign.error.message);
+      currentUser=sign.data?.user||null;
+      if(!sign.data?.session){
+        return alert('Akun berhasil dibuat. Konfirmasikan email, lalu masuk menggunakan akun tersebut dan kirim ulang formulir permohonan akses. Belum ada permohonan akses yang dicatat.');
+      }
+    }
+    const rr=await sb.functions.invoke('create-registration-request',{body:{email,full_name:name,whatsapp:wa,institution:inst,payment_reference:ref,note}});
+    if(rr.error||rr.data?.success!==true||!rr.data?.data)return alert('Akun berhasil dibuat, tetapi permohonan akses belum tercatat: '+(rr.error?.message||rr.data?.error||'respons server tidak valid'));
+    const rid=rr.data.data; const msg=`Registrasi GORUT-OUTBREAK AI%0AID: ${encodeURIComponent(rid)}%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(wa)}%0AInstansi: ${encodeURIComponent(inst)}%0APenggunaan aplikasi GORUT-OUTBREAK AI versi publik gratis.%0ARef: ${encodeURIComponent(ref)}`;
     const box=document.getElementById('registerMsg');box.style.display='block';box.innerHTML=`Permintaan <b>${esc0(rid)}</b> tercatat di server dan menunggu verifikasi admin.<br><br><a href="https://wa.me/6282290150334?text=${msg}" target="_blank" rel="noopener"><button class="btn-whatsapp">Kirim Konfirmasi WhatsApp</button></a>`;
   };
   /* Start selectors after DOM is ready. */
