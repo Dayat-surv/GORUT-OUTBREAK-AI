@@ -16,6 +16,9 @@ const endpoints = [
 for (const endpoint of endpoints) {
   assert.ok(app.includes("functions.invoke('" + endpoint + "'"), "Frontend must invoke " + endpoint);
 }
+assert.equal(app.split("functions.invoke('create-registration-request'").length - 1, 2, "Both registration wrappers must use the Edge Function");
+assert.ok(!app.includes("sb.rpc('create_registration_request'"), "Frontend must not retain a direct legacy registration RPC call");
+assert.ok(!app.includes("sb.rpc('activate_premium_7d'") && !app.includes("sb.rpc('reject_registration'"), "Admin actions must not call legacy RPCs directly");
 assert.ok(app.includes("serverSummary.deleted!==true"), "Delete must wait for server confirmation");
 assert.ok(app.includes("if(!sign.data?.session)") && app.includes("Konfirmasikan email"), "Registration must handle email-confirmation flow");
 assert.ok(helper.includes('withSupabase({ auth: "user" }'), "Every operation must require a user JWT");
