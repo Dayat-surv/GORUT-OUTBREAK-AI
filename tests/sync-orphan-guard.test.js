@@ -35,12 +35,19 @@ assert.match(sync, /catch\(error\)[\s\S]*?Antrean lokal dipertahankan/,
 // Case-form helpers are declared inside the v40 closure but are consumed by
 // later questionnaire wrappers. Expose the helper explicitly to avoid a
 // ReferenceError that prevents the Add/Edit Case modal from opening.
-assert.match(app, /window\\.addressFields=addressFields;/,
+assert.match(app, /window\.addressFields=addressFields;/,
   'addressFields must be exposed for later case-form wrappers');
-assert.match(app, /\\+window\\.addressFields\\(\\{\\}\\)\\+extraFood\\+extraPriority\\+qPanel/,
+assert.match(app, /\+window\.addressFields\(\{\}\)\+extraFood\+extraPriority\+qPanel/,
   'Add Case questionnaire wrapper must call the exposed address helper');
-assert.match(app, /\\+window\\.addressFields\\(c\\)\\+extraFood\\+extraPriority\\+qPanel/,
+assert.match(app, /\+window\.addressFields\(c\)\+extraFood\+extraPriority\+qPanel/,
   'Edit Case questionnaire wrapper must call the exposed address helper');
+
+assert.match(app, /function ensureCaseQuestionnaire\(c=\{\}\)/,
+  'case form must ensure a questionnaire is loaded for the active disease');
+assert.match(app, /function questionnaireCasePanel\(c=\{\}\)\{ensureCaseQuestionnaire\(c\);/,
+  'case panel must synchronize disease questionnaire before rendering');
+assert.match(app, /loadedDisease!==diseaseId\|\|!Array\.isArray\(db\.questions\)\|\|!db\.questions\.length/,
+  'case form must reload missing or mismatched questionnaire data');
 
 console.log('Sync orphan-guard regression checks passed.');
 
