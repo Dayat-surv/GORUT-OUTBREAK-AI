@@ -12,9 +12,9 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=184\.7/, 'main page must load the current cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v184\.7/, 'service worker cache version must match the current release');
-assert.match(sw, /app\.js\?v=184\.7/, 'service worker must precache the exact current application script');
+assert.match(index, /app\.js\?v=185\.1/, 'main page must load the current cache-busted application script');
+assert.match(sw, /gorut-outbreak-ai-final-v185\.1/, 'service worker cache version must match the current release');
+assert.match(sw, /app\.js\?v=185\.1/, 'service worker must precache the exact current application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 assert.match(appJs, /functions\.invoke\('delete-investigation'/, 'investigation deletion must use the authenticated Edge Function');
