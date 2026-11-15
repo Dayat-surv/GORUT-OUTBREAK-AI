@@ -573,6 +573,36 @@ window.gorutHandleLogin = async function () {
   window.showRegister=function(){
     return window.v45ShowRegister();
   };
+  /* Explicit click target used by the STAGING login button. Restore modal
+     visibility after the guard has run and surface any runtime failure. */
+  window.gorutOpenRegister=function(){
+    try{
+      if(!window.GORUT_BACKEND||window.GORUT_BACKEND.enabled!==true){
+        inform('Registrasi hanya tersedia melalui Supabase STAGING. Mode lokal dinonaktifkan.');
+        return false;
+      }
+      if(typeof window.v45ShowRegister!=='function'){
+        inform('Fungsi formulir registrasi belum tersedia. Muat ulang halaman.');
+        return false;
+      }
+      var result=window.v45ShowRegister();
+      var modal=document.getElementById('registerModal');
+      if(modal){
+        modal.classList.add('show');
+        modal.style.display='grid';
+        modal.style.visibility='visible';
+      }
+      if(!modal||!modal.querySelector('.register-modal')){
+        inform('Formulir registrasi gagal ditampilkan. Periksa pemuatan aplikasi dan muat ulang halaman.');
+        return false;
+      }
+      return result===undefined?true:result;
+    }catch(err){
+      console.error('GORUT registration opener error:',err);
+      inform('Formulir registrasi gagal dibuka: '+(err&&err.message?err.message:String(err)));
+      return false;
+    }
+  };
   /* Legacy local/demo and local activation paths remain disabled. */
   window.demoLogin=function(){inform('Login demo/lokal dinonaktifkan pada STAGING.');return false;};
   window.submitRegistration=async function(){inform('Formulir registrasi lama dinonaktifkan. Gunakan formulir Supabase.');return false;};
