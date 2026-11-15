@@ -541,9 +541,11 @@ async function testBackend(){
   else {badge.textContent='Backend: online';detail.textContent='Koneksi PostgreSQL/Supabase aktif. '+(data?.length||0)+' baris disease terbaca.';}
 }
 async function syncNow(){
+ try{
   const sb=await backendClient(); if(!sb){alert('Backend belum dikonfigurasi. Mode offline tetap aktif.');return;}
-  const user=(await sb.auth.getUser()).data.user;
-  if(!user){alert('Silakan login melalui Supabase Auth terlebih dahulu.');return;}
+  const auth=await sb.auth.getUser();
+  if(auth.error||!auth.data?.user)throw new Error(auth.error?.message||'Sesi login tidak tersedia. Silakan masuk kembali.');
+  const user=auth.data.user;
   let ok=0,fail=0;
   for(const x of db.investigations){const row={id:x.serverId||uuidFrom(x.id),owner_id:user.id,name:x.name,outbreak_type:x.type||'Penyakit Menular',disease_id:x.disease||null,province:x.prov||'Gorontalo',district:x.kab||'Gorontalo Utara',subdistrict:x.kec||null,village:x.desa||null,facility:x.pkm||null,start_date:x.date||null,status:x.status||'Berjalan',metadata:{local_id:x.id,food_investigation:x.foodInvestigation||null}};const r=await sb.from('investigations').upsert(row,{onConflict:'id'});if(!r.error){x.serverId=row.id;ok++;}else fail++;}
   for(const a of (db.alerts||[])){const row={id:a.serverId||uuidFrom(a.id),owner_id:user.id,disease_id:a.disease||null,epi_week:a.week||null,alert_date:a.date||null,reporting_facility:a.facility||null,count:a.count||0,verification_result:a.result||null,metadata:{local_id:a.id}};const r=await sb.from('alerts').upsert(row,{onConflict:'id'});if(!r.error){a.serverId=row.id;ok++;}else fail++;}
@@ -554,6 +556,12 @@ async function syncNow(){
   if(fail===0){syncQueue=[];localStorage.setItem('gorut-sync-queue','[]');for(const v of (db.fieldVisits||[]))v.syncStatus='synced';}save();
   document.getElementById('backendBadge').textContent=fail?'Backend: sebagian gagal':'Backend: tersinkron';
   document.getElementById('backendDetail').textContent=`Sinkronisasi selesai. Berhasil: ${ok}; gagal: ${fail}.`;
+ }catch(error){
+  console.error('Sinkronisasi terhenti dengan aman:',error);
+  const badge=document.getElementById('backendBadge');if(badge)badge.textContent='Backend: sinkronisasi terhenti';
+  const detail=document.getElementById('backendDetail');if(detail)detail.textContent='Sinkronisasi terhenti. Antrean lokal dipertahankan; periksa koneksi dan sesi login, lalu coba kembali.';
+  alert('Sinkronisasi terhenti. Antrean lokal tidak dibersihkan. '+(error?.message||String(error)));
+ }
 }
 function uuidFrom(v){let h=String(v).replace(/[^0-9a-f]/gi,'').padEnd(32,'0').slice(0,32);return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20,32);}
 
