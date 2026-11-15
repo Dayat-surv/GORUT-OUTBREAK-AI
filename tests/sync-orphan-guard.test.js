@@ -32,6 +32,16 @@ assert.match(sync, /const auth=await sb\.auth\.getUser\(\);[\s\S]*?if\(auth\.err
 assert.match(sync, /catch\(error\)[\s\S]*?Antrean lokal dipertahankan/,
   'unexpected auth/network exceptions must be caught and report that the local queue is preserved');
 
+// Case-form helpers are declared inside the v40 closure but are consumed by
+// later questionnaire wrappers. Expose the helper explicitly to avoid a
+// ReferenceError that prevents the Add/Edit Case modal from opening.
+assert.match(app, /window\\.addressFields=addressFields;/,
+  'addressFields must be exposed for later case-form wrappers');
+assert.match(app, /\\+window\\.addressFields\\(\\{\\}\\)\\+extraFood\\+extraPriority\\+qPanel/,
+  'Add Case questionnaire wrapper must call the exposed address helper');
+assert.match(app, /\\+window\\.addressFields\\(c\\)\\+extraFood\\+extraPriority\\+qPanel/,
+  'Edit Case questionnaire wrapper must call the exposed address helper');
+
 console.log('Sync orphan-guard regression checks passed.');
 
 
