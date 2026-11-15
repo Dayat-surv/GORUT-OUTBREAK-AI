@@ -6,7 +6,7 @@ Tanggal pemeriksaan: 15 November 2026
 - Repository: `Dayat-surv/GORUT-OUTBREAK-AI`
 - Lingkungan yang diuji: STAGING
 - Branch STAGING: `staging/backend-auth-e2e-20261028`
-- Commit HEAD STAGING yang diperiksa: `8bb964f47685bdffd11c82ffcc969fd179841a3f`
+- Commit HEAD STAGING yang diperiksa: `0b423c9b592abbbc1c5b18e49ae91ac38060abcc`
 - Branch Production: `main`
 - Commit HEAD `main` saat perbandingan: `0bce6e12a84cae6e7179266e7eed9ecc2634986b`
 - Merge base: `9e8fd19a24da3975706e758d45864de47637125d`
@@ -16,7 +16,7 @@ Snapshot ini adalah catatan audit STAGING, bukan persetujuan deployment Producti
 ## 2. Temuan perbandingan branch
 
 Perbandingan GitHub menunjukkan kedua branch telah divergen:
-- STAGING 98 commit di depan `main`.
+- STAGING 104 commit di depan `main`.
 - `main` 11 commit di depan STAGING.
 - Workflow GitHub Pages pada `.github/workflows/pages.yml` melakukan deployment dari branch `main`.
 
@@ -50,15 +50,18 @@ Publishable key tidak dicatat dalam dokumen ini. Kedua flag dan konfigurasi Prod
 ## 5. Temuan residual dan keterbatasan bukti
 
 1. Supabase Security Advisor melaporkan `auth_leaked_password_protection`: Leaked Password Protection belum aktif. Paket Supabase Free yang digunakan tidak menyediakan pengaktifan fitur ini. Ini adalah risiko residual yang harus diterima secara tertulis atau ditangani melalui peningkatan paket sebelum penggunaan yang lebih luas.
-2. Pemeriksaan status commit GitHub untuk HEAD STAGING tidak mengembalikan status checks. Endpoint daftar workflow run yang tersedia juga tidak menunjukkan run PR untuk commit tersebut. Karena itu, dokumen ini **tidak menyatakan CI pada HEAD STAGING telah lulus**.
-3. Workflow `staging-validation.yml` mendefinisikan pemeriksaan sintaks JavaScript, regression test snapshot penelitian, GIS test mode, release smoke test, static security test RPC, dan static validation SQL. Hasil aktual workflow untuk snapshot HEAD harus diverifikasi di GitHub Actions sebelum gerbang rilis berikutnya.
-4. Pengujian yang tercatat bukan pengganti audit penetrasi independen, peninjauan seluruh kode baris demi baris, atau uji beban.
-5. Tidak ada migrasi, konfigurasi, maupun data Production yang diubah dalam audit ini.
+2. GitHub Actions pada HEAD STAGING `0b423c9b592abbbc1c5b18e49ae91ac38060abcc` telah selesai dengan **conclusion: success**. Run: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/43703879046 . Job `staging-checks` dan seluruh langkah berikut lulus: JavaScript syntax, research snapshot regression, isolated GIS test mode, release smoke, sync orphan-guard, Supabase RPC static security, dan Supabase validation SQL safety.
+3. Audit runtime Edge Function penghapusan pada proyek STAGING `xeqdhwqylutntphlkmqe` menemukan `delete-investigation` ACTIVE versi 4, `verify_jwt=true`. Source runtime berhasil diambil dan ditinjau: handler memakai `serveSecureAdminOperation`, mengambil actor ID dari klaim JWT tervalidasi, memvalidasi ID investigasi, lalu memanggil RPC `edge_delete_investigation_bundle`.
+4. Definisi RPC runtime telah diperiksa secara read-only. Fungsi bersifat `SECURITY DEFINER`, `search_path` dikosongkan, pemanggilan langsung dibatasi ke `service_role` (hak EXECUTE untuk `anon`, `authenticated`, dan `PUBLIC` tidak ada), dan fungsi membandingkan `investigations.owner_id` dengan `p_actor_id` sebelum penghapusan. Edge Function meneruskan actor ID yang berasal dari JWT; uji lintas-akun sebelumnya juga menghasilkan 403 `NOT_AUTHORIZED`.
+5. Cakupan penghapusan yang ditinjau mencakup kasus, kontak, spesimen, kunjungan lapangan, survei publik, dan respons survei. Relasi FK yang diperiksa menunjukkan kasus dan survei memakai `NO ACTION`, sehingga RPC menghapus child rows terkait secara eksplisit sebelum parent. Kontak/spesimen juga memiliki relasi kasus dengan `SET NULL`, tetapi seluruh data investigasi dihapus melalui RPC yang sama.
+6. Pada `syncNow()`, validasi hasil `auth.getUser()` ditambahkan dan exception tak terduga kini ditangkap; pesan status menjelaskan bahwa antrean lokal dipertahankan. Regression test untuk auth guard, penanganan exception, dan empat jalur orphan ditambahkan.
+7. Pengujian yang tercatat bukan pengganti audit penetrasi independen, peninjauan seluruh kode baris demi baris, atau uji beban.
+8. Tidak ada migrasi, konfigurasi, maupun data Production yang diubah dalam audit ini.
 
 ## 6. Gerbang wajib sebelum promosi ke Production
 
 - [ ] Bekukan perubahan STAGING dan pertahankan snapshot commit HEAD di atas.
-- [ ] Jalankan/konfirmasi seluruh job `staging-validation.yml` pada HEAD STAGING; simpan tautan run dan hasil tiap job.
+- [x] Jalankan/konfirmasi seluruh job `staging-validation.yml` pada HEAD STAGING; simpan tautan run dan hasil tiap job.
 - [ ] Buat branch promosi baru dari HEAD `main` terkini; jangan menjadikan branch STAGING sebagai target merge langsung.
 - [ ] Buat daftar perubahan yang benar-benar diperlukan dan port satu per satu ke branch promosi.
 - [ ] Tinjau ulang `app.js`, `index.html`, `sw.js`, `backend-config.js`, stylesheet, dan seluruh file/migrasi Supabase yang ikut dipromosikan.
@@ -86,6 +89,6 @@ Publishable key tidak dicatat dalam dokumen ini. Kedua flag dan konfigurasi Prod
 
 ## 8. Keputusan gerbang saat ini
 
-**STATUS: STAGING FUNCTIONAL TESTS PASSED; MANUAL ACCESS-CONTROL TESTS PASSED; RESIDUAL SECURITY FINDING OPEN; AUTOMATED CI EVIDENCE PENDING; PRODUCTION RELEASE NOT APPROVED.**
+**STATUS: STAGING FUNCTIONAL TESTS PASSED; MANUAL ACCESS-CONTROL TESTS PASSED; DELETE EDGE FUNCTION/RPC REVIEWED; AUTOMATED CI PASSED ON HEAD 0b423c9; RESIDUAL SECURITY FINDING OPEN (LEAKED PASSWORD PROTECTION); PRODUCTION RELEASE NOT APPROVED.**
 
 Dokumen ini hanya ditambahkan ke branch STAGING. Tidak ada perubahan pada branch `main`, GitHub Pages Production, proyek Supabase Production, atau data operasional Production.
