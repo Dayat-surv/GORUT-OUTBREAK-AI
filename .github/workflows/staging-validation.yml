@@ -32,6 +32,8 @@ jobs:
         run: node tests/gis-test-mode.test.js
       - name: Run release smoke tests
         run: node tests/release-smoke.test.js
+      - name: Run sync orphan-guard regression tests
+        run: node tests/sync-orphan-guard.test.js
       - name: Run Supabase RPC static security checks
         run: node tests/supabase-rpc-static.test.js
       - name: Run Supabase validation SQL safety checks
