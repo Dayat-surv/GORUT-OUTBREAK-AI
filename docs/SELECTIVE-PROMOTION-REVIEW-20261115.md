@@ -82,3 +82,50 @@ Kandidat di atas bukan persetujuan otomatis untuk merge.
 
 ## 5. Batas perubahan
 Dokumen ini dibuat pada branch `release/production-selective-20261115`. Branch `main`, GitHub Pages Production, Supabase Production, dan data operasional Production tidak diubah. Belum ada pull request, merge, migrasi Production, atau deployment Production.
+
+
+## 6. Pemeriksaan read-only Supabase Production (15 Nov 2026)
+
+Proyek Production teridentifikasi sebagai `gorut-outbreak-ai`, ref `lheuszdhprwmtajhdukc`, status proyek ACTIVE_HEALTHY, PostgreSQL 17.11. Tidak ada perintah perubahan skema atau data yang dijalankan.
+
+### Struktur dan data
+- 14 tabel di schema public; seluruh 14 tabel mengaktifkan RLS.
+- `relforcerowsecurity` belum diaktifkan (FORCE RLS false).
+- Snapshot jumlah baris: investigations 9, cases 5, contacts 0, specimens 0, field_visits 0, registration_requests 0, active public_surveys 0. Angka ini hanya snapshot saat audit, bukan pernyataan bahwa tabel kosong secara permanen.
+- Kebijakan owner pada tabel operasional menggunakan `auth.uid() = owner_id` pada USING dan WITH CHECK. Policy admin tersedia terpisah pada audit_log, profiles, dan registration_requests.
+- Fungsi `is_admin()` memeriksa role pada `profiles`, bukan user metadata JWT.
+
+### Edge Functions
+Daftar Edge Functions Production yang dikembalikan Supabase MCP kosong. Ini berbeda dari STAGING yang memiliki:
+- activate-registration v5
+- reject-registration v4
+- delete-investigation v4
+- create-registration-request v1
+
+STAGING `app.js` memanggil ketiga fungsi registrasi/admin tersebut dan fungsi penghapusan investigasi melalui `supabase.functions.invoke(...)`. Karena fungsi-fungsi itu belum terdaftar di Production, mempromosikan kode frontend STAGING tanpa menyiapkan/deploy fungsi Production yang telah diaudit akan menghasilkan alur yang gagal. Jangan deploy fungsi STAGING apa adanya; sesuaikan endpoint, konfigurasi, secrets, otorisasi Admin, dan pemeriksaan kepemilikan terhadap Production terlebih dahulu.
+
+### Fungsi SQL dan Security Advisor
+Production memiliki 9 fungsi di schema public, seluruhnya SECURITY DEFINER dan `search_path=''`. Dari pemeriksaan hak EXECUTE:
+- `activate_premium_7d`, `reject_registration`: EXECUTE authenticated, tidak untuk anon. Isi fungsi memeriksa `auth.uid()` memiliki role admin sebelum perubahan.
+- `create_registration_request`: EXECUTE authenticated, tidak untuk anon. Isi fungsi mewajibkan sesi login dan email formulir cocok dengan email akun.
+- `get_my_public_survey_submissions`: EXECUTE authenticated, tidak untuk anon. Isi fungsi membatasi hasil ke investigasi yang `owner_id = auth.uid()`.
+- `is_admin`: EXECUTE authenticated, tidak untuk anon; hanya mengembalikan boolean dari role profil.
+- `get_public_survey`, `submit_public_survey` (dua signature), dan trigger function `handle_new_user`: tidak memiliki EXECUTE untuk anon maupun authenticated pada hasil pemeriksaan privilege.
+
+Security Advisor memberi 5 peringatan SECURITY DEFINER yang dapat dipanggil authenticated (empat fungsi di atas kecuali fungsi-fungsi tanpa EXECUTE; tepatnya activate_premium_7d, create_registration_request, get_my_public_survey_submissions, is_admin, reject_registration), serta peringatan leaked-password protection disabled. Lima fungsi tersebut mempunyai guard internal yang terlihat pada definisinya, tetapi tetap memerlukan review dan uji otorisasi independen sebelum rilis. Jangan menganggap peringatan selesai hanya karena ada guard internal.
+Health Advisor tidak mengembalikan lint.
+
+### Keputusan kompatibilitas
+1. Jangan jalankan migrasi STAGING ke Production.
+2. Jangan menyalin `backend-config.js` STAGING.
+3. Jangan mempromosikan `app.js` STAGING sebelum Edge Functions Production tersedia dan telah diuji.
+4. Jangan mengubah grants SECURITY DEFINER Production hanya berdasarkan peringatan advisor; evaluasi kebutuhan aplikasi dan jalur pemanggilan lebih dahulu.
+5. Production memiliki data operasional (9 investigations dan 5 cases pada snapshot audit). Semua perubahan tetap memerlukan backup, rencana rollback, dan persetujuan eksplisit.
+
+## 7. Status setelah audit
+- Pemeriksaan skema, kebijakan, fungsi, grants, Edge Functions, dan advisor Production: selesai secara read-only.
+- Kompatibilitas frontend STAGING dengan Production: belum lulus karena dependensi Edge Functions belum tersedia di Production.
+- Perubahan database Production: nihil.
+- Deployment Production: nihil.
+- Branch `main`: tidak diubah.
+- Branch promosi hanya berisi dokumentasi audit; belum ada kode runtime yang dipromosikan.
