@@ -20,6 +20,8 @@ assert.equal(app.split("functions.invoke('create-registration-request'").length 
 assert.ok(!app.includes("sb.rpc('create_registration_request'"), "Frontend must not retain a direct legacy registration RPC call");
 assert.ok(!app.includes("sb.rpc('activate_premium_7d'") && !app.includes("sb.rpc('reject_registration'"), "Admin actions must not call legacy RPCs directly");
 assert.ok(app.includes("serverSummary.deleted!==true"), "Delete must wait for server confirmation");
+assert.ok(app.includes("countByCase('contacts','index_case_id')") && app.includes("countByCase('specimens','case_id')"), "Delete confirmation must count indirectly linked contacts/specimens");
+assert.ok(app.includes("contacts:counts[1]+counts[3]-counts[4]") && app.includes("specimens:counts[2]+counts[5]-counts[6]"), "Delete confirmation must deduplicate direct/indirect child counts");
 assert.ok(app.includes("if(!sign.data?.session)") && app.includes("Konfirmasikan email"), "Registration must handle email-confirmation flow");
 assert.ok(helper.includes('withSupabase({ auth: "user" }'), "Every operation must require a user JWT");
 assert.ok(helper.includes("ctx.userClaims?.id ?? ctx.jwtClaims?.sub"), "Actor identity must come from verified claims");
