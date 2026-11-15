@@ -228,7 +228,17 @@ begin
                 join public.cases k on k.id = s.case_id
                 where k.investigation_id = p_investigation_id
                   and s.investigation_id is not null
-                  and s.investigation_id is distinct from p_investigation_id) then
+                  and s.investigation_id is distinct from p_investigation_id)
+     or exists (select 1 from public.contacts c
+                join public.cases k on k.id = c.index_case_id
+                where c.investigation_id = p_investigation_id
+                  and k.investigation_id is not null
+                  and k.investigation_id is distinct from p_investigation_id)
+     or exists (select 1 from public.specimens s
+                join public.cases k on k.id = s.case_id
+                where s.investigation_id = p_investigation_id
+                  and k.investigation_id is not null
+                  and k.investigation_id is distinct from p_investigation_id) then
     raise exception 'RELATED_RECORD_OWNER_OR_INVESTIGATION_MISMATCH';
   end if;
 
