@@ -33,3 +33,21 @@ Paket ini disiapkan untuk proyek Supabase Production, tetapi **belum dideploy da
 - Jangan mematikan JWT verification.
 - Jangan memasukkan service-role key ke browser, repository, atau file konfigurasi frontend.
 - Deployment Edge Function membuat endpoint aktif segera. Karena itu deployment memerlukan persetujuan eksplisit terpisah dan tidak dilakukan oleh pekerjaan persiapan ini.
+
+
+## Pemeriksaan lanjutan (15 November 2026)
+- Struktur kolom Production diverifikasi kembali untuk semua tabel yang disentuh. Kolom yang dipakai kandidat tersedia, termasuk `registration_requests.note/reviewed_by/reviewed_at`, `subscriptions.activated_at`, dan `audit_log.details`.
+- Fungsi kandidat hapus investigasi diperketat: sebelum menghapus, ia menolak seluruh operasi bila ada kasus/kontak/spesimen/kunjungan atau survei terkait yang owner/creator-nya berbeda dari pemilik investigasi. Ini fail-closed karena skema saat ini tidak memiliki FK komposit yang menjamin konsistensi pemilik.
+- Helper Edge Function mengembalikan konflik generik bila integritas kepemilikan rekaman terkait tidak konsisten.
+- Snapshot Production setelah audit tetap menunjukkan 9 investigasi, 5 kasus, 0 kontak, 0 spesimen, 0 kunjungan, 0 permohonan registrasi, dan 0 survei publik aktif. Daftar Edge Functions Production tetap kosong. Pemeriksaan ini hanya SELECT/list; tidak ada perubahan.
+- Kode kandidat masih belum dikompilasi atau dijalankan. Pemeriksaan skema tidak menggantikan uji migrasi pada salinan database dan uji runtime.
+
+## Matriks uji wajib sebelum aktivasi
+| Fungsi | Uji positif | Uji negatif |
+|---|---|---|
+| create-registration-request | akun login + email terverifikasi yang cocok | tanpa JWT, email tidak cocok, email belum diverifikasi, input terlalu panjang |
+| activate-registration | Admin + permohonan pending | petugas, anon, ID tidak ada, permohonan bukan pending |
+| reject-registration | Admin + permohonan pending | petugas, anon, ID tidak ada, permohonan bukan pending |
+| delete-investigation | pemilik investigasi + semua child owner cocok | anon, bukan pemilik, ID tidak ada, child owner mismatch |
+
+Semua uji hapus harus memakai data sintetis di lingkungan terisolasi dan memastikan tidak ada rekaman akun lain yang terhapus.
