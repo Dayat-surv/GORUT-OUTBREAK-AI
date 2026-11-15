@@ -524,96 +524,88 @@ window.gorutHandleLogin = async function () {
 </script>
 
 <script>
-/* v169-staging-auth-guard: retire legacy Open Access/demo and local registration/access-management flows.
-   STAGING UI only. No auth account, database, case, or operational data is modified. */
+/* v185-staging-registration-gate:
+   Enable Supabase Auth registration only on STAGING.
+   Keep local/demo registration disabled. Admin review actions remain server-side
+   through authenticated Edge Functions with server-verified admin role.
+   No operational data or production configuration is modified. */
 (function(){
   'use strict';
-  var notice='Registrasi baru dan pengelolaan aktivasi akses sementara dinonaktifkan selama penyiapan keamanan STAGING. Akun petugas yang sudah terdaftar tetap dapat masuk seperti biasa.';
-  function inform(){
+  function inform(message){
     var el=document.getElementById('loginMsg');
-    if(el){el.style.display='block';el.textContent=notice;}
-    else window.alert(notice);
+    if(el){el.style.display='block';el.textContent=message;}
+    else window.alert(message);
   }
-  window.showRegister=function(){inform();};
-  window.demoLogin=function(){inform();return false;};
-  window.v45ShowRegister=function(){inform();return false;};
-  window.v45Register=async function(){inform();return false;};
-  window.v45RegisterAndWA=function(){inform();return false;};
-  window.v45Approve=function(){inform();return false;};
-  window.v45Reject=function(){inform();return false;};
-  window.closeRegister=function(){var m=document.getElementById('registerModal');if(m)m.classList.remove('show');};
-  window.submitRegistration=async function(){inform();return false;};
-  window.activateRegistration= function(){inform();return false;};
-  window.activateRegistrationV28=async function(){inform();return false;};
-  window.v30RejectRegistration=async function(){inform();return false;};
+  /* Never permit local/offline account creation on this hosted STAGING build. */
+  var originalShow=window.v45ShowRegister;
+  window.v45ShowRegister=function(){
+    if(!window.GORUT_BACKEND||window.GORUT_BACKEND.enabled!==true){
+      inform('Registrasi hanya tersedia melalui Supabase STAGING. Mode lokal dinonaktifkan.');
+      return false;
+    }
+    if(typeof originalShow!=='function'){
+      inform('Formulir registrasi belum siap. Muat ulang halaman.');
+      return false;
+    }
+    return originalShow.apply(this,arguments);
+  };
+  var originalRegister=window.v45Register;
+  window.v45Register=async function(){
+    if(!window.GORUT_BACKEND||window.GORUT_BACKEND.enabled!==true){
+      inform('Pendaftaran akun lokal diblokir. Gunakan koneksi Supabase STAGING.');
+      return false;
+    }
+    if(typeof window.backendClient!=='function'){
+      inform('Layanan Supabase STAGING belum siap. Muat ulang halaman.');
+      return false;
+    }
+    var client=await window.backendClient();
+    if(!client){
+      inform('Koneksi Supabase STAGING belum tersedia. Akun tidak dibuat.');
+      return false;
+    }
+    if(typeof originalRegister!=='function'){
+      inform('Fungsi registrasi belum siap. Muat ulang halaman.');
+      return false;
+    }
+    return originalRegister.apply(this,arguments);
+  };
+  window.showRegister=function(){
+    return window.v45ShowRegister();
+  };
+  /* Legacy local/demo and local activation paths remain disabled. */
+  window.demoLogin=function(){inform('Login demo/lokal dinonaktifkan pada STAGING.');return false;};
+  window.submitRegistration=async function(){inform('Formulir registrasi lama dinonaktifkan. Gunakan formulir Supabase.');return false;};
+  window.activateRegistration=function(){inform('Aktivasi lokal dinonaktifkan.');return false;};
   window.renderAdminV27=function(){
     var el=document.getElementById('v27RegList');
-    if(el)el.innerHTML='<tr><td colspan="7">Pengelolaan registrasi sementara dinonaktifkan pada STAGING.</td></tr>';
+    if(el)el.innerHTML='<tr><td colspan="7">Registrasi lokal dinonaktifkan pada STAGING.</td></tr>';
   };
   window.renderAdminV28=async function(){
     var el=document.getElementById('v28RegList');
-    if(el)el.innerHTML='<tr><td colspan="8">Pengelolaan aktivasi akses sementara dinonaktifkan pada STAGING.</td></tr>';
-  };
-  window.v30RefreshAdmin=async function(){
-    var box=document.getElementById('v30AdminContent');
-    if(!box)return;
-    var role=String(window.GORUT_USER&&window.GORUT_USER.role||'').toLowerCase();
-    if(!/^(admin|admin_kabupaten|super_admin|administrator)$/.test(role)){
-      box.innerHTML='<div class="notice">Panel administrasi hanya tersedia untuk akun Admin.</div>';
-      return;
-    }
-    var sb=typeof window.backendClient==='function'?await window.backendClient():null;
-    if(!sb){box.innerHTML='<div class="notice">Koneksi Supabase STAGING belum tersedia.</div>';return;}
-    box.innerHTML='<div class="notice">Memuat ringkasan Admin (mode hanya-baca)…</div>';
-    var results=await Promise.all([
-      sb.from('subscriptions').select('id,user_id,plan_code,status,starts_at,expires_at,activated_at').order('created_at',{ascending:false}),
-      sb.from('profiles').select('id,full_name,role,facility,created_at').order('created_at',{ascending:false}),
-      sb.from('audit_log').select('id,actor_id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(20)
-    ]);
-    var err=results.find(function(x){return x.error;});
-    if(err){box.innerHTML='<div class="notice">Gagal memuat ringkasan Admin: '+String(err.error.message||'Kesalahan query').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];})+'</div>';return;}
-    var S=results[0].data||[],P=results[1].data||[],L=results[2].data||[];
-    var esc=function(x){return String(x==null?'—':x).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});};
-    var active=S.filter(function(x){return x.status==='active'&&x.expires_at&&new Date(x.expires_at)>new Date();}).length;
-    var fmt=function(x){return x?new Date(x).toLocaleString('id-ID'):'—';};
-    box.innerHTML='<div class="v30-admin-grid">'+
-      '<div class="v30-stat"><small>Subscription aktif</small><strong>'+active+'</strong></div>'+
-      '<div class="v30-stat"><small>Total pengguna</small><strong>'+P.length+'</strong></div>'+
-      '<div class="v30-stat"><small>Audit terbaru</small><strong>'+L.length+'</strong></div></div>'+
-      '<div class="card" style="margin-top:14px"><h3>👥 Pengguna</h3><div style="overflow:auto"><table><thead><tr><th>Nama</th><th>Role</th><th>Fasilitas</th><th>Dibuat</th></tr></thead><tbody>'+
-      (P.map(function(x){return '<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.role)+'</td><td>'+esc(x.facility)+'</td><td>'+fmt(x.created_at)+'</td></tr>';}).join('')||'<tr><td colspan="4">Belum ada pengguna.</td></tr>')+
-      '</tbody></table></div></div>'+
-      '<div class="card" style="margin-top:14px"><h3>🧾 Subscription</h3><div style="overflow:auto"><table><thead><tr><th>User ID</th><th>Paket</th><th>Status</th><th>Mulai</th><th>Berakhir</th></tr></thead><tbody>'+
-      (S.map(function(x){return '<tr><td>'+esc(x.user_id)+'</td><td>'+esc(x.plan_code)+'</td><td>'+esc(x.status)+'</td><td>'+fmt(x.starts_at)+'</td><td>'+fmt(x.expires_at)+'</td></tr>';}).join('')||'<tr><td colspan="5">Belum ada data subscription.</td></tr>')+
-      '</tbody></table></div></div>'+
-      '<div class="card" style="margin-top:14px"><h3>🔎 Audit Trail</h3><div style="overflow:auto"><table><thead><tr><th>Waktu</th><th>Aksi</th><th>Entitas</th><th>ID</th></tr></thead><tbody>'+
-      (L.map(function(x){return '<tr><td>'+fmt(x.created_at)+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.entity_type)+'</td><td>'+esc(x.entity_id)+'</td></tr>';}).join('')||'<tr><td colspan="4">Belum ada catatan audit.</td></tr>')+
-      '</tbody></table></div></div>'+
-      '<div class="notice" style="margin-top:12px">Mode STAGING hanya-baca. Registrasi, aktivasi, penolakan, dan perubahan subscription tetap dinonaktifkan.</div>';
+    if(el)el.innerHTML='<tr><td colspan="8">Gunakan panel Admin server untuk meninjau permintaan.</td></tr>';
   };
   function applyGuard(){
     var backendBadge=document.getElementById('backendBadge');
     if(backendBadge)backendBadge.textContent=window.GORUT_BACKEND&&window.GORUT_BACKEND.enabled?'Mode: Supabase STAGING':'Mode lokal — tanpa autentikasi server';
     var roleBadge=document.getElementById('roleBadge');
     if(roleBadge&&!window.GORUT_USER)roleBadge.textContent='Login diperlukan';
-    var style=document.getElementById('v169StagingGuardStyle');
-    if(!style){style=document.createElement('style');style.id='v169StagingGuardStyle';style.textContent='#v45UserAdmin{display:none!important}';document.head.appendChild(style);}
+    var style=document.getElementById('v185StagingGuardStyle');
+    if(!style){style=document.createElement('style');style.id='v185StagingGuardStyle';style.textContent='#v45UserAdmin{display:none!important}';document.head.appendChild(style);}
     var modal=document.getElementById('registerModal');
     if(modal){modal.classList.remove('show');modal.style.display='none';}
-    document.querySelectorAll('[onclick*="showRegister"],[onclick*="submitRegistration"],[data-action="register"]').forEach(function(el){
+    document.querySelectorAll('[onclick*="submitRegistration"],[data-action="register"]').forEach(function(el){
       el.style.display='none';
       el.setAttribute('aria-hidden','true');
     });
     var old27=document.getElementById('v27AccessAdmin');if(old27)old27.remove();
     var old28=document.getElementById('v28AccessAdmin');if(old28)old28.remove();
-    window.renderAdminV27();
-    window.renderAdminV28();
-    window.v30RefreshAdmin();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyGuard);
   else applyGuard();
   window.addEventListener('load',applyGuard,{once:true});
 })();
+
 </script>
 
 
