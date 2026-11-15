@@ -1,0 +1,35 @@
+name: Production candidate validation
+
+on:
+  push:
+    branches:
+      - release/production-selective-20261115
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout candidate branch
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Parse frontend JavaScript
+        run: node --check app.js
+      - name: Run candidate security assertions
+        run: node scripts/validate-production-candidate.mjs
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check all Production candidate Edge Functions
+        run: |
+          deno check supabase/functions/activate-registration/index.ts
+          deno check supabase/functions/reject-registration/index.ts
+          deno check supabase/functions/delete-investigation/index.ts
+          deno check supabase/functions/create-registration-request/index.ts
