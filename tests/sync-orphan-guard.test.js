@@ -33,3 +33,22 @@ assert.match(sync, /catch\(error\)[\s\S]*?Antrean lokal dipertahankan/,
   'unexpected auth/network exceptions must be caught and report that the local queue is preserved');
 
 console.log('Sync orphan-guard regression checks passed.');
+
+
+// Public questionnaire creation must remain blocked while the explicit
+// publicSurveyEnabled feature flag is false, without creating survey rows.
+const publicQStart = app.indexOf('async function publicQ(){');
+const publicQEnd = app.indexOf('\nfunction copyText', publicQStart + 30);
+assert.ok(publicQStart >= 0 && publicQEnd > publicQStart, 'publicQ function must exist');
+const publicQ = app.slice(publicQStart, publicQEnd);
+assert.match(publicQ, /surveyConfig\.enabled!==true\|\|surveyConfig\.publicSurveyEnabled!==true/,
+  'public questionnaire creation must require both backend and public survey flags');
+assert.ok(publicQ.indexOf('surveyConfig.publicSurveyEnabled!==true') < publicQ.indexOf('await backendClient()'),
+  'public survey feature gate must run before backend client access');
+assert.ok(publicQ.indexOf('surveyConfig.publicSurveyEnabled!==true') < publicQ.indexOf("from('questionnaires').insert"),
+  'public survey feature gate must run before questionnaire creation');
+const publicSurveyHtml = fs.readFileSync(path.join(__dirname, '..', 'public_survey.html'), 'utf8');
+assert.match(publicSurveyHtml, /Fitur kuesioner publik sedang dinonaktifkan selama audit keamanan/,
+  'public survey page must accurately explain that the feature is disabled for security review');
+assert.doesNotMatch(publicSurveyHtml, /Formulir online belum tersedia karena backend belum dikonfigurasi/,
+  'public survey page must not misdiagnose a disabled feature as missing backend configuration');
