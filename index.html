@@ -591,6 +591,8 @@ window.gorutHandleLogin = async function () {
         modal.classList.add('show');
         modal.style.display='grid';
         modal.style.visibility='visible';
+        /* Keep registration dialog above the fixed login screen (z-index:9999). */
+        modal.style.zIndex='10000';
       }
       if(!modal||!modal.querySelector('.register-modal')){
         inform('Formulir registrasi gagal ditampilkan. Periksa pemuatan aplikasi dan muat ulang halaman.');
