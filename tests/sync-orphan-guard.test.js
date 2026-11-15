@@ -42,6 +42,12 @@ assert.match(app, /\+window\.addressFields\(\{\}\)\+extraFood\+extraPriority\+qP
 assert.match(app, /\+window\.addressFields\(c\)\+extraFood\+extraPriority\+qPanel/,
   'Edit Case questionnaire wrapper must call the exposed address helper');
 
+assert.match(app, /function resolveCaseDiseaseId\(value\)/,
+  'case form must normalize disease IDs and disease display names');
+assert.match(app, /resolveCaseDiseaseId\(act\(\)\?\.disease\)/,
+  'active investigation disease must be resolved before questionnaire loading');
+assert.match(app, /String\(d\.name\)\.trim\(\)\.toLowerCase\(\)===raw\.toLowerCase\(\)/,
+  'display-name disease values must map to canonical questionnaire IDs');
 assert.match(app, /function ensureCaseQuestionnaire\(c=\{\}\)/,
   'case form must ensure a questionnaire is loaded for the active disease');
 assert.match(app, /function questionnaireCasePanel\(c=\{\}\)\{ensureCaseQuestionnaire\(c\);/,
