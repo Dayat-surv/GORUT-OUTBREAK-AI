@@ -180,7 +180,7 @@ Tidak ada salinan penuh app.js STAGING. backend-config.js tetap konfigurasi Prod
 - Dependency npm:@supabase/server dipatok pada 1.9.2.
 
 ### Bukti uji otomatis
-GitHub Actions run #1: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/43697019083 — **SUCCESS** pada kedua job:
+GitHub Actions run #10: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/43697365938 — **SUCCESS** pada kedua job:
 1. validate: node --check app.js, pemeriksaan kontrak keamanan statis, dan deno check pada keempat Edge Functions.
 2. postgres-integration: migrasi diterapkan pada PostgreSQL 17 disposable dengan skema sintetis; uji positif/negatif registrasi, email belum terverifikasi, aktivasi/penolakan Admin, larangan non-admin, penghapusan bundle, kepemilikan berbeda, dan relasi lintas investigasi lulus. Data uji di-rollback.
 
