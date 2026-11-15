@@ -5610,9 +5610,11 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       var user=auth&&auth.data&&auth.data.user;
       if(auth&&auth.error)throw auth.error;
       if(!user)throw new Error('Sesi login Supabase tidak ditemukan. Silakan login ulang.');
-      var serverId=inv.serverId||(window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():uuidFrom(String(inv.id)+'-'+String(user.id)));
+      var serverId=inv.serverId||(window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():uuidFrom(String(user.id)+'-'+String(inv.id)+'-investigation'));
+      inv.serverId=serverId;
+      if(typeof save==='function')save();
       var row={id:serverId,owner_id:user.id,name:inv.name,outbreak_type:inv.type||'Penyakit Menular',disease_id:inv.disease||null,province:inv.prov||'Gorontalo',district:inv.kab||'Gorontalo Utara',subdistrict:inv.kec||null,village:inv.desa||null,facility:inv.pkm||null,start_date:inv.date||null,status:inv.status||'Berjalan',metadata:{local_id:inv.id,source:'saveKlb_petugas_staging',food_investigation:inv.foodInvestigation||null}};
-      var result=await sb.from('investigations').insert(row).select('id').single();
+      var result=await sb.from('investigations').upsert(row,{onConflict:'id'}).select('id').single();
       if(result.error)throw result.error;
       inv.serverId=result.data.id;
       if(typeof save==='function')save();
@@ -5667,12 +5669,38 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       persistUpdatedInvestigation126(active,patch);
       return;
     }
-    var before=String(db.active||'');
-    var out=oldSaveKlb.apply(this,arguments);
-    var created=(db.investigations||[]).find(function(x){return String(x.id)===String(db.active)&&String(x.id)!==before});
-    if(created)persistCreatedInvestigation126(created);
+    /* v185: buat investigasi baru melalui satu jalur saja. Jangan memanggil oldSaveKlb
+       karena fungsi lama juga menjalankan syncNow() untuk semua investigasi; itu dapat
+       membuat baris server kedua sebelum penyimpanan khusus selesai. */
+    var newId=Date.now();
+    while((db.investigations||[]).some(function(x){return String(x.id)===String(newId)}))newId++;
+    var created={
+      id:newId,
+      name:val('inName')||'Investigasi Baru',
+      type:val('inType')||'Penyakit Menular',
+      disease:val('disease')||db.selectedDisease||'campak',
+      prov:val('prov'),kab:val('kab'),kec:val('kec'),desa:val('desa'),pkm:val('pkm'),
+      date:val('tgl')||new Date().toISOString().slice(0,10),
+      status:'Berjalan'
+    };
+    if(created.type==='Keracunan Makanan'){
+      created.disease='keracunan-pangan';
+      created.foodInvestigation={
+        eventName:val('foodEventName'),eventDate:val('foodEventDate'),venue:val('foodVenue'),
+        foodSource:val('foodSource'),mealTime:val('foodMealTime'),
+        exposed:+val('foodExposed')||0,ill:+val('foodIll')||0,dead:+val('foodDead')||0,
+        suspectedFood:val('foodSuspected'),foodHandler:val('foodHandler'),
+        waterSource:val('foodWater'),storage:val('foodStorage'),initialHypothesis:val('foodHypothesis')
+      };
+    }
+    db.investigations.push(created);
+    db.active=created.id;
+    db.selectedDisease=created.disease;
+    if(typeof save==='function')save();
+    if(typeof page==='function')page('dashboard');
+    persistCreatedInvestigation126(created);
     setTimeout(function(){renderRegistry126()},100);
-    return out;
+    return;
   };
   document.addEventListener('DOMContentLoaded',function(){setTimeout(install126,1000)});
   [1800,4000,7500].forEach(function(ms){setTimeout(install126,ms)});
