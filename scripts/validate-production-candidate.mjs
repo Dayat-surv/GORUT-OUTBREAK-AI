@@ -60,7 +60,7 @@ function checkSqlBalance(source) {
     if (c === "(") depth++;
     if (c === ")") { depth--; assert.ok(depth >= 0, "SQL has an unmatched closing parenthesis"); }
   }
-  assert.equal(state, "normal", "SQL must not end inside a string/comment/dollar-quote");
+  assert.ok(state === "normal" || state === "line", "SQL must not end inside a string or block/dollar comment");
   assert.equal(depth, 0, "SQL parentheses must be balanced");
 }
 checkSqlBalance(migration);
