@@ -348,7 +348,7 @@ paparan → outcome"></textarea></div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="backend-config.js" onerror="window.GORUT_BACKEND={enabled:false}"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://unpkg.com/esri-leaflet@3.0.16/dist/esri-leaflet.js"></script>
-<script src="app.js?v=184.7"></script>
+<script src="app.js?v=185.1"></script>
 <script>
 /* v149: clarify research snapshot behavior for records explicitly excluded as invalid test data. */
 (function(){
@@ -603,6 +603,19 @@ window.gorutHandleLogin = async function () {
       return false;
     }
   };
+  /* Capture click as a fallback even if cached/older login markup still carries
+     the previous inline handler. Stop duplicate inline invocation. */
+  document.addEventListener('click',function(event){
+    var target=event.target;
+    var button=target&&target.closest?target.closest('button'):null;
+    if(!button)return;
+    var label=(button.textContent||'').replace(/\\s+/g,' ').trim();
+    if(label.indexOf('Daftar Akun Gratis')===-1)return;
+    event.preventDefault();
+    event.stopPropagation();
+    if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+    window.gorutOpenRegister();
+  },true);
   /* Legacy local/demo and local activation paths remain disabled. */
   window.demoLogin=function(){inform('Login demo/lokal dinonaktifkan pada STAGING.');return false;};
   window.submitRegistration=async function(){inform('Formulir registrasi lama dinonaktifkan. Gunakan formulir Supabase.');return false;};
