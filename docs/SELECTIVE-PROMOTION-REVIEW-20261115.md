@@ -168,7 +168,7 @@ Audit membuktikan bahwa kandidat Edge Functions awal belum dipanggil oleh fronte
 - registrasi: create-registration-request melalui Edge Function; jika sign-up belum memberi session, pengguna diminta mengonfirmasi email dan login sebelum mengirim permohonan;
 - aktivasi: activate-registration melalui Edge Function;
 - penolakan: reject-registration melalui Edge Function;
-- penghapusan: delete-investigation melalui Edge Function, dengan verifikasi session dan serverId serta konfirmasi server sebelum state lokal dihapus.
+- penghapusan: delete-investigation melalui Edge Function, dengan verifikasi session dan serverId, perhitungan kontak/spesimen yang terhubung melalui kasus tanpa hitung ganda, serta konfirmasi server sebelum state lokal dihapus.
 
 Tidak ada salinan penuh app.js STAGING. backend-config.js tetap konfigurasi Production dari main.
 
@@ -180,7 +180,7 @@ Tidak ada salinan penuh app.js STAGING. backend-config.js tetap konfigurasi Prod
 - Dependency npm:@supabase/server dipatok pada 1.9.2.
 
 ### Bukti uji otomatis
-GitHub Actions run #10: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/43697365938 — **SUCCESS** pada kedua job:
+GitHub Actions run #14: https://github.com/Dayat-surv/GORUT-OUTBREAK-AI/actions/runs/43697681692 — **SUCCESS** pada kedua job:
 1. validate: node --check app.js, pemeriksaan kontrak keamanan statis, dan deno check pada keempat Edge Functions.
 2. postgres-integration: migrasi diterapkan pada PostgreSQL 17 disposable dengan skema sintetis; uji positif/negatif registrasi, email belum terverifikasi, aktivasi/penolakan Admin, larangan non-admin, penghapusan bundle, kepemilikan berbeda, dan relasi lintas investigasi lulus. Data uji di-rollback.
 
