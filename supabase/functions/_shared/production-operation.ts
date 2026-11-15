@@ -59,7 +59,7 @@ export function serveProductionOperation(config: Config): void {
       const status = /AUTH_REQUIRED/i.test(message) ? 401
         : /NOT_AUTHORIZED|Hanya administrator|EMAIL_MISMATCH/i.test(message) ? 403
         : /NOT_FOUND|tidak ditemukan/i.test(message) ? 404
-        : /pending|terlalu panjang|EMAIL_NOT_VERIFIED|Akun Auth|INVALID_/i.test(message) ? 409
+        : /pending|terlalu panjang|EMAIL_NOT_VERIFIED|Akun Auth|RELATED_RECORD_OWNER_MISMATCH|INVALID_/i.test(message) ? 409
         : 500;
       const code = status === 401 ? "AUTH_REQUIRED"
         : status === 403 ? "NOT_AUTHORIZED"
