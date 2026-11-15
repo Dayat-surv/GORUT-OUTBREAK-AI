@@ -129,3 +129,26 @@ Health Advisor tidak mengembalikan lint.
 - Deployment Production: nihil.
 - Branch `main`: tidak diubah.
 - Branch promosi hanya berisi dokumentasi audit; belum ada kode runtime yang dipromosikan.
+
+
+## 8. Paket kandidat empat Edge Functions Production disiapkan (belum aktif)
+
+Dibuat pada branch promosi:
+- `supabase/functions/_shared/production-operation.ts`
+- `supabase/functions/activate-registration/index.ts`
+- `supabase/functions/reject-registration/index.ts`
+- `supabase/functions/delete-investigation/index.ts`
+- `supabase/functions/create-registration-request/index.ts`
+- `supabase/migrations/20261115090000_production_edge_operations_candidate.sql`
+- `supabase/PRODUCTION-EDGE-FUNCTIONS-PREPARATION.md`
+
+Penyesuaian khusus schema Production:
+- `audit_log.details` digunakan sebagai kolom audit.
+- Tidak mengasumsikan adanya `registration_requests.rejection_reason`.
+- Status aktivasi diset ke `verified`, sesuai kondisi yang dibaca UI Production.
+- Semua RPC baru dibatasi EXECUTE ke `service_role`; Edge Functions menerima JWT dan meneruskan actor ID hanya dari klaim JWT terverifikasi.
+- Aktivasi dan penolakan memerlukan role Admin; penghapusan memeriksa kepemilikan investigasi di dalam RPC; pembuatan permohonan memerlukan email Auth terverifikasi yang sama.
+
+Pemeriksaan file di GitHub mengonfirmasi seluruh 6 file kode/migrasi dan dokumen paket tersimpan di branch. Ini merupakan pemeriksaan isi repositori, bukan hasil kompilasi Deno, uji migrasi, atau uji runtime.
+
+**Belum dilakukan:** migration tidak dijalankan di proyek mana pun; Edge Functions tidak dideploy; endpoint Production belum dibuat; belum ada data atau konfigurasi Production yang diubah. Deployment memerlukan persetujuan eksplisit terpisah karena endpoint akan langsung aktif setelah deploy.
