@@ -42,7 +42,7 @@ Paket ini adalah kandidat khusus Production. Kode frontend dan Edge Functions te
 - Helper Edge Function mengembalikan konflik generik bila integritas kepemilikan rekaman terkait tidak konsisten.
 - Snapshot Production setelah audit tetap menunjukkan 9 investigasi, 5 kasus, 0 kontak, 0 spesimen, 0 kunjungan, 0 permohonan registrasi, dan 0 survei publik aktif. Daftar Edge Functions Production tetap kosong. Pemeriksaan ini hanya SELECT/list; tidak ada perubahan.
 - `app.js` kandidat kini memanggil keempat Edge Functions melalui `supabase.functions.invoke`; penghapusan lokal hanya dilakukan setelah server mengonfirmasi sukses.
-- `node --check app.js`, pemeriksaan keamanan statis, dan `deno check` untuk keempat Edge Functions lulus pada GitHub Actions run #1 (15 November 2026).
+- `node --check app.js`, pemeriksaan keamanan statis, dan `deno check` untuk keempat Edge Functions lulus pada GitHub Actions run #10 (15 November 2026).
 - Migrasi berhasil diterapkan pada PostgreSQL 17 disposable; uji sintetis positif/negatif untuk registrasi, aktivasi Admin, penolakan Admin, penghapusan bundle, owner mismatch, dan relasi kasus lintas investigasi lulus. Seluruh data uji di-rollback.
 - Uji tersebut bukan clone Supabase Production: RLS, Auth/JWT platform, Edge Runtime, dan konfigurasi deployment Supabase belum diuji. Tidak ada perubahan Production.
 
@@ -61,7 +61,7 @@ Semua uji hapus harus memakai data sintetis di lingkungan terisolasi dan memasti
 ## Hasil audit dan pengujian lanjutan (15 November 2026)
 
 ### Perbaikan kandidat pada branch release
-- Frontend app.js telah diselaraskan secara selektif dengan empat endpoint: create-registration-request, activate-registration, reject-registration, dan delete-investigation. Tidak menyalin seluruh app.js STAGING.
+- Frontend app.js telah diselaraskan secara selektif dengan empat endpoint: create-registration-request, activate-registration, reject-registration, dan delete-investigation. Kedua wrapper registrasi yang aktif telah diarahkan ke Edge Function; tidak ada pemanggilan langsung legacy create_registration_request / activate_premium_7d / reject_registration dari frontend. Tidak menyalin seluruh app.js STAGING.
 - Alur pendaftaran sekarang menangani kondisi sign-up yang belum menghasilkan session: pengguna diminta mengonfirmasi email, masuk, lalu mengirim permohonan; endpoint menolak email yang belum terverifikasi.
 - Penghapusan server memerlukan session valid, serverId yang terpetakan dan diverifikasi, konfirmasi pengguna, serta respons sukses server sebelum data lokal dihapus.
 - Dependency @supabase/server dipatok pada versi 1.9.2.
