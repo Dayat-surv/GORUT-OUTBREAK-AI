@@ -42,9 +42,15 @@ begin
     raise exception 'INVALID_FIELD_LENGTH';
   end if;
 
+  -- Serialize retries for the same verified email and avoid returning
+  -- another account's pending request identifier.
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_email, 0));
+
   select r.id into v_id
   from public.registration_requests r
-  where lower(r.email) = v_email and r.status = 'pending'
+  where r.user_id = p_actor_id
+    and lower(r.email) = v_email
+    and r.status = 'pending'
     and r.created_at > now() - interval '10 minutes'
   order by r.created_at desc limit 1;
   if v_id is not null then return v_id; end if;
@@ -172,19 +178,69 @@ begin
   if not found then raise exception 'INVESTIGATION_NOT_FOUND'; end if;
   if v_owner_id is distinct from p_actor_id then raise exception 'NOT_AUTHORIZED'; end if;
 
-  -- Fail closed if any linked row is owned by another account. The Production
-  -- schema does not enforce owner consistency with a composite foreign key.
-  if exists (select 1 from public.cases where investigation_id = p_investigation_id and owner_id is distinct from p_actor_id)
-     or exists (select 1 from public.contacts where investigation_id = p_investigation_id and owner_id is distinct from p_actor_id)
-     or exists (select 1 from public.specimens where investigation_id = p_investigation_id and owner_id is distinct from p_actor_id)
-     or exists (select 1 from public.field_visits where investigation_id = p_investigation_id and owner_id is distinct from p_actor_id)
-     or exists (select 1 from public.public_surveys where investigation_id = p_investigation_id and created_by is distinct from p_actor_id) then
-    raise exception 'RELATED_RECORD_OWNER_MISMATCH';
+  -- Lock the parent and all linked records before checking ownership.
+  -- This prevents concurrent child updates/inserts from invalidating the checks.
+  perform 1 from public.cases k
+    where k.investigation_id = p_investigation_id for update;
+  perform 1 from public.contacts c
+    where c.investigation_id = p_investigation_id
+       or exists (select 1 from public.cases k
+                  where k.id = c.index_case_id and k.investigation_id = p_investigation_id)
+    for update;
+  perform 1 from public.specimens s
+    where s.investigation_id = p_investigation_id
+       or exists (select 1 from public.cases k
+                  where k.id = s.case_id and k.investigation_id = p_investigation_id)
+    for update;
+  perform 1 from public.field_visits f
+    where f.investigation_id = p_investigation_id for update;
+  perform 1 from public.public_surveys s
+    where s.investigation_id = p_investigation_id for update;
+
+  -- Fail closed if a linked record belongs to another owner or is linked
+  -- to a different investigation. Contacts/specimens may also be linked
+  -- indirectly through a case when investigation_id is NULL.
+  if exists (select 1 from public.cases
+             where investigation_id = p_investigation_id
+               and owner_id is distinct from p_actor_id)
+     or exists (select 1 from public.contacts c
+                where (c.investigation_id = p_investigation_id
+                       or exists (select 1 from public.cases k
+                                  where k.id = c.index_case_id and k.investigation_id = p_investigation_id))
+                  and c.owner_id is distinct from p_actor_id)
+     or exists (select 1 from public.specimens s
+                where (s.investigation_id = p_investigation_id
+                       or exists (select 1 from public.cases k
+                                  where k.id = s.case_id and k.investigation_id = p_investigation_id))
+                  and s.owner_id is distinct from p_actor_id)
+     or exists (select 1 from public.field_visits
+                where investigation_id = p_investigation_id
+                  and owner_id is distinct from p_actor_id)
+     or exists (select 1 from public.public_surveys
+                where investigation_id = p_investigation_id
+                  and created_by is distinct from p_actor_id)
+     or exists (select 1 from public.contacts c
+                join public.cases k on k.id = c.index_case_id
+                where k.investigation_id = p_investigation_id
+                  and c.investigation_id is not null
+                  and c.investigation_id is distinct from p_investigation_id)
+     or exists (select 1 from public.specimens s
+                join public.cases k on k.id = s.case_id
+                where k.investigation_id = p_investigation_id
+                  and s.investigation_id is not null
+                  and s.investigation_id is distinct from p_investigation_id) then
+    raise exception 'RELATED_RECORD_OWNER_OR_INVESTIGATION_MISMATCH';
   end if;
 
   select count(*) into v_case_count from public.cases where investigation_id = p_investigation_id;
-  select count(*) into v_contact_count from public.contacts where investigation_id = p_investigation_id;
-  select count(*) into v_specimen_count from public.specimens where investigation_id = p_investigation_id;
+  select count(*) into v_contact_count from public.contacts c
+    where c.investigation_id = p_investigation_id
+       or exists (select 1 from public.cases k
+                  where k.id = c.index_case_id and k.investigation_id = p_investigation_id);
+  select count(*) into v_specimen_count from public.specimens s
+    where s.investigation_id = p_investigation_id
+       or exists (select 1 from public.cases k
+                  where k.id = s.case_id and k.investigation_id = p_investigation_id);
   select count(*) into v_visit_count from public.field_visits where investigation_id = p_investigation_id;
   select count(*) into v_survey_count from public.public_surveys where investigation_id = p_investigation_id;
   select count(*) into v_response_count
@@ -196,8 +252,14 @@ begin
   where r.survey_id = s.id and s.investigation_id = p_investigation_id;
   delete from public.public_surveys where investigation_id = p_investigation_id;
   delete from public.field_visits where investigation_id = p_investigation_id;
-  delete from public.specimens where investigation_id = p_investigation_id;
-  delete from public.contacts where investigation_id = p_investigation_id;
+  delete from public.specimens s
+    where s.investigation_id = p_investigation_id
+       or exists (select 1 from public.cases k
+                  where k.id = s.case_id and k.investigation_id = p_investigation_id);
+  delete from public.contacts c
+    where c.investigation_id = p_investigation_id
+       or exists (select 1 from public.cases k
+                  where k.id = c.index_case_id and k.investigation_id = p_investigation_id);
   delete from public.cases where investigation_id = p_investigation_id;
   delete from public.investigations where id = p_investigation_id;
   if not found then raise exception 'INVESTIGATION_DELETE_FAILED'; end if;
