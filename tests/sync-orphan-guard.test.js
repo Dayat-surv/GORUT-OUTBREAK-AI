@@ -66,8 +66,8 @@ assert.match(app, /!m\|\|m\.querySelector\('#v46RiskHint'\)/,
   'the automatic risk-factor explanation must be inserted at most once per case form');
 assert.match(app, /const complete=canonical\.map\(q=>existingByLabel\.get\(normLabel\(q\.label\)\)\|\|q\)/,
   'case form must restore missing canonical questions even when a partial questionnaire is already stored');
-assert.match(app, /const extras=existing\.filter\(q=>q&&q\.label&&!canonicalKeys\.has\(normLabel\(q\.label\)\)\)/,
-  'case form must preserve custom questions while restoring the standard instrument');
+assert.match(app, /const extras=existing\.filter\(q=>q&&q\.label&&!isIntegratedCoreQuestion\(q\)&&!canonicalKeys\.has\(normLabel\(q\.label\)\)\)/,
+  'case form must preserve custom questions while excluding duplicates handled by integrated fields');
 assert.match(app, /db\.questions=next;/,
   'the completed questionnaire must be the list used to render and collect case answers');
 
