@@ -5155,6 +5155,7 @@ try{installBrandingV183();}catch(e){}
         if(/^Q_/i.test(k)){
           var target=answerAliases[String(k).toLowerCase()]||'';
           if(target)fillIfBlank126(target,ans[k]);
+          else row[k]=researchAnswerValue126(ans[k]);
           return;
         }
         row[k]=researchAnswerValue126(ans[k]);
@@ -5592,4 +5593,67 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     productionChanged:false,
     questionDeletionCount:0
   };
+})();
+
+
+/* v186 — QUESTION LABEL RESOLUTION + PRESERVE ALL QUESTIONNAIRE COLUMNS IN RESEARCH SNAPSHOTS */
+(function(){
+  'use strict';
+  var root=window;
+  function escapeHtml(value){return String(value===null||value===undefined?'':value).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+  function questionMetaMap(){
+    var map={};
+    function add(label,cat,diseaseId){
+      if(!label)return;
+      var q=null;
+      try{if(typeof buildQuestion==='function')q=buildQuestion(label,cat||'')}catch(e){}
+      var id=q&&q.id||('Q_'+String(label).toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,55));
+      map[id]={id:id,label:q&&q.label||String(label),category:cat||'Kuesioner',type:q&&q.type||'unknown',options:q&&Array.isArray(q.options)?q.options:[],diseaseId:diseaseId||'umum',version:q&&q.version||''};
+    }
+    try{(baseQ||[]).forEach(function(item){add(item[1],item[0],'umum')})}catch(e){}
+    try{Object.keys(diseases||{}).forEach(function(id){var d=diseases[id]||{};(d.q||[]).forEach(function(label){add(label,'Spesifik — '+(d.name||id),id)})})}catch(e){}
+    try{(root.db&&root.db.questions||[]).forEach(function(q){if(q&&q.id)map[q.id]={id:q.id,label:q.label||q.id,category:q.cat||'Kuesioner',type:q.type||'unknown',options:q.options||[],diseaseId:root.db.selectedDisease||'aktif',version:q.version||''}})}catch(e){}
+    return map;
+  }
+  function variableLabel(name,meta){
+    var key=String(name||'').replace(/^answers\./,'');
+    if(meta[key])return meta[key];
+    var byLabel=Object.keys(meta).find(function(id){return meta[id].label===key});
+    return byLabel?meta[byLabel]:null;
+  }
+  root.discoverResearchVariables=function(){
+    var cs=typeof researchCases==='function'?researchCases():[],found=new Map(),meta=questionMetaMap();
+    cs.forEach(function(c){
+      Object.keys(c||{}).forEach(function(k){found.set(k,{name:k,label:k,type:typeof c[k]==='number'?'numeric':'unknown',role:'covariate'})});
+      Object.keys(c&&c.answers&&typeof c.answers==='object'?c.answers:{}).forEach(function(k){
+        var q=meta[k],value=c.answers[k];
+        found.set('answers.'+k,{name:'answers.'+k,label:q?q.label:k,type:q?q.type:(typeof value==='number'?'numeric':'unknown'),role:'covariate',category:q?q.category:'Jawaban kuesioner',diseaseId:q?q.diseaseId:'metadata belum tersedia'});
+      });
+    });
+    var arr=Array.from(found.values()).sort(function(a,b){return a.name.localeCompare(b.name)});
+    var box=document.getElementById('variableDiscovery');
+    if(box)box.innerHTML=arr.length
+      ?'<b>'+arr.length+' variabel terdeteksi</b><div style="max-height:320px;overflow:auto;margin-top:8px">'+arr.map(function(x){return '<div style="padding:5px 0;border-bottom:1px solid #e5e7eb"><code>'+escapeHtml(x.name)+'</code> — <b>'+escapeHtml(x.label)+'</b><br><small>'+escapeHtml(x.category||'Variabel kasus')+' · tipe: '+escapeHtml(x.type)+' · instrumen: '+escapeHtml(x.diseaseId||'-')+'</small></div>'}).join('')+'</div><small>Nama teknis variabel dipertahankan untuk kompatibilitas analisis; label ditampilkan dari metadata pertanyaan. Periksa definisi operasional sebelum menetapkan exposure/outcome/confounder.</small>'
+      :'Belum ada variabel pada data kasus aktif.';
+    return arr;
+  };
+  var priorAuto=root.generateAutoDictionary;
+  if(typeof priorAuto==='function')root.generateAutoDictionary=function(){
+    var result=priorAuto.apply(this,arguments),meta=questionMetaMap();
+    try{
+      if(typeof researchState!=='undefined'&&Array.isArray(researchState.dictionary)){
+        researchState.dictionary=researchState.dictionary.map(function(v){
+          var q=variableLabel(v.name,meta);
+          return q?Object.assign({},v,{label:q.label,type:v.type==='unknown'?q.type:v.type,category:q.category,questionnaireDiseaseId:q.diseaseId,questionId:q.id}):v;
+        });
+        localStorage.setItem('gorut-research-plan',JSON.stringify(researchState));
+        var input=document.getElementById('varDictionary');
+        if(input)input.value=researchState.dictionary.map(function(v){return [v.name,v.label,v.type,v.role].join(' | ')}).join('\n');
+        var box=document.getElementById('variableDiscovery');
+        if(box)box.innerHTML+='<p class="small"><b>Metadata pertanyaan diterapkan.</b> Kolom Q_* yang tidak memiliki alias inti tetap dipertahankan dalam dataset penelitian.</p>';
+      }
+    }catch(e){console.warn('v186: metadata dictionary tidak dapat diterapkan',e)}
+    return result;
+  };
+  root.GORUT_QUESTIONNAIRE_DICTIONARY_V186={version:'v186',labelsResolved:true,preservesUnknownQuestionColumns:true,stableQuestionIds:true};
 })();
