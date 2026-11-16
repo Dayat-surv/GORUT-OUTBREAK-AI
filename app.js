@@ -490,6 +490,8 @@ async function syncNow(){
   if(fail===0){syncQueue=[];localStorage.setItem('gorut-sync-queue','[]');for(const v of (db.fieldVisits||[]))v.syncStatus='synced';}save();
   document.getElementById('backendBadge').textContent=fail?'Backend: sebagian gagal':'Backend: tersinkron';
   document.getElementById('backendDetail').textContent=`Sinkronisasi selesai. Berhasil: ${ok}; gagal: ${fail}.`;
+  window.GORUT_LAST_SYNC_RESULT={ok,fail,success:fail===0,at:new Date().toISOString()};
+  return window.GORUT_LAST_SYNC_RESULT;
 }
 function uuidFrom(v){let h=String(v).replace(/[^0-9a-f]/gi,'').padEnd(32,'0').slice(0,32);return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20,32);}
 
@@ -5779,4 +5781,57 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     window.__gorutAddCaseGuard187=true;
   }
   window.GORUT_V187={version:'v187',features:['Supabase password recovery request and recovery form','case creation prompts for investigation context','no questionnaire fields removed']};
+})();
+
+
+/* ==================== STAGING v188 — SAVE CASE THEN CONFIRM SERVER SYNC ====================
+   Save locally first, then synchronize to the authenticated STAGING backend.
+   A local list update is never presented as proof of server persistence.
+   This wrapper does not delete records, questions, or answer keys.
+*/
+(function(){
+  'use strict';
+  var previousSaveCase=window.saveCase;
+  if(typeof previousSaveCase!=='function') return;
+  window.saveCase=async function(){
+    var before=(window.db&&Array.isArray(window.db.cases))?window.db.cases.length:0;
+    var result=await previousSaveCase.apply(this,arguments);
+    var current=(window.db&&Array.isArray(window.db.cases))?window.db.cases:[];
+    var created=current.length>before?current[before]:null;
+    if(!created) return result;
+
+    var badge=document.getElementById('backendBadge');
+    var detail=document.getElementById('backendDetail');
+    var config=window.GORUT_BACKEND||{};
+    if(!config.enabled){
+      if(badge)badge.textContent='Kasus: tersimpan lokal — belum ke server';
+      if(detail)detail.textContent='Kasus tampil di perangkat ini, tetapi backend STAGING tidak aktif. Data belum tersinkron ke server.';
+      alert('Kasus tersimpan di perangkat ini, tetapi BELUM dikirim ke server. Jangan logout sebelum sinkronisasi berhasil.');
+      return result;
+    }
+    try{
+      var client=await backendClient();
+      if(!client) throw new Error('Klien Supabase STAGING tidak tersedia.');
+      var auth=await client.auth.getUser();
+      if(auth.error) throw auth.error;
+      if(!auth.data||!auth.data.user) throw new Error('Sesi Supabase tidak ditemukan. Silakan login kembali.');
+      if(typeof window.syncNow!=='function') throw new Error('Fungsi sinkronisasi server tidak tersedia.');
+      var syncResult=await window.syncNow();
+      var status=window.GORUT_LAST_SYNC_RESULT;
+      if(syncResult===false||!status||status.success!==true){
+        var failed=status&&Number.isFinite(status.fail)?status.fail:'tidak diketahui';
+        throw new Error('Sinkronisasi belum terkonfirmasi berhasil (gagal: '+failed+'). Kasus tetap berada di perangkat dan tidak dianggap tersimpan di server.');
+      }
+      if(badge)badge.textContent='Kasus: tersinkron ke STAGING';
+      if(detail)detail.textContent='Kasus '+String(created.id||'')+' berhasil dikirim ke Supabase STAGING. Berhasil: '+status.ok+'; gagal: 0.';
+      alert('Kasus berhasil disimpan dan dikonfirmasi tersinkron ke Supabase STAGING.');
+    }catch(error){
+      console.error('GORUT v188 case sync failed',error);
+      if(badge)badge.textContent='Kasus: menunggu sinkronisasi';
+      if(detail)detail.textContent='Kasus tampil di perangkat ini, tetapi sinkronisasi server gagal: '+(error&&error.message?error.message:String(error))+'. Jangan logout; data lokal masih dipertahankan.';
+      alert('Kasus BELUM tersimpan di server STAGING. Data lokal tetap dipertahankan.\n\n'+(error&&error.message?error.message:String(error))+'\n\nJangan logout sebelum masalah sinkronisasi diperbaiki.');
+    }
+    return result;
+  };
+  window.GORUT_V188={version:'v188',feature:'save-case-then-confirm-staging-sync',preservesCaseAnswers:true,productionChanges:false};
 })();
