@@ -2605,7 +2605,7 @@ function installLogin(){
   function enhanceCaseForms46(){
     const oldAdd=window.addCase;
     if(typeof oldAdd==='function'){
-      window.addCase=function(){oldAdd();setTimeout(()=>{const m=document.querySelector('#modal .modal-body')||document.querySelector('#modal');if(!m)return;const q=m.querySelector('[id^="v45q_"]');if(!q)return;const box=document.createElement('div');box.className='notice';box.id='v46RiskHint';box.innerHTML='<b>🔎 Faktor Risiko:</b> akan dihitung otomatis dari jawaban paparan/riwayat/kontak/lingkungan pada kuesioner saat disimpan.';const first=m.querySelector('.card');if(first)first.before(box);},20)};
+      window.addCase=function(){oldAdd();setTimeout(()=>{const m=document.querySelector('#modal .modal-body')||document.querySelector('#modal');if(!m||m.querySelector('#v46RiskHint'))return;const q=m.querySelector('[id^="v45q_"]');if(!q)return;const box=document.createElement('div');box.className='notice';box.id='v46RiskHint';box.innerHTML='<b>🔎 Faktor Risiko:</b> akan dihitung otomatis dari jawaban paparan/riwayat/kontak/lingkungan pada kuesioner saat disimpan.';const first=m.querySelector('.card');if(first)first.before(box);},20)};
     }
     const oldSave=window.saveCase;
     if(typeof oldSave==='function')window.saveCase=async function(){await oldSave();const c=db.cases[db.cases.length-1];if(c){syncCoreRisk46(c);queueSync&&queueSync('cases');save();}try{cases()}catch(e){}};
