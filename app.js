@@ -2262,21 +2262,36 @@ function installLogin(){
   function ensureCaseQuestionnaire(c={}){
     const diseaseId=resolveCaseDiseaseId(c.disease)||resolveCaseDiseaseId(act()?.disease)||resolveCaseDiseaseId(db.selectedDisease);
     if(!diseaseId)return;
+    const disease=diseases[diseaseId];
+    if(!disease)return;
     const selector=document.getElementById('qDisease');
-    const loadedDisease=db.questionMeta?.disease;
-    if(loadedDisease!==diseaseId||!Array.isArray(db.questions)||!db.questions.length){
-      db.selectedDisease=diseaseId;
-      if(selector)selector.value=diseaseId;
-      if(typeof window.loadDiseaseQuestions==='function'){
-        window.loadDiseaseQuestions();
-      }else{
-        const d=diseases[diseaseId];
-        db.questions=[...baseQ.map(q=>buildQuestion(q[1],q[0])),...d.q.map(x=>buildQuestion(x,'Spesifik — '+d.name))];
-        db.questionMeta={disease:diseaseId,diseaseName:d.name,group:d.group,version:instrumentMeta.release,validationStatus:'Perlu validasi akhir sebelum digunakan sebagai formulir resmi'};
-        save();
-      }
-    }else{
-      db.selectedDisease=diseaseId;
+    db.selectedDisease=diseaseId;
+    if(selector)selector.value=diseaseId;
+
+    // The case-entry form must always contain the complete standard instrument.
+    // The questionnaire menu can retain a user-filtered subset, so a non-empty
+    // db.questions array is not proof that all required questions are present.
+    const canonical=[
+      ...baseQ.map(q=>buildQuestion(q[1],q[0])),
+      ...(Array.isArray(disease.q)?disease.q:[]).map(x=>buildQuestion(x,'Spesifik — '+disease.name))
+    ];
+    const existing=Array.isArray(db.questions)?db.questions:[];
+    const normLabel=value=>String(value||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
+    const existingByLabel=new Map();
+    existing.forEach(q=>{if(q&&q.label){const key=normLabel(q.label);if(key&&!existingByLabel.has(key))existingByLabel.set(key,q)}});
+    const canonicalKeys=new Set(canonical.map(q=>normLabel(q.label)));
+    const complete=canonical.map(q=>existingByLabel.get(normLabel(q.label))||q);
+    const extras=existing.filter(q=>q&&q.label&&!canonicalKeys.has(normLabel(q.label)));
+    const next=[...complete,...extras];
+    const currentSignature=existing.map(q=>q&&q.label?normLabel(q.label):'').join('|');
+    const nextSignature=next.map(q=>normLabel(q.label)).join('|');
+    const meta=db.questionMeta||{};
+    const metaMismatch=resolveCaseDiseaseId(meta.disease||meta.diseaseName)!==diseaseId;
+    if(currentSignature!==nextSignature||metaMismatch||existing.length<canonical.length){
+      db.questions=next;
+      db.questionMeta={...meta,disease:diseaseId,diseaseName:disease.name,group:disease.group,version:instrumentMeta.release,validationStatus:'Perlu validasi akhir sebelum digunakan sebagai formulir resmi'};
+      ensureQuestionIds();
+      save();
     }
   }
   function ensureQuestionIds(){(db.questions||[]).forEach((q,i)=>{if(!q.id)q.id='Q_'+String(i+1).padStart(3,'0')});}
