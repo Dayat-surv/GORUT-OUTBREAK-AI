@@ -52,7 +52,7 @@ assert.match(app, /function ensureCaseQuestionnaire\(c=\{\}\)/,
   'case form must ensure a questionnaire is loaded for the active disease');
 assert.match(app, /function questionnaireCasePanel\(c=\{\}\)\{ensureCaseQuestionnaire\(c\);/,
   'case panel must synchronize disease questionnaire before rendering');
-assert.match(app, /function modal\(x\)\{modalbox\.innerHTML='<div class=\\"modal-close-row\\"><button type=\\"button\\" class=\\"modal-close-btn\\" onclick=\\"closeAppModal\(\)\\"/,
+assert.match(app, /function modal\(x\)\{modalbox\.innerHTML='<div class="modal-close-row"><button type="button" class="modal-close-btn" onclick="closeAppModal\(\)"/,
   'all modal forms must expose a close button that closes the modal');
 assert.match(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'), /\.modal-close-row\{position:sticky/,
   'modal close control must remain visible while scrolling long forms');
