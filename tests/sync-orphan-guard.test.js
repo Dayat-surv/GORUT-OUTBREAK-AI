@@ -54,6 +54,14 @@ assert.match(app, /function questionnaireCasePanel\(c=\{\}\)\{ensureCaseQuestion
   'case panel must synchronize disease questionnaire before rendering');
 assert.match(app, /loadedDisease!==diseaseId\|\|!Array\.isArray\(db\.questions\)\|\|!db\.questions\.length/,
   'case form must reload missing or mismatched questionnaire data');
+assert.match(app, /const canonical=\[\s*\.\.\.baseQ\.map\(q=>buildQuestion\(q\[1\],q\[0\]\)\)/,
+  'case form must reconstruct the complete standard instrument from general and disease-specific questions');
+assert.match(app, /const complete=canonical\.map\(q=>existingByLabel\.get\(normLabel\(q\.label\)\)\|\|q\)/,
+  'case form must restore missing canonical questions even when a partial questionnaire is already stored');
+assert.match(app, /const extras=existing\.filter\(q=>q&&q\.label&&!canonicalKeys\.has\(normLabel\(q\.label\)\)\)/,
+  'case form must preserve custom questions while restoring the standard instrument');
+assert.match(app, /db\.questions=next;/,
+  'the completed questionnaire must be the list used to render and collect case answers');
 
 console.log('Sync orphan-guard regression checks passed.');
 
