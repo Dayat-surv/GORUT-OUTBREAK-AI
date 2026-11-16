@@ -5816,6 +5816,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       if(auth.error) throw auth.error;
       if(!auth.data||!auth.data.user) throw new Error('Sesi Supabase tidak ditemukan. Silakan login kembali.');
       if(typeof window.syncNow!=='function') throw new Error('Fungsi sinkronisasi server tidak tersedia.');
+      window.GORUT_LAST_SYNC_RESULT=null;
       var syncResult=await window.syncNow();
       var status=window.GORUT_LAST_SYNC_RESULT;
       if(syncResult===false||!status||status.success!==true){
