@@ -91,3 +91,49 @@ assert.match(publicSurveyHtml, /Fitur kuesioner publik sedang dinonaktifkan sela
   'public survey page must accurately explain that the feature is disabled for security review');
 assert.doesNotMatch(publicSurveyHtml, /Formulir online belum tersedia karena backend belum dikonfigurasi/,
   'public survey page must not misdiagnose a disabled feature as missing backend configuration');
+
+
+// Full disease-catalogue semantic regression: generic onset/status/outcome are
+// owned by the integrated case form; disease-specific onset/clinical criteria,
+// exposure, specimen, laboratory, and classification questions must remain.
+const vm = require('node:vm');
+const diseaseStart = app.indexOf('const diseases={');
+const diseaseEnd = app.indexOf('\n};', diseaseStart);
+assert.ok(diseaseStart >= 0 && diseaseEnd > diseaseStart, 'disease catalogue must exist');
+const diseaseLiteral = app.slice(diseaseStart + 'const diseases='.length, diseaseEnd + 2);
+const diseaseCatalogue = vm.runInNewContext('(' + diseaseLiteral + ')');
+const integratedGenericLabels = new Set([
+  'id kasus','nama lengkap','umur','jenis kelamin','tanggal onset gejala',
+  'tanggal onset','status kasus','status kesehatan','outcome',
+  'alamat lengkap','alamat lengkap tempat tinggal/kejadian',
+  'provinsi','kabupaten','kabupaten/kota','kecamatan','desa/kelurahan',
+  'puskesmas','latitude','longitude'
+]);
+const diseaseEntries = Object.entries(diseaseCatalogue);
+assert.equal(diseaseEntries.length, 34, 'audit must cover all 34 configured diseases/syndromes');
+const duplicateCounts = {'tanggal onset':0,'status kasus':0,'outcome':0};
+for (const [diseaseId, disease] of diseaseEntries) {
+  assert.ok(Array.isArray(disease.q) && disease.q.length > 0, diseaseId + ' must retain disease-specific questions');
+  const normalized = disease.q.map(q => String(q).trim().toLowerCase());
+  assert.equal(new Set(normalized).size, normalized.length, diseaseId + ' must not contain repeated question labels');
+  for (const label of normalized) if (Object.hasOwn(duplicateCounts, label)) duplicateCounts[label]++;
+  const effectiveQuestions = disease.q.filter(q => !integratedGenericLabels.has(String(q).trim().toLowerCase()));
+  assert.ok(effectiveQuestions.every(q => !integratedGenericLabels.has(String(q).trim().toLowerCase())),
+    diseaseId + ' must exclude integrated generic fields from the rendered disease questionnaire');
+}
+assert.deepEqual(duplicateCounts, {'tanggal onset':27,'status kasus':18,'outcome':34},
+  'catalogue duplicate baseline must remain explicit and filtered by the integrated-field layer');
+const campakQuestions = diseaseCatalogue.campak.q;
+for (const label of ['Tanggal onset demam','Tanggal onset ruam','Klasifikasi kasus','Spesimen serum','Hasil laboratorium']) {
+  assert.ok(campakQuestions.includes(label), 'measles-specific question must be preserved: ' + label);
+}
+for (const label of ['Tanggal onset kelumpuhan','Spesimen tinja pertama','Spesimen tinja kedua','Klasifikasi akhir']) {
+  assert.ok(diseaseCatalogue.afp.q.includes(label), 'AFP-specific investigation question must be preserved: ' + label);
+}
+assert.match(app, /db\.questions=filterIntegratedCoreQuestions\(db\.questions\)/,
+  'the actual questionnaire loader must apply the integrated-field filter');
+assert.match(app, /!m\|\|m\.querySelector\('#v46RiskHint'\)/,
+  'risk-factor hint insertion must be idempotent for a case modal');
+assert.equal((app.match(/id='v46RiskHint'/g) || []).length, 1,
+  'the case modal must define only one risk-factor hint element');
+console.log('Disease catalogue semantic duplicate checks passed (34 diseases; 79 generic duplicate entries filtered).');
