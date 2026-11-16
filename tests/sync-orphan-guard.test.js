@@ -56,8 +56,14 @@ assert.match(app, /function modal\(x\)\{modalbox\.innerHTML='<div class=\\"modal
   'all modal forms must expose a close button that closes the modal');
 assert.match(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'), /\.modal-close-row\{position:sticky/,
   'modal close control must remain visible while scrolling long forms');
-assert.match(app, /const canonical=\[\s*\.\.\.baseQ\.map\(q=>buildQuestion\(q\[1\],q\[0\]\)\)/,
-  'case form must reconstruct the complete standard instrument from general and disease-specific questions');
+assert.match(app, /const canonical=filterIntegratedCoreQuestions\(\[\s*\.\.\.baseQ\.map\(q=>buildQuestion\(q\[1\],q\[0\]\)\)/,
+  'case form must reconstruct the standard instrument while excluding integrated core fields');
+assert.match(app, /'id kasus','nama lengkap','umur','jenis kelamin','tanggal onset gejala'[\s\S]*?'puskesmas','latitude','longitude'/,
+  'integrated identity, clinical status/outcome, administrative address, and coordinates must be excluded from disease questions');
+assert.match(app, /db\.questions=filterIntegratedCoreQuestions\(db\.questions\)/,
+  'the disease questionnaire menu must also exclude fields handled by the integrated case form');
+assert.match(app, /!m\|\|m\.querySelector\('#v46RiskHint'\)/,
+  'the automatic risk-factor explanation must be inserted at most once per case form');
 assert.match(app, /const complete=canonical\.map\(q=>existingByLabel\.get\(normLabel\(q\.label\)\)\|\|q\)/,
   'case form must restore missing canonical questions even when a partial questionnaire is already stored');
 assert.match(app, /const extras=existing\.filter\(q=>q&&q\.label&&!canonicalKeys\.has\(normLabel\(q\.label\)\)\)/,
