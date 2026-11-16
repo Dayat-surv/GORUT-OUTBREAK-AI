@@ -12,7 +12,7 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-const appVersion = index.match(/app\\.js\\?v=(\\d+)/)?.[1];
+const appVersion = index.match(/app\.js\?v=(\d+)/)?.[1];
 assert.ok(appVersion, 'main page must declare a cache-busted application script version');
 assert.ok(
   sw.includes('gorut-outbreak-ai-final-v' + appVersion) || sw.includes('gorut-outbreak-ai-staging-v' + appVersion),
