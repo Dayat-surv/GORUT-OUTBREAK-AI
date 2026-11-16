@@ -5836,3 +5836,65 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   };
   window.GORUT_V188={version:'v188',feature:'save-case-then-confirm-staging-sync',preservesCaseAnswers:true,productionChanges:false};
 })();
+
+
+/* ==================== v189 STAGING — CASE EDIT SERVER PERSISTENCE ====================
+   Keep case edits on the same server-backed path as case creation.
+   Fail closed: do not report a successful edit unless Supabase confirms the upsert.
+   STAGING branch only; no production configuration or data changes.
+*/
+(function(){
+  const previousUpd=window.upd;
+  if(typeof previousUpd!=='function') return;
+  const cloneCase=(c)=>JSON.parse(JSON.stringify(c));
+  window.upd=async function(id){
+    const c=(window.db?.cases||[]).find(x=>String(x.id)===String(id));
+    if(!c) return;
+    const before=cloneCase(c);
+    await previousUpd.apply(this,arguments);
+    const current=(window.db?.cases||[]).find(x=>String(x.id)===String(id));
+    if(!current) return;
+    try{
+      const sb=await backendClient();
+      if(!sb) throw new Error('Backend STAGING tidak tersedia; perubahan tidak dapat diverifikasi di server.');
+      const auth=await sb.auth.getUser();
+      if(auth.error) throw auth.error;
+      const user=auth.data?.user;
+      if(!user) throw new Error('Sesi Supabase tidak ditemukan. Silakan login kembali.');
+      const investigation=(window.db?.investigations||[]).find(x=>String(x.id)===String(current.investigationId));
+      if(!investigation) throw new Error('Investigasi induk kasus tidak ditemukan.');
+      const serverId=current.serverId||(window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():uuidFrom(String(Date.now())+Math.random()+Math.random()));
+      const row={
+        id:serverId,
+        owner_id:user.id,
+        investigation_id:investigation.serverId||uuidFrom(current.investigationId),
+        case_code:String(current.id||''),
+        full_name:current.name||'',
+        age:Number(current.age)||null,
+        sex:current.sex||null,
+        onset_date:current.onset||null,
+        status:current.status||null,
+        outcome:current.outcome||null,
+        latitude:current.lat||null,
+        longitude:current.lng||null,
+        questionnaire_response:{...(current.answers||{}),foodCase:current.foodCase||null,priority:current.priority||null}
+      };
+      const result=await sb.from('cases').upsert(row,{onConflict:'id'});
+      if(result.error) throw result.error;
+      current.serverId=serverId;
+      if(typeof save==='function') save();
+      if(typeof cases==='function') cases();
+      window.GORUT_CASE_EDIT_SYNC_RESULT={success:true,caseId:String(id),serverId,at:new Date().toISOString()};
+      console.info('v189: edit kasus terkonfirmasi tersimpan di Supabase STAGING.',window.GORUT_CASE_EDIT_SYNC_RESULT);
+    }catch(error){
+      const index=(window.db?.cases||[]).findIndex(x=>String(x.id)===String(id));
+      if(index>=0) window.db.cases[index]=before;
+      if(typeof save==='function') save();
+      if(typeof cases==='function') cases();
+      window.GORUT_CASE_EDIT_SYNC_RESULT={success:false,caseId:String(id),error:String(error?.message||error),at:new Date().toISOString()};
+      console.error('v189: edit kasus gagal disimpan ke Supabase STAGING.',error);
+      alert('Perubahan kasus TIDAK tersimpan ke server STAGING. Data lokal dikembalikan ke kondisi sebelum edit.\n\n'+String(error?.message||error));
+    }
+  };
+  window.GORUT_CASE_EDIT_SYNC_VERSION='v189';
+})();
