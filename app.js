@@ -5718,7 +5718,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   }
   const originalAdd=window.addCase;
   if(typeof originalAdd==='function'&&!window.__gorutAddCaseGuard187){
-    window.addCase=function(){
+    window.gorutAddCase187=function(){
       const current=(db.investigations||[]).find(x=>String(x.id)===String(db.active));
       if(current)return originalAdd.apply(this,arguments);
       const options=(db.investigations||[]).filter(x=>x&&x.id!==undefined&&x.id!==null);
@@ -5746,6 +5746,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       close();
       originalAdd.call(window);
     };
+    window.addCase=window.gorutAddCase187;
     window.__gorutAddCaseGuard187=true;
   }
   window.GORUT_V187={version:'v187',features:['Supabase password recovery request and recovery form','case creation prompts for investigation context','no questionnaire fields removed']};
