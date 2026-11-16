@@ -37,3 +37,22 @@ Gunakan satu investigasi dan satu kasus sintetis yang jelas diberi awalan `UJI`.
 - Uji sinkronisasi Supabase: BELUM DILAKUKAN.
 - Kelayakan rilis: BELUM DISETUJUI.
 - Production: TIDAK DIUBAH.
+
+
+## Tambahan implementasi v186 — kamus dan snapshot penelitian
+Commit implementasi: `a21bdfe78b0b47b23911a2c3ecd013d16832bf43`
+
+- Penemuan variabel menampilkan label, kategori, tipe, dan penyakit/instrumen dari metadata pertanyaan sambil mempertahankan nama teknis `answers.Q_...`.
+- Pembuatan dictionary otomatis memperkaya label kolom Q_* yang dikenali tanpa mengganti nama teknis variabel.
+- Snapshot penelitian kini mempertahankan kolom Q_* yang tidak memiliki alias field inti. Sebelumnya, cabang pemrosesan Q_* hanya mengisi alias tertentu lalu menghentikan pemrosesan; pertanyaan lain berisiko tidak ikut masuk ke dataset penelitian.
+- Kolom alias inti tetap mengisi field standar yang kosong; jawaban Q_* yang tidak memiliki alias disimpan sebagai kolom Q_* tersendiri.
+
+## Pemeriksaan kode setelah v185/v186
+- Pemeriksaan sintaks terisolasi untuk wrapper v185: LULUS.
+- Simulasi merge: kunci jawaban yang tidak dirender tetap ada; perubahan instrumen yang tidak cocok memulihkan jawaban awal: LULUS.
+- Pemeriksaan sintaks terisolasi untuk resolver metadata v186: LULUS.
+- Pemeriksaan browser pada aplikasi lengkap: BELUM DILAKUKAN.
+- Uji Supabase STAGING round-trip: BELUM DILAKUKAN.
+- Validasi hasil dataset penelitian dengan contoh kasus: BELUM DILAKUKAN.
+
+Catatan: pemeriksaan sintaks dan simulasi terisolasi bukan pengganti pengujian end-to-end di browser. Jangan menganggap rilis telah lulus sebelum T01–T08 dijalankan.
