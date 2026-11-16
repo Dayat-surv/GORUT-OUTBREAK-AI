@@ -5511,3 +5511,85 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   [1800,4000,7500].forEach(function(ms){setTimeout(install126,ms)});
   window.GORUT_V126={version:'v126',features:['KLB investigation registry','active investigation navigation to PE report/research/case dashboards','research dataset generation from active investigation answers','no operational case deletion or overwrite']};
 })();
+
+
+/* v185 — NON-DESTRUCTIVE QUESTIONNAIRE EDIT + CASE-SPECIFIC INSTRUMENT
+   Protects historical answers when a case is edited. Does not delete question
+   definitions, alter database schema, or write to Production.
+*/
+(function(){
+  'use strict';
+  var root=window;
+  function objectAnswers(value){
+    if(value&&typeof value==='object'&&!Array.isArray(value))return Object.assign({},value);
+    if(typeof value==='string'){try{var parsed=JSON.parse(value);if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))return Object.assign({},parsed)}catch(e){}}
+    return {};
+  }
+  function caseDisease(c){
+    if(!c)return '';
+    var inv=(root.db&&Array.isArray(root.db.investigations)?root.db.investigations:[]).find(function(x){return String(x.id)===String(c.investigationId)});
+    return String(c.disease||inv&&inv.disease||'');
+  }
+  function diseaseCatalog(){
+    try{if(typeof diseases!=='undefined'&&diseases)return diseases}catch(e){}
+    return root.diseases||{};
+  }
+  var priorEdit=root.editCase;
+  if(typeof priorEdit==='function'){
+    root.editCase=function(id){
+      var data=root.db||{},c=(data.cases||[]).find(function(x){return String(x.id)===String(id)});
+      var diseaseId=caseDisease(c),catalog=diseaseCatalog();
+      if(c&&diseaseId&&catalog[diseaseId]&&typeof root.loadDiseaseQuestions==='function'){
+        var selector=document.getElementById('qDisease');
+        if(selector)selector.value=diseaseId;
+        data.selectedDisease=diseaseId;
+        root.loadDiseaseQuestions();
+      }
+      return priorEdit.apply(this,arguments);
+    };
+  }
+  var priorUpdate=root.upd;
+  if(typeof priorUpdate==='function'){
+    root.upd=async function(id){
+      var data=root.db||{},before=(data.cases||[]).find(function(x){return String(x.id)===String(id)});
+      var beforeAnswers=objectAnswers(before&&before.answers),diseaseId=caseDisease(before);
+      var selectedBefore=String(data.selectedDisease||''),sameInstrument=!!(diseaseId&&selectedBefore===diseaseId);
+      var result=await priorUpdate.apply(this,arguments);
+      var after=(data.cases||[]).find(function(x){return String(x.id)===String(id)});
+      if(after){
+        var editedAnswers=objectAnswers(after.answers);
+        /* Only accept form edits when the loaded instrument matches this case.
+           Always retain keys that were not rendered by the current form. */
+        after.answers=sameInstrument
+          ? Object.assign({},beforeAnswers,editedAnswers)
+          : beforeAnswers;
+        if(diseaseId){
+          after.questionnaireDiseaseId=diseaseId;
+          after.questionnaireMeta=Object.assign({},after.questionnaireMeta||{},{
+            diseaseId:diseaseId,
+            answerStorage:'case.answers',
+            integrityPolicy:'non-destructive-merge',
+            integrityVersion:'v185'
+          });
+        }
+        after.answerCount=Object.keys(after.answers).filter(function(k){return k!=='foodCase'&&k!=='priority'}).length;
+        after.dataIntegrity=Object.assign({},after.dataIntegrity||{},{
+          allQuestionnaireAnswersStored:true,
+          storageField:'answers',
+          preserveUnrenderedKeys:true,
+          version:'v185'
+        });
+        try{if(typeof save==='function')save()}catch(e){console.error('v185: gagal menyimpan pemulihan jawaban kasus',e)}
+      }
+      return result;
+    };
+  }
+  root.GORUT_QUESTIONNAIRE_INTEGRITY_V185={
+    version:'v185',
+    policy:'non-destructive-merge',
+    caseSpecificInstrument:true,
+    preservesUnrenderedAnswerKeys:true,
+    productionChanged:false,
+    questionDeletionCount:0
+  };
+})();
