@@ -56,3 +56,24 @@ Commit implementasi: `a21bdfe78b0b47b23911a2c3ecd013d16832bf43`
 - Validasi hasil dataset penelitian dengan contoh kasus: BELUM DILAKUKAN.
 
 Catatan: pemeriksaan sintaks dan simulasi terisolasi bukan pengganti pengujian end-to-end di browser. Jangan menganggap rilis telah lulus sebelum T01–T08 dijalankan.
+
+
+## Hasil pengujian terisolasi tambahan — 16 November 2026
+Pengujian dilakukan pada sumber kode yang diambil langsung dari branch ini, tanpa menjalankan aplikasi terhadap data operasional.
+
+| Uji teknis | Hasil |
+|---|---|
+| Parse/syntax seluruh `app.js` dengan JavaScript Function parser | PASS |
+| v185: pemilihan penyakit kasus sebelum edit | PASS |
+| v185: nilai yang sengaja diedit tetap diterapkan | PASS |
+| v185: jawaban lama yang tidak dirender tetap ada | PASS |
+| v185: jawaban spesifik penyakit tetap ada | PASS |
+| v185: snapshot dipulihkan jika instrumen tidak cocok | PASS |
+| v186: label pertanyaan dikenali dari metadata | PASS |
+| v186: variabel Q_* tanpa metadata tetap terdaftar | PASS |
+| v186: alias inti dipetakan ke kolom standar | PASS |
+| v186: Q_* tanpa alias tetap menjadi kolom dataset | PASS |
+
+Contoh uji snapshot sintetis memuat `Q_ID_KASUS`, `Q_BATUK`, `Q_DEMAM`, dan `Q_LEGACY`: ID Kasus dipetakan ke kolom inti, sedangkan ketiga variabel pertanyaan lainnya tetap tersedia sebagai kolom dataset.
+
+**Batas interpretasi:** PASS di atas merupakan parse/syntax dan unit harness terisolasi, bukan uji browser end-to-end. Tidak membuktikan bahwa UI aktual, handler lengkap, autentikasi, RLS, atau Supabase STAGING bekerja benar. T01–T08 tetap wajib dilakukan pada browser STAGING.
