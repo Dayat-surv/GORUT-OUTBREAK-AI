@@ -116,13 +116,13 @@ for (const [diseaseId, disease] of diseaseEntries) {
   assert.ok(Array.isArray(disease.q) && disease.q.length > 0, diseaseId + ' must retain disease-specific questions');
   const normalized = disease.q.map(q => String(q).trim().toLowerCase());
   assert.equal(new Set(normalized).size, normalized.length, diseaseId + ' must not contain repeated question labels');
-  for (const label of normalized) if (Object.hasOwn(duplicateCounts, label)) duplicateCounts[label]++;
-  const effectiveQuestions = disease.q.filter(q => !integratedGenericLabels.has(String(q).trim().toLowerCase()));
-  assert.ok(effectiveQuestions.every(q => !integratedGenericLabels.has(String(q).trim().toLowerCase())),
-    diseaseId + ' must exclude integrated generic fields from the rendered disease questionnaire');
+  for (const label of normalized) {
+    if (Object.hasOwn(duplicateCounts, label)) duplicateCounts[label]++;
+    assert.ok(!integratedGenericLabels.has(label), diseaseId + ' must not store integrated generic fields in its disease-specific catalogue');
+  }
 }
-assert.deepEqual(duplicateCounts, {'tanggal onset':27,'status kasus':18,'outcome':34},
-  'catalogue duplicate baseline must remain explicit and filtered by the integrated-field layer');
+assert.deepEqual(duplicateCounts, {'tanggal onset':0,'status kasus':0,'outcome':0},
+  'generic onset, case status, and outcome must be removed from every disease-specific catalogue');
 const campakQuestions = diseaseCatalogue.campak.q;
 for (const label of ['Tanggal onset demam','Tanggal onset ruam','Klasifikasi kasus','Spesimen serum','Hasil laboratorium']) {
   assert.ok(campakQuestions.includes(label), 'measles-specific question must be preserved: ' + label);
@@ -136,4 +136,4 @@ assert.match(app, /!m\|\|m\.querySelector\('#v46RiskHint'\)/,
   'risk-factor hint insertion must be idempotent for a case modal');
 assert.equal((app.match(/id='v46RiskHint'/g) || []).length, 1,
   'the case modal must define only one risk-factor hint element');
-console.log('Disease catalogue semantic duplicate checks passed (34 diseases; 79 generic duplicate entries filtered).');
+console.log('Disease catalogue semantic duplicate checks passed (34 diseases; generic onset/status/outcome removed).');
