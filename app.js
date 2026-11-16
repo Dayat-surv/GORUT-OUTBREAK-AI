@@ -1899,7 +1899,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
       '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
-      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v186</div>'+
+      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v187</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
@@ -5719,22 +5719,36 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   const originalAdd=window.addCase;
   if(typeof originalAdd==='function'&&!window.__gorutAddCaseGuard187){
     window.gorutAddCase187=function(){
-      const current=(db.investigations||[]).find(x=>String(x.id)===String(db.active));
-      if(current)return originalAdd.apply(this,arguments);
-      const options=(db.investigations||[]).filter(x=>x&&x.id!==undefined&&x.id!==null);
-      if(!options.length){
-        alert('Kasus harus terkait dengan investigasi. Buat atau buka Investigasi KLB terlebih dahulu, kemudian pilih Tambah Kasus.');
-        if(typeof window.page==='function')window.page('investigasi');
-        return;
+      try{
+        const current=(db.investigations||[]).find(x=>String(x.id)===String(db.active));
+        if(current){originalAdd.apply(this,arguments);}
+        else{
+          const options=(db.investigations||[]).filter(x=>x&&x.id!==undefined&&x.id!==null);
+          if(!options.length){
+            alert('Kasus harus terkait dengan investigasi. Buat atau buka Investigasi KLB terlebih dahulu, kemudian pilih Tambah Kasus.');
+            if(typeof window.page==='function')window.page('investigasi');
+            return;
+          }
+          if(options.length===1){
+            db.active=options[0].id;
+            db.selectedDisease=options[0].disease||'campak';
+            if(typeof window.loadDiseaseQuestions==='function')window.loadDiseaseQuestions();
+            if(typeof save==='function')save();
+            originalAdd.apply(this,arguments);
+          }else{
+            if(typeof modal!=='function')throw new Error('Fungsi modal() tidak tersedia.');
+            modal('<h2>Pilih Investigasi untuk Kasus Baru</h2><p class="small">Setiap kasus harus terhubung dengan satu investigasi. Pilih investigasi tujuan terlebih dahulu.</p><div class="field"><label>Investigasi</label><select id="gorutCaseInvestigation187">'+options.map(x=>'<option value="'+esc187(x.id)+'">'+esc187(x.name||('Investigasi '+x.id))+' — '+esc187(x.desa||x.kec||'Wilayah belum diisi')+'</option>').join('')+'</select></div><button class="primary" type="button" onclick="window.gorutChooseCaseInvestigation187()">Lanjut Tambah Kasus</button>');
+          }
+        }
+        const modalEl187=document.getElementById('modal');
+        if(!modalEl187||!modalEl187.classList.contains('show')){
+          console.warn('GORUT v187: handler Tambah Kasus berjalan tetapi modal formulir tidak terbuka.',{active:db.active,investigations:(db.investigations||[]).length});
+          alert('Tombol Tambah Kasus terpanggil, tetapi formulir tidak terbuka. Buka Console (F12) dan kirim pesan GORUT v187 untuk pemeriksaan.');
+        }
+      }catch(err){
+        console.error('GORUT v187 Tambah Kasus:',err);
+        alert('Tambah Kasus gagal: '+(err&&err.message?err.message:String(err)));
       }
-      if(options.length===1){
-        db.active=options[0].id;
-        db.selectedDisease=options[0].disease||'campak';
-        if(typeof window.loadDiseaseQuestions==='function')window.loadDiseaseQuestions();
-        if(typeof save==='function')save();
-        return originalAdd.apply(this,arguments);
-      }
-      modal('<h2>Pilih Investigasi untuk Kasus Baru</h2><p class="small">Setiap kasus harus terhubung dengan satu investigasi. Pilih investigasi tujuan terlebih dahulu.</p><div class="field"><label>Investigasi</label><select id="gorutCaseInvestigation187">'+options.map(x=>'<option value="'+esc187(x.id)+'">'+esc187(x.name||('Investigasi '+x.id))+' — '+esc187(x.desa||x.kec||'Wilayah belum diisi')+'</option>').join('')+'</select></div><button class="primary" type="button" onclick="window.gorutChooseCaseInvestigation187()">Lanjut Tambah Kasus</button>');
     };
     window.gorutChooseCaseInvestigation187=function(){
       const id=E('gorutCaseInvestigation187')?.value;
