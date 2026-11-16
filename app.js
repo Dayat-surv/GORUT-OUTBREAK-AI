@@ -1899,7 +1899,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
       '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
-      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v183</div>'+
+      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v186</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
@@ -2065,8 +2065,8 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       `<div style="overflow:auto"><table><thead><tr><th>Nama</th><th>Jenis</th><th>WhatsApp</th><th>Status</th><th>Daftar</th><th>Aksi</th></tr></thead><tbody>${users.map(u=>`<tr><td><b>${esc45(u.name)}</b><br><small>${esc45(u.id)}</small></td><td>${esc45(roleShort[u.role]||u.role)}</td><td>${esc45(u.whatsapp||'-')}</td><td><span class="badge">${esc45(u.status)}</span></td><td>${new Date(u.requestedAt).toLocaleString('id-ID')}</td><td>${u.role!=='admin'&&u.status==='menunggu'?`<button class="primary" onclick="v45Approve('${esc45(u.id)}')">✓ Izinkan</button> <button onclick="v45Reject('${esc45(u.id)}')">Tolak</button>`:'—'}</td></tr>`).join('')||'<tr><td colspan="6">Belum ada pengguna.</td></tr>'}</tbody></table></div>`;
   }
   function installBrandingV183(){
-  document.documentElement.setAttribute('data-gorut-brand','v183');
-  const t=document.querySelector('title'); if(t) t.textContent='GORUT-OUTBREAK AI v183 — Surveilans Epidemiologi Gorontalo Utara';
+  document.documentElement.setAttribute('data-gorut-brand','v186');
+  const t=document.querySelector('title'); if(t) t.textContent='GORUT-OUTBREAK AI v186 — Surveilans Epidemiologi Gorontalo Utara';
 }
 function installLogin(){
     // Retire v43 open-access startup and restore the requested login page.
