@@ -1908,7 +1908,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       '<div class="field"><label>'+(window.GORUT_BACKEND?.enabled?'Email akun Supabase':'Nama User')+'</label><input id="v45LoginName" autocomplete="username" placeholder="'+(window.GORUT_BACKEND?.enabled?'nama@instansi.go.id':'Nama user')+'"></div>'+
       '<div class="field"><label>Password</label><input id="v45LoginPass" type="password" autocomplete="current-password" placeholder="Password"></div>'+
       '<div class="field" id="v45LoginWaWrap"><label>Nomor WhatsApp terdaftar</label><input id="v45LoginWa" inputmode="tel" placeholder="08xxxxxxxxxx"></div>'+
-      '<button class="primary" style="width:100%;margin-top:4px" onclick="v45Login()">🔐 Login</button>'+(window.GORUT_BACKEND?.enabled?'':'<button class="btn-ghost" style="width:100%;margin-top:8px" onclick="demoLogin()">🚀 Masuk Gratis / Mode Lokal</button>')+
+      '<button class="primary" style="width:100%;margin-top:4px" onclick="v45Login()">🔐 Login</button>'+(window.GORUT_BACKEND?.enabled?'<button class="btn-ghost" type="button" style="width:100%;margin-top:8px" onclick="window.gorutForgotPassword()">Lupa kata sandi?</button>':'<button class="btn-ghost" style="width:100%;margin-top:8px" onclick="demoLogin()">🚀 Masuk Gratis / Mode Lokal</button>')+
       '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+
       '<button class="btn-ghost" style="flex:1" onclick="v45ShowRegister()">📝 Daftar Akun Gratis</button>'+
       (window.GORUT_BACKEND?.enabled?'':'<a href="https://wa.me/'+WA+'?text='+encodeURIComponent(WA_TEXT)+'" target="_blank" rel="noopener" style="flex:1;text-decoration:none"><button class="btn-whatsapp" style="width:100%">💬 WhatsApp Admin</button></a>')+'</div>'+
@@ -5656,4 +5656,97 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     return result;
   };
   root.GORUT_QUESTIONNAIRE_DICTIONARY_V186={version:'v186',labelsResolved:true,preservesUnknownQuestionColumns:true,stableQuestionIds:true};
+})();
+
+
+/* v187 — STAGING LOGIN RECOVERY + CASE-CREATION CONTEXT GUARD */
+(function(){
+  'use strict';
+  const E=id=>document.getElementById(id);
+  const esc187=v=>String(v??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+  window.gorutForgotPassword=async function(){
+    const cfg=window.GORUT_BACKEND||{};
+    if(!cfg.enabled)return alert('Pemulihan password hanya tersedia untuk akun Supabase.');
+    const email=(E('v45LoginName')?.value||'').trim().toLowerCase();
+    if(!email)return alert('Masukkan email akun Supabase pada kolom Email akun Supabase terlebih dahulu.');
+    try{
+      const sb=await backendClient();
+      if(!sb?.auth)return alert('Koneksi Supabase belum siap. Periksa konfigurasi STAGING.');
+      const redirectTo=window.location.origin+window.location.pathname;
+      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo});
+      if(error)throw error;
+      alert('Permintaan pemulihan password telah dikirim. Periksa email masuk dan folder Spam. Buka tautan pemulihan pada browser ini untuk membuat password baru.');
+    }catch(err){alert('Permintaan pemulihan password gagal: '+(err?.message||String(err)));}
+  };
+  window.gorutShowRecoveryForm=function(sb){
+    if(E('app'))E('app').style.display='none';
+    if(E('login'))E('login').style.display='none';
+    let el=E('gorutRecovery187');
+    if(!el){el=document.createElement('div');el.id='gorutRecovery187';el.className='login';document.body.appendChild(el);}
+    el.style.display='grid';
+    el.innerHTML='<div class="loginbox" style="text-align:left"><h2>Atur Ulang Password</h2><p class="small">Masukkan password baru untuk akun Supabase Anda.</p><div class="field"><label>Password baru</label><input id="gorutRecoveryPass187" type="password" autocomplete="new-password"></div><div class="field"><label>Ulangi password baru</label><input id="gorutRecoveryConfirm187" type="password" autocomplete="new-password"></div><button class="primary" style="width:100%" type="button" onclick="window.gorutCompletePasswordRecovery()">Simpan Password Baru</button><p class="small">Jangan bagikan tautan pemulihan atau password kepada siapa pun.</p></div>';
+    window.__gorutRecoveryClient187=sb;
+  };
+  window.gorutCompletePasswordRecovery=async function(){
+    const p=E('gorutRecoveryPass187')?.value||'',c=E('gorutRecoveryConfirm187')?.value||'';
+    if(p.length<8)return alert('Gunakan password minimal 8 karakter.');
+    if(p!==c)return alert('Konfirmasi password belum sama.');
+    const sb=window.__gorutRecoveryClient187;
+    if(!sb?.auth)return alert('Sesi pemulihan tidak tersedia. Silakan minta tautan pemulihan baru.');
+    try{
+      const {error}=await sb.auth.updateUser({password:p});
+      if(error)throw error;
+      await sb.auth.signOut();
+      if(E('gorutRecovery187'))E('gorutRecovery187').style.display='none';
+      if(typeof window.v45ShowLogin==='function')window.v45ShowLogin('Password berhasil diperbarui. Silakan login menggunakan password baru.');
+      alert('Password berhasil diperbarui. Silakan login kembali.');
+    }catch(err){alert('Password belum berhasil diperbarui: '+(err?.message||String(err)));}
+  };
+  const originalBackend=window.backendClient;
+  if(typeof originalBackend==='function'&&!window.__gorutBackendRecovery187){
+    window.backendClient=async function(){
+      const sb=await originalBackend.apply(this,arguments);
+      if(sb?.auth&&!window.__gorutRecoveryListener187){
+        window.__gorutRecoveryListener187=true;
+        sb.auth.onAuthStateChange((event)=>{
+          if(event==='PASSWORD_RECOVERY')setTimeout(()=>window.gorutShowRecoveryForm(sb),0);
+        });
+      }
+      return sb;
+    };
+    window.__gorutBackendRecovery187=true;
+  }
+  const originalAdd=window.addCase;
+  if(typeof originalAdd==='function'&&!window.__gorutAddCaseGuard187){
+    window.addCase=function(){
+      const current=(db.investigations||[]).find(x=>String(x.id)===String(db.active));
+      if(current)return originalAdd.apply(this,arguments);
+      const options=(db.investigations||[]).filter(x=>x&&x.id!==undefined&&x.id!==null);
+      if(!options.length){
+        alert('Kasus harus terkait dengan investigasi. Buat atau buka Investigasi KLB terlebih dahulu, kemudian pilih Tambah Kasus.');
+        if(typeof window.page==='function')window.page('investigasi');
+        return;
+      }
+      if(options.length===1){
+        db.active=options[0].id;
+        db.selectedDisease=options[0].disease||'campak';
+        if(typeof window.loadDiseaseQuestions==='function')window.loadDiseaseQuestions();
+        if(typeof save==='function')save();
+        return originalAdd.apply(this,arguments);
+      }
+      modal('<h2>Pilih Investigasi untuk Kasus Baru</h2><p class="small">Setiap kasus harus terhubung dengan satu investigasi. Pilih investigasi tujuan terlebih dahulu.</p><div class="field"><label>Investigasi</label><select id="gorutCaseInvestigation187">'+options.map(x=>'<option value="'+esc187(x.id)+'">'+esc187(x.name||('Investigasi '+x.id))+' — '+esc187(x.desa||x.kec||'Wilayah belum diisi')+'</option>').join('')+'</select></div><button class="primary" type="button" onclick="window.gorutChooseCaseInvestigation187()">Lanjut Tambah Kasus</button>');
+    };
+    window.gorutChooseCaseInvestigation187=function(){
+      const id=E('gorutCaseInvestigation187')?.value;
+      const inv=(db.investigations||[]).find(x=>String(x.id)===String(id));
+      if(!inv)return alert('Pilih investigasi yang valid.');
+      db.active=inv.id;db.selectedDisease=inv.disease||'campak';
+      if(typeof window.loadDiseaseQuestions==='function')window.loadDiseaseQuestions();
+      if(typeof save==='function')save();
+      close();
+      originalAdd.call(window);
+    };
+    window.__gorutAddCaseGuard187=true;
+  }
+  window.GORUT_V187={version:'v187',features:['Supabase password recovery request and recovery form','case creation prompts for investigation context','no questionnaire fields removed']};
 })();
