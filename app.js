@@ -2259,6 +2259,20 @@ function installLogin(){
     const found=Object.entries(diseases).find(([id,d])=>String(d.name).trim().toLowerCase()===raw.toLowerCase());
     return found?found[0]:'';
   }
+  const integratedCoreQuestionLabels=new Set([
+    'id kasus','nama lengkap','umur','jenis kelamin','tanggal onset gejala',
+    'tanggal onset','status kasus','status kesehatan','outcome',
+    'alamat lengkap','alamat lengkap tempat tinggal/kejadian',
+    'provinsi','kabupaten','kabupaten/kota','kecamatan','desa/kelurahan',
+    'puskesmas','latitude','longitude'
+  ]);
+  function isIntegratedCoreQuestion(q){
+    const label=String(q?.label||'').trim().toLowerCase().replace(/\s+/g,' ');
+    return integratedCoreQuestionLabels.has(label);
+  }
+  function filterIntegratedCoreQuestions(questions){
+    return (Array.isArray(questions)?questions:[]).filter(q=>!isIntegratedCoreQuestion(q));
+  }
   function ensureCaseQuestionnaire(c={}){
     const diseaseId=resolveCaseDiseaseId(c.disease)||resolveCaseDiseaseId(act()?.disease)||resolveCaseDiseaseId(db.selectedDisease);
     if(!diseaseId)return;
@@ -2271,17 +2285,17 @@ function installLogin(){
     // The case-entry form must always contain the complete standard instrument.
     // The questionnaire menu can retain a user-filtered subset, so a non-empty
     // db.questions array is not proof that all required questions are present.
-    const canonical=[
+    const canonical=filterIntegratedCoreQuestions([
       ...baseQ.map(q=>buildQuestion(q[1],q[0])),
       ...(Array.isArray(disease.q)?disease.q:[]).map(x=>buildQuestion(x,'Spesifik — '+disease.name))
-    ];
+    ]);
     const existing=Array.isArray(db.questions)?db.questions:[];
     const normLabel=value=>String(value||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
     const existingByLabel=new Map();
     existing.forEach(q=>{if(q&&q.label){const key=normLabel(q.label);if(key&&!existingByLabel.has(key))existingByLabel.set(key,q)}});
     const canonicalKeys=new Set(canonical.map(q=>normLabel(q.label)));
     const complete=canonical.map(q=>existingByLabel.get(normLabel(q.label))||q);
-    const extras=existing.filter(q=>q&&q.label&&!canonicalKeys.has(normLabel(q.label)));
+    const extras=existing.filter(q=>q&&q.label&&!isIntegratedCoreQuestion(q)&&!canonicalKeys.has(normLabel(q.label)));
     const next=[...complete,...extras];
     const currentSignature=existing.map(q=>q&&q.label?normLabel(q.label):'').join('|');
     const nextSignature=next.map(q=>normLabel(q.label)).join('|');
@@ -2326,7 +2340,13 @@ function installLogin(){
     const a=collectQ45(); const c=db.cases.find(x=>String(x.id)===String(id));if(!c)return; await oldUpd(id); c.answers=a; coreFromAnswers(c,a); c.disease=act()?.disease||c.disease; save();cases();
   };
   const oldLoad=window.loadDiseaseQuestions;
-  window.loadDiseaseQuestions=function(){oldLoad();ensureQuestionIds();save();};
+  window.loadDiseaseQuestions=function(){
+    oldLoad();
+    db.questions=filterIntegratedCoreQuestions(db.questions);
+    ensureQuestionIds();
+    save();
+    if(typeof window.renderQ==='function')window.renderQ();
+  };
   // Make questionnaire inputs usable as an actual case-entry instrument; retain preview behavior.
   const oldRenderQ=window.renderQ;
   window.renderQ=function(){oldRenderQ();ensureQuestionIds();};
