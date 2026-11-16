@@ -12,10 +12,13 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-const appVersion = index.match(/app\.js\?v=(\d+)/)?.[1];
+const appVersion = index.match(/app\\.js\\?v=(\\d+)/)?.[1];
 assert.ok(appVersion, 'main page must declare a cache-busted application script version');
-assert.match(sw, new RegExp('gorut-outbreak-ai-(?:final|staging)-v' + appVersion + '(?:[\\'\"])'), 'service worker cache version must match the application version');
-assert.match(sw, new RegExp('app\\.js\\?v=' + appVersion + '(?:[\\'\"])'), 'service worker must precache the matching application script');
+assert.ok(
+  sw.includes('gorut-outbreak-ai-final-v' + appVersion) || sw.includes('gorut-outbreak-ai-staging-v' + appVersion),
+  'service worker cache version must match the application version'
+);
+assert.ok(sw.includes('app.js?v=' + appVersion), 'service worker must precache the matching application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
