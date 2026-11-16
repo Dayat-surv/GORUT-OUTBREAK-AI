@@ -61,3 +61,15 @@ STATIC AUDIT: TEMUAN TERIDENTIFIKASI.
 QUESTION DELETION: NONE.
 PRODUCTION CHANGE: NONE.
 PRODUCTION RELEASE: NOT APPROVED.
+
+
+## Pembaruan tindak lanjut — v185/v186
+- QI-01 (risiko penghapusan jawaban saat edit): telah diberi mitigasi kode v185 melalui merge non-destruktif dan pemulihan snapshot bila instrumen tidak cocok. Status: MITIGASI KODE DITERAPKAN; belum lulus uji browser/backend.
+- QI-02 (instrumen edit tidak mengikuti penyakit kasus): telah diberi mitigasi v185 dengan memilih instrumen dari penyakit kasus/investigasi sebelum form edit dibangun. Status: MITIGASI KODE DITERAPKAN; perlu uji lintas penyakit di browser.
+- QI-03 (label dictionary tidak terbaca): telah ditangani pada v186 dengan resolver metadata label/kategori/tipe/instrumen. Status: PERBAIKAN KODE DITERAPKAN; perlu verifikasi keluaran dictionary.
+- QI-04 (round-trip sinkronisasi): belum diuji. Status: OPEN.
+- QI-05 (validator isi instrumen): belum diselesaikan. Audit struktural dangkal yang ada tidak boleh dianggap validasi isi. Status: OPEN.
+
+Tambahan temuan dataset penelitian: builder snapshot sebelumnya hanya memetakan Q_* tertentu ke alias inti dan mengabaikan Q_* lain. v186 mengubah perilaku agar setiap Q_* yang tidak memiliki alias tetap disimpan sebagai kolom tersendiri. Perlu uji dengan kuesioner multi-penyakit dan pemeriksaan bahwa jumlah kolom/jawaban sama dengan sumber.
+
+**Status keseluruhan setelah implementasi:** CODE MITIGATIONS COMMITTED TO STAGING; END-TO-END TESTING PENDING; PRODUCTION RELEASE NOT APPROVED.
