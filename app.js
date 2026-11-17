@@ -4632,7 +4632,7 @@ try{installBrandingV184();}catch(e){}
       const key=String(c.id||'')+'|'+String(c.investigationId||'');
       const prev=grouped.get(key);
       if(!prev)grouped.set(key,c);
-      else if(completeness(c)>completeness(prev))grouped.set(key,c);
+      else {const tc=Date.parse(c.updatedAt||'')||0,tp=Date.parse(prev.updatedAt||'')||0;if(tc>tp||(tc===tp&&completeness(c)>completeness(prev)))grouped.set(key,c);}
     });
     const rows=[...grouped.values()];
     const head=table.querySelector('thead tr');
@@ -4780,6 +4780,7 @@ try{installBrandingV184();}catch(e){}
               kec:c.kec??c.admin?.kec??'',
               desa:c.desa??c.admin?.desa??'',
               symptoms:c.symptoms??'',
+              updatedAt:c.updatedAt??'',
               admin:c.admin&&typeof c.admin==='object'?{...c.admin}:{}
             }
           };
@@ -4809,6 +4810,7 @@ try{installBrandingV184();}catch(e){}
           c.kec=meta.kec??c.kec??'';
           c.desa=meta.desa??c.desa??'';
           c.symptoms=meta.symptoms??c.symptoms??'';
+          c.updatedAt=meta.updatedAt??c.updatedAt??'';
           c.admin=Object.assign({},c.admin||{},meta.admin||{},{
             prov:c.prov||c.admin?.prov||'',
             kab:c.kab||c.admin?.kab||'',
