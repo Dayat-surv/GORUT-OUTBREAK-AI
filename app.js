@@ -5382,12 +5382,35 @@ try{installBrandingV184();}catch(e){}
     Object.assign(c,{name:v('ed116_name').trim(),age:age===null?0:age,sex:v('ed116_sex'),onset:v('ed116_onset'),status:v('ed116_status'),outcome:v('ed116_outcome'),symptoms:v('ed116_symptoms'),address:v('ed116_address'),prov:v('ed116_prov'),kab:v('ed116_kab'),kec:v('ed116_kec'),desa:v('ed116_desa'),lat:lat,lng:lng,updatedAt:new Date().toISOString()});
     c.admin=Object.assign({},c.admin||{},{prov:c.prov||(c.admin&&c.admin.prov)||'',kab:c.kab||(c.admin&&c.admin.kab)||'',kec:c.kec||(c.admin&&c.admin.kec)||'',desa:c.desa||(c.admin&&c.admin.desa)||'',lat:lat,lng:lng,source:(c.admin&&c.admin.source)||'input manual'});
     if(food){var old=c.foodCase||{};c.foodCase=Object.assign({},old,{food:v('ed116_food'),consumedAt:v('ed116_consumed'),onsetAt:v('ed116_foodonset'),incubationHours:v('ed116_incubation')===''?null:Number(v('ed116_incubation')),symptoms:v('ed116_symptoms'),foodSource:v('ed116_foodsource'),hospitalized:v('ed116_hospitalized'),clinicalSpecimen:v('ed116_specimen')})}
-    try{if(typeof queueSync==='function')queueSync('cases')}catch(e){console.warn('Antrean sinkronisasi kasus:',e)}
     try{if(typeof save==='function')save();else localStorage.setItem('gorut-v8',JSON.stringify(window.db))}catch(e){alert('Perubahan belum dapat disimpan lokal: '+e.message);return}
     document.getElementById('modal').classList.remove('show');
     try{if(typeof window.renderCaseListRecovery106==='function')window.renderCaseListRecovery106();else if(typeof window.cases==='function')window.cases()}catch(e){console.warn('Refresh daftar kasus:',e)}
     try{if(typeof window.renderQuestionnaireMatrixV125==='function')window.renderQuestionnaireMatrixV125()}catch(e){console.warn('Refresh tabel jawaban kuesioner:',e)}
-    alert('Perubahan disimpan pada rekaman sumber yang dipilih. Jawaban kuesioner lain tetap dipertahankan. Jalankan Sinkronisasi Supabase untuk mengirim perubahan ke server.');
+    /* Update only the selected source case on STAGING. Never create a replacement row when its server ID is missing. */
+    try{
+      var sb=await backendClient();
+      if(!sb)throw new Error('Client Supabase STAGING tidak tersedia.');
+      var auth=await sb.auth.getUser();
+      if(auth.error||!auth.data||!auth.data.user)throw new Error(auth.error&&auth.error.message||'Sesi Supabase tidak aktif.');
+      if(!c.serverId)throw new Error('ID server rekaman sumber tidak tersedia; pembaruan otomatis dibatalkan untuk mencegah duplikasi.');
+      var inv=(window.db.investigations||[]).find(function(x){return String(x.id)===String(c.investigationId)});
+      if(!inv||!inv.serverId)throw new Error('ID server investigasi tidak tersedia; pembaruan otomatis dibatalkan.');
+      var row={id:c.serverId,owner_id:auth.data.user.id,investigation_id:inv.serverId,case_code:String(c.id||''),full_name:c.name||'',age:Number(c.age)||null,sex:c.sex||null,onset_date:c.onset||null,status:c.status||null,outcome:c.outcome||null,latitude:c.lat||null,longitude:c.lng||null,questionnaire_response:{...(c.answers||{}),foodCase:c.foodCase||null,priority:c.priority||null}};
+      var result=await sb.from('cases').upsert(row,{onConflict:'id'});
+      if(result.error)throw new Error(result.error.message);
+      var pending=Array.isArray(syncQueue)?syncQueue.findIndex(function(x){return x.entity==='cases'}):-1;
+      if(pending>=0){syncQueue.splice(pending,1);localStorage.setItem('gorut-sync-queue',JSON.stringify(syncQueue));}
+      if(typeof updateSyncBadge==='function')updateSyncBadge();
+      if(typeof save==='function')save();
+      alert('Perubahan kasus berhasil dikirim dan dikonfirmasi oleh Supabase STAGING. Jawaban kuesioner lain tetap dipertahankan.');
+    }catch(syncError){
+      try{if(typeof queueSync==='function')queueSync('cases')}catch(queueError){}
+      try{if(typeof save==='function')save()}catch(saveError){}
+      console.error('Pembaruan kasus ke Supabase STAGING gagal:',syncError);
+      var detail=document.getElementById('backendDetail');
+      if(detail)detail.textContent='Perubahan kasus tersimpan lokal, tetapi belum terkonfirmasi di server STAGING: '+(syncError.message||String(syncError));
+      alert('Perubahan tersimpan lokal, tetapi BELUM berhasil dikirim ke Supabase STAGING. Antrean sinkronisasi dipertahankan. '+(syncError.message||String(syncError)));
+    }
   };
   window.GORUT_V116={version:'v118',features:['edit selected source record by unique server ID','duplicate-group Edit opens source selection','preserve questionnaire answers and server identifiers']};
 })();
