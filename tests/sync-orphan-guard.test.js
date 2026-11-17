@@ -74,8 +74,8 @@ assert.match(app, /function modal\(x\)\{modalbox\.innerHTML='<div class="modal-c
   'all modal forms must expose a close button that closes the modal');
 assert.match(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'), /\.modal-close-row\{position:sticky/,
   'modal close control must remain visible while scrolling long forms');
-assert.match(app, /const canonical=\[\s*\.\.\.baseQ\.map\(q=>buildQuestion\(q\[1\],q\[0\]\)\)[\s\S]*?filterIntegratedCoreQuestions\(\(Array\.isArray\(disease\.q\)/,
-  'case form must retain all integrated base questions while filtering only generic duplicates from disease-specific questions');
+assert.match(app, /const canonical=buildCaseQuestionList45\(diseaseId\)/,
+  'case form must retain integrated base questions and deduplicate exact disease-specific overlaps');
 assert.match(app, /const integratedCoreQuestionLabels=new Set\(\[[\s\S]*?'id kasus'[\s\S]*?'nama lengkap'[\s\S]*?'umur'[\s\S]*?'jenis kelamin'[\s\S]*?'tanggal onset gejala'[\s\S]*?'puskesmas'[\s\S]*?'latitude'[\s\S]*?'longitude'/,
   'generic identity, onset, status/outcome, address, and coordinate fields must be filtered from disease-specific questions');
 assert.doesNotMatch(app, /db\.questions=filterIntegratedCoreQuestions\(db\.questions\)/,
