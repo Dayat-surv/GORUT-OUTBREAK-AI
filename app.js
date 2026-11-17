@@ -2348,7 +2348,7 @@ function installLogin(){
     if(!c.sex)c.sex=find('Jenis kelamin');
     if(!c.onset)c.onset=find('Tanggal onset gejala','Onset');
     if(!c.status)c.status=find('Status kasus','Status');
-    if(!c.outcome)c.outcome=find('Outcome','Keadaan akhir','Status kesehatan');
+    if(!c.outcome)c.outcome=find('Outcome','Keadaan akhir');
     c.address=c.address||find('Alamat lengkap','Alamat lengkap tempat tinggal/kejadian');
     c.desa=c.desa||find('Desa/Kelurahan');c.kec=c.kec||find('Kecamatan');c.kab=c.kab||find('Kabupaten','Kabupaten/Kota');c.prov=c.prov||find('Provinsi');
     c.pkm=c.pkm||find('Puskesmas');c.puskesmas=c.puskesmas||c.pkm;
@@ -2376,7 +2376,7 @@ function installLogin(){
     const sex=pick('Jenis kelamin')||(mode==='edit'?c.sex||'':'');
     const onset=pick('Tanggal onset gejala','Onset')||(mode==='edit'?c.onset||'':'');
     const status=pick('Status kasus','Status')||(mode==='edit'?c.status||'':'');
-    const outcome=pick('Outcome','Keadaan akhir')||pick('Status kesehatan')||(mode==='edit'?c.outcome||'':'');
+    const outcome=pick('Outcome','Keadaan akhir')||(mode==='edit'?c.outcome||'':'');
     const symptoms=pick('Gejala utama')||(mode==='edit'?c.symptoms||'':'');
     const address=pick('Alamat lengkap','Alamat lengkap tempat tinggal/kejadian')||(mode==='edit'?c.address||'':'');
     const prov=pick('Provinsi')||(mode==='edit'?c.prov||'':'');
