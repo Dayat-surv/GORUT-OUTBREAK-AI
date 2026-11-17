@@ -4753,7 +4753,66 @@ try{installBrandingV184();}catch(e){}
     E107('modal')?.classList.remove('show');
     try{if(typeof window.renderCaseListRecovery106==='function')window.renderCaseListRecovery106();else if(typeof window.cases==='function')window.cases()}catch(e){console.warn('Refresh daftar kasus:',e)}
     try{if(typeof window.renderQuestionnaireMatrixV125==='function')window.renderQuestionnaireMatrixV125()}catch(e){console.warn('Refresh tabel jawaban kuesioner:',e)}
-    alert('Perubahan kasus berhasil disimpan pada aplikasi. Jawaban kuesioner tetap dipertahankan. Jika menggunakan Supabase, jalankan Sinkronisasi Supabase untuk mengirim perubahan ke server.');
+    // Persist only the edited case source rows. Do not run global syncNow() here:
+    // that routine upserts every operational record. Read existing JSONB first so raw
+    // questionnaire answers remain byte-for-byte equivalent at the key/value level.
+    const editedRows=sourceCases.filter(row=>String(row.id)===String(c.id)&&String(row.investigationId)===String(c.investigationId));
+    const saveButton=E107('ed107_save');
+    if(saveButton){saveButton.disabled=true;saveButton.textContent='Menyimpan ke server…';}
+    (async()=>{
+      try{
+        const cfg=window.GORUT_BACKEND||{};
+        if(!cfg.enabled)throw new Error('Backend STAGING tidak aktif. Perubahan hanya tersimpan lokal.');
+        const sb=await backendClient();
+        if(!sb)throw new Error('Koneksi Supabase tidak tersedia.');
+        const auth=await sb.auth.getUser();
+        if(auth.error||!auth.data?.user)throw new Error(auth.error?.message||'Sesi login Supabase tidak ditemukan.');
+        const user=auth.data.user;
+        const targets=editedRows.filter(row=>row.serverId);
+        if(!targets.length)throw new Error('ID server rekaman tidak tersedia; perubahan belum dikirim ke server.');
+        for(const row of targets){
+          const current=await sb.from('cases').select('questionnaire_response').eq('id',String(row.serverId)).eq('owner_id',user.id).single();
+          if(current.error)throw current.error;
+          const existing=current.data?.questionnaire_response;
+          const answers=existing&&typeof existing==='object'&&!Array.isArray(existing)?{...existing}:{};
+          const priorMeta=answers.__gorut_case_meta_v1&&typeof answers.__gorut_case_meta_v1==='object'?answers.__gorut_case_meta_v1:{};
+          answers.__gorut_case_meta_v1={
+            ...priorMeta,
+            address:row===c?c.address:(row.address??priorMeta.address??''),
+            prov:row===c?c.prov:(row.prov??priorMeta.prov??''),
+            kab:row===c?c.kab:(row.kab??priorMeta.kab??''),
+            kec:row===c?c.kec:(row.kec??priorMeta.kec??''),
+            desa:row===c?c.desa:(row.desa??priorMeta.desa??''),
+            symptoms:row===c?c.symptoms:(row.symptoms??priorMeta.symptoms??''),
+            updatedAt:editedAt,
+            name:editedName,
+            admin:row===c?{...(c.admin||{})}:{...(row.admin||priorMeta.admin||{})}
+          };
+          const patch={full_name:editedName,questionnaire_response:answers};
+          if(row===c){
+            patch.age=Number(c.age)||null;patch.sex=c.sex||null;patch.onset_date=c.onset||null;
+            patch.status=c.status||null;patch.outcome=c.outcome||null;
+            patch.latitude=c.lat??null;patch.longitude=c.lng??null;
+          }
+          const updated=await sb.from('cases').update(patch).eq('id',String(row.serverId)).eq('owner_id',user.id).select('id').single();
+          if(updated.error)throw updated.error;
+          if(!updated.data?.id)throw new Error('Tidak ada rekaman server yang diperbarui untuk '+String(row.id)+'.');
+        }
+        try{if(typeof save==='function')save()}catch(e){}
+        const badge=E107('backendBadge'),detail=E107('backendDetail');
+        if(badge)badge.textContent='Backend: tersinkron';
+        if(detail)detail.textContent='Perubahan kasus berhasil diperbarui langsung ke server STAGING. Jawaban kuesioner asli dipertahankan.';
+        alert('Perubahan kasus berhasil disimpan dan dikonfirmasi pada server STAGING. Jawaban kuesioner tetap dipertahankan.');
+      }catch(err){
+        console.error('Penyimpanan langsung kasus ke Supabase gagal:',err);
+        const badge=E107('backendBadge'),detail=E107('backendDetail');
+        if(badge)badge.textContent='Backend: gagal menyimpan kasus';
+        if(detail)detail.textContent='Perubahan kasus masih tersimpan lokal, tetapi server belum mengonfirmasi: '+(err?.message||String(err));
+        alert('Perubahan tersimpan lokal, tetapi BELUM terkonfirmasi di server STAGING.\n\n'+(err?.message||String(err))+'\n\nJangan menganggap perubahan sudah permanen sebelum status server berhasil.');
+      }finally{
+        if(saveButton){saveButton.disabled=false;saveButton.textContent='Simpan Perubahan';}
+      }
+    })();
   }
   window.editCase=edit107;
   window.saveEditedCaseV107=saveEdited107;
