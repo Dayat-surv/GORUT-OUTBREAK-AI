@@ -203,7 +203,7 @@ for (const label of [
   'ID Kasus','Nama lengkap','Umur','Jenis kelamin','Tanggal onset gejala',
   'Status kasus','Status kesehatan','Outcome','Alamat lengkap','Provinsi',
   'Kabupaten','Kecamatan','Desa/Kelurahan','Puskesmas','Latitude','Longitude'
-]) assert.ok(baseLabels.has(label), 'integrated questionnaire must retain core field: ' + label);
+]) assert.ok(baseLabels.has(label.toLowerCase()), 'integrated questionnaire must retain core field: ' + label);
 assert.match(app, /'Outcome':\{type:'choice',options:\['Rawat jalan','Dirawat','Sembuh','Meninggal','Belum diketahui'\]\}/,
   'integrated Outcome must preserve the user-facing epidemiological options');
 assert.match(app, /function coreFromAnswers\(c,a\)[\s\S]*?find\('Outcome','Keadaan akhir'\)/,
