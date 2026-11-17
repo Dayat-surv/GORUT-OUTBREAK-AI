@@ -4640,10 +4640,10 @@ try{installBrandingV184();}catch(e){}
     let note=E('caseListRecoveryNote106');
     if(!note){note=document.createElement('div');note.id='caseListRecoveryNote106';note.className='notice';table.parentElement?.insertBefore(note,table);}
     note.textContent=fallback?'Perhatian: tidak ditemukan kasus yang tertaut ke investigasi aktif. Untuk menghindari daftar kosong, seluruh kasus tersimpan ditampilkan. Periksa tautan investigasi setiap kasus.':('Menampilkan '+rows.length+' dari '+source.length+' kasus'+(active?' pada investigasi aktif':' tersimpan')+'. Detail Lengkap memuat data inti dan seluruh jawaban kuesioner.');
-    body.innerHTML=rows.map(c=>{
-      const id=String(c.id??'');
+    body.innerHTML=rows.map((c,rowIndex)=>{
+      const id=String(c.id??''),sourceId=String(c.serverId??'');
       const action=c.action||c.initialAction||c.followUp||c.treatment||c.management||'-';
-      return '<tr data-case-id="'+esc(id)+'">'+
+      return '<tr data-case-id="'+esc(id)+'" data-case-server-id="'+esc(sourceId)+'" data-case-row-index="'+rowIndex+'">'+
         '<td>'+esc(id||'-')+'</td><td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(disease(c))+'</td>'+
         '<td>'+esc(c.age??'-')+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(symptom(c))+'</td>'+
         '<td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||c.admin?.desa||'-')+'</td><td>'+esc(c.kec||c.admin?.kec||'-')+'</td>'+
@@ -4652,14 +4652,14 @@ try{installBrandingV184();}catch(e){}
         '<td class="table-actions"><span class="case-actions-106"></span></td></tr>';
     }).join('')||'<tr><td colspan="15"><div class="notice">'+(query?'Tidak ada kasus yang cocok dengan pencarian. Hapus teks pencarian untuk melihat seluruh kasus.':'Belum ada data kasus pada sumber data aplikasi.')+'</div></td></tr>';
     body.querySelectorAll('tr[data-case-id]').forEach(tr=>{
-      const id=tr.getAttribute('data-case-id'), target=tr.querySelector('.case-actions-106'); if(!target)return;
+      const id=tr.getAttribute('data-case-id'),sourceId=tr.getAttribute('data-case-server-id'),target=tr.querySelector('.case-actions-106'); if(!target)return;
       const btn=(label,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',fn);target.appendChild(b)};
       btn('🔎 Detail Lengkap',()=>{
         if(typeof window.showCaseQuestionnaireV73==='function')window.showCaseQuestionnaireV73(id);
         else if(typeof window.showCaseRiskFactors59==='function')window.showCaseRiskFactors59(id);
         else alert('Panel detail belum siap. Muat ulang aplikasi; data kasus tidak diubah.');
       });
-      btn('Edit',()=>{if(typeof window.editCase==='function')window.editCase(id)});
+      btn('Edit',()=>{if(typeof window.editCase==='function')window.editCase(id,sourceId||undefined)});
     });
   }
   window.renderCaseListRecovery106=list;
@@ -4684,8 +4684,9 @@ try{installBrandingV184();}catch(e){}
     const values=[...new Set([...(options||[]),...(current!=null&&String(current)!==''?[String(current)]:[])])];
     return '<div class="field"><label for="'+id+'">'+label+'</label><select id="'+id+'">'+values.map(v=>'<option value="'+esc107(v)+'" '+(String(v)===String(current==null?'':current)?'selected':'')+'>'+esc107(v)+'</option>').join('')+'</select></div>';
   };
-  function edit107(id){
-    const c=(window.db?.cases||[]).find(x=>String(x.id)===String(id));
+  function edit107(id,sourceId){
+    const sourceCases=window.db?.cases||[];
+    const c=(sourceId?sourceCases.find(x=>String(x.serverId||'')===String(sourceId)):null)||sourceCases.find(x=>String(x.id)===String(id));
     if(!c){alert('Kasus tidak ditemukan pada data aplikasi. Data tidak diubah.');return;}
     const inv=(window.db?.investigations||[]).find(x=>String(x.id)===String(c.investigationId));
     const food=inv?.disease==='keracunan-pangan'||!!c.foodCase,fc=c.foodCase||{};
@@ -4723,11 +4724,12 @@ try{installBrandingV184();}catch(e){}
     const box=E107('modalbox'),modalEl=E107('modal');
     if(!box||!modalEl){alert('Panel edit belum tersedia. Muat ulang halaman dan coba kembali.');return;}
     box.innerHTML=html;E107('ed107_id').readOnly=true;modalEl.classList.add('show');
-    E107('ed107_save').addEventListener('click',()=>saveEdited107(id));
+    E107('ed107_save').addEventListener('click',()=>saveEdited107(id,sourceId));
     E107('ed107_cancel').addEventListener('click',()=>modalEl.classList.remove('show'));
   }
-  function saveEdited107(id){
-    const c=(window.db?.cases||[]).find(x=>String(x.id)===String(id));
+  function saveEdited107(id,sourceId){
+    const sourceCases=window.db?.cases||[];
+    const c=(sourceId?sourceCases.find(x=>String(x.serverId||'')===String(sourceId)):null)||sourceCases.find(x=>String(x.id)===String(id));
     if(!c){alert('Kasus tidak ditemukan. Tidak ada perubahan yang disimpan.');return;}
     const v=id=>E107(id)?.value??'';
     const ageRaw=v('ed107_age'),age=ageRaw===''?null:Number(ageRaw);
@@ -4739,7 +4741,7 @@ try{installBrandingV184();}catch(e){}
     const editedAt=new Date().toISOString();
     Object.assign(c,{name:editedName,age:age===null?0:age,sex:v('ed107_sex'),onset:v('ed107_onset'),status:v('ed107_status'),outcome:v('ed107_outcome'),symptoms:v('ed107_symptoms'),address:v('ed107_address'),prov:v('ed107_prov'),kab:v('ed107_kab'),kec:v('ed107_kec'),desa:v('ed107_desa'),lat:lat,lng:lng,updatedAt:editedAt});
     /* A case_code may have multiple source rows (different server IDs). Keep the canonical case name consistent across those rows without touching their questionnaire answers. */
-    (window.db?.cases||[]).forEach(row=>{if(row!==c&&String(row.id)===String(c.id)&&String(row.investigationId)===String(c.investigationId)){row.name=editedName;row.updatedAt=editedAt;}});
+    sourceCases.forEach(row=>{if(row!==c&&String(row.id)===String(c.id)&&String(row.investigationId)===String(c.investigationId)){row.name=editedName;row.updatedAt=editedAt;}});
     c.admin=Object.assign({},c.admin||{},{prov:c.prov||c.admin?.prov||'',kab:c.kab||c.admin?.kab||'',kec:c.kec||c.admin?.kec||'',desa:c.desa||c.admin?.desa||'',lat:lat,lng:lng,source:c.admin?.source||'input manual'});
     const inv=(window.db?.investigations||[]).find(x=>String(x.id)===String(c.investigationId));
     if(inv?.disease==='keracunan-pangan'||c.foodCase){
