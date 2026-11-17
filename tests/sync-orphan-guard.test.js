@@ -37,10 +37,20 @@ assert.match(sync, /catch\(error\)[\s\S]*?Antrean lokal dipertahankan/,
 // ReferenceError that prevents the Add/Edit Case modal from opening.
 assert.match(app, /window\.addressFields=addressFields;/,
   'addressFields must be exposed for later case-form wrappers');
-assert.match(app, /\+window\.addressFields\(\{\}\)\+extraFood\+extraPriority\+qPanel/,
-  'Add Case questionnaire wrapper must call the exposed address helper');
-assert.match(app, /\+window\.addressFields\(c\)\+extraFood\+extraPriority\+qPanel/,
-  'Edit Case questionnaire wrapper must call the exposed address helper');
+const caseFormStart = app.indexOf('function answerByLabels45');
+const caseFormEnd = app.indexOf('const oldLoad=window.loadDiseaseQuestions', caseFormStart);
+assert.ok(caseFormStart >= 0 && caseFormEnd > caseFormStart, 'final integrated Add/Edit Case wrapper must exist');
+const caseFormWrapper = app.slice(caseFormStart, caseFormEnd);
+assert.doesNotMatch(caseFormWrapper, /f\('ID','cid'|f\('Nama','cn'|f\('Umur','ca'|f\('Jenis kelamin','cs'|f\('Onset','co'|f\('Status','ct'|f\('Outcome','cu'|window\.addressFields/,
+  'identity, onset, status, outcome, and address fields must not be duplicated before the integrated questionnaire');
+assert.match(caseFormWrapper, /questionnaireCasePanel\(draft\)/,
+  'Add Case must render the integrated questionnaire as the single source of core case fields');
+assert.match(caseFormWrapper, /questionnaireCasePanel\(c\)/,
+  'Edit Case must render the integrated questionnaire as the single source of core case fields');
+assert.match(caseFormWrapper, /bridgeQuestionnaireAnswers45\(answers,\{\},'add'\)/,
+  'Add Case must bridge integrated answers to legacy structured case fields before save');
+assert.match(caseFormWrapper, /bridgeQuestionnaireAnswers45\(answers,c,'edit'\)/,
+  'Edit Case must bridge integrated answers to legacy structured case fields before update');
 
 assert.match(app, /function resolveCaseDiseaseId\(value\)/,
   'case form must normalize disease IDs and disease display names');
@@ -50,18 +60,24 @@ assert.match(app, /String\(d\.name\)\.trim\(\)\.toLowerCase\(\)===raw\.toLowerCa
   'display-name disease values must map to canonical questionnaire IDs');
 assert.match(app, /function ensureCaseQuestionnaire\(c=\{\}\)/,
   'case form must ensure a questionnaire is loaded for the active disease');
-assert.match(app, /function questionnaireCasePanel\(c=\{\}\)\{ensureCaseQuestionnaire\(c\);/,
+assert.match(app, /function questionnaireCasePanel\(c=\{\}\)\{[\s\S]*?ensureCaseQuestionnaire\(c\);ensureQuestionIds\(\)/,
   'case panel must synchronize disease questionnaire before rendering');
+assert.match(app, /function questionnaireAnswersForCase\(c=\{\}\)/,
+  'integrated core fields must be prefilled from existing structured case data when editing');
+assert.match(app, /function bridgeQuestionnaireAnswers45\(answers,c=\{\},mode='add'\)/,
+  'integrated answers must bridge to legacy case persistence fields without duplicate visible inputs');
+assert.match(app, /function nextCaseId45\(\)/,
+  'new case ID must be generated in the integrated ID question');
 assert.match(app, /function modal\(x\)\{modalbox\.innerHTML='<div class="modal-close-row"><button type="button" class="modal-close-btn" onclick="closeAppModal\(\)"/,
   'all modal forms must expose a close button that closes the modal');
 assert.match(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'), /\.modal-close-row\{position:sticky/,
   'modal close control must remain visible while scrolling long forms');
-assert.match(app, /const canonical=filterIntegratedCoreQuestions\(\[\s*\.\.\.baseQ\.map\(q=>buildQuestion\(q\[1\],q\[0\]\)\)/,
-  'case form must reconstruct the standard instrument while excluding integrated core fields');
+assert.match(app, /const canonical=\[\s*\.\.\.baseQ\.map\(q=>buildQuestion\(q\[1\],q\[0\]\)\)[\s\S]*?filterIntegratedCoreQuestions\(\(Array\.isArray\(disease\.q\)/,
+  'case form must retain all integrated base questions while filtering only generic duplicates from disease-specific questions');
 assert.match(app, /'id kasus','nama lengkap','umur','jenis kelamin','tanggal onset gejala'[\s\S]*?'puskesmas','latitude','longitude'/,
   'integrated identity, clinical status/outcome, administrative address, and coordinates must be excluded from disease questions');
-assert.match(app, /db\.questions=filterIntegratedCoreQuestions\(db\.questions\)/,
-  'the disease questionnaire menu must also exclude fields handled by the integrated case form');
+assert.doesNotMatch(app, /db\.questions=filterIntegratedCoreQuestions\(db\.questions\)/,
+  'the disease questionnaire loader must not remove integrated base questions from case.answers');
 assert.match(app, /!m\|\|m\.querySelector\('#v46RiskHint'\)/,
   'the automatic risk-factor explanation must be inserted at most once per case form');
 assert.match(app, /const complete=canonical\.map\(q=>existingByLabel\.get\(normLabel\(q\.label\)\)\|\|q\)/,
@@ -130,10 +146,53 @@ for (const label of ['Tanggal onset demam','Tanggal onset ruam','Klasifikasi kas
 for (const label of ['Tanggal onset kelumpuhan','Spesimen tinja pertama','Spesimen tinja kedua','Klasifikasi akhir']) {
   assert.ok(diseaseCatalogue.afp.q.includes(label), 'AFP-specific investigation question must be preserved: ' + label);
 }
-assert.match(app, /db\.questions=filterIntegratedCoreQuestions\(db\.questions\)/,
-  'the actual questionnaire loader must apply the integrated-field filter');
+assert.doesNotMatch(app, /db\.questions=filterIntegratedCoreQuestions\(db\.questions\)/,
+  'the actual questionnaire loader must preserve integrated base questions');
 assert.match(app, /!m\|\|m\.querySelector\('#v46RiskHint'\)/,
   'risk-factor hint insertion must be idempotent for a case modal');
 assert.equal((app.match(/id='v46RiskHint'/g) || []).length, 1,
   'the case modal must define only one risk-factor hint element');
 console.log('Disease catalogue semantic duplicate checks passed (34 diseases; generic onset/status/outcome removed).');
+
+
+// Core identity, clinical status/outcome, and administrative location fields
+// must remain inside the integrated questionnaire so every response is saved
+// in case.answers and included in questionnaire_response synchronization.
+const baseStart = app.indexOf('const baseQ=[');
+const baseEnd = app.indexOf('\n];', baseStart);
+assert.ok(baseStart >= 0 && baseEnd > baseStart, 'integrated base question catalogue must exist');
+const baseLiteral = app.slice(baseStart + 'const baseQ='.length, baseEnd + 2);
+const baseQuestions = vm.runInNewContext('(' + baseLiteral + ')');
+const baseLabels = new Set(baseQuestions.map(q => q[1]));
+for (const label of [
+  'ID Kasus','Nama lengkap','Umur','Jenis kelamin','Tanggal onset gejala',
+  'Status kasus','Status kesehatan','Outcome','Alamat lengkap','Provinsi',
+  'Kabupaten','Kecamatan','Desa/Kelurahan','Puskesmas','Latitude','Longitude'
+]) assert.ok(baseLabels.has(label), 'integrated questionnaire must retain core field: ' + label);
+assert.match(app, /'Outcome':\{type:'choice',options:\['Rawat jalan','Dirawat','Sembuh','Meninggal','Belum diketahui'\]\}/,
+  'integrated Outcome must preserve the user-facing epidemiological options');
+assert.match(app, /function coreFromAnswers\(c,a\)[\s\S]*?find\('Outcome','Keadaan akhir','Status kesehatan'\)/,
+  'integrated Outcome must populate the structured case outcome field');
+assert.match(app, /c\.answers=answers;coreFromAnswers\(c,c\.answers\)/,
+  'all integrated questionnaire answers must be retained on each case');
+assert.match(app, /questionnaire_response:\{\.\.\.\(c\.answers\|\|\{\}\)/,
+  'all integrated answers must be included in backend case synchronization');
+assert.match(app, /resolveQuestionnaireRBI\(\)/,
+  'RBI location identification must remain available from the integrated questionnaire');
+const v70Start = app.indexOf('/* ==================== v70 — OTOMATISASI DESA');
+const v70End = app.indexOf('/* ==================== v72 — DEMOGRAPHY', v70Start);
+assert.ok(v70Start >= 0 && v70End > v70Start, 'village-to-Puskesmas integration module must exist');
+const v70 = app.slice(v70Start, v70End);
+assert.match(v70, /questionInput\('Desa\/Kelurahan'\)/,
+  'village master selection must target the integrated Desa/Kelurahan question');
+assert.match(v70, /questionInput\('Kecamatan'\)[\s\S]*?questionInput\('Puskesmas'\)/,
+  'village selection must populate integrated Kecamatan and Puskesmas fields');
+assert.match(v70, /window\.resolveQuestionnaireRBI=async function\(\)/,
+  'RBI must populate integrated administrative fields from integrated coordinates');
+assert.doesNotMatch(v70, /field\('cdesa'\)|field\('ckec'\)|field\('cpkm'\)/,
+  'village mapping must not depend on removed duplicate outer-form fields');
+assert.match(app, /!m\|\|m\.querySelector\('#v46RiskHint'\)/,
+  'risk-factor notice insertion must be idempotent');
+assert.equal((app.match(/id='v46RiskHint'/g) || []).length, 1,
+  'only one risk-factor notice element may be defined');
+console.log('Integrated questionnaire core-field retention and single-form regression checks passed.');
