@@ -82,8 +82,8 @@ assert.doesNotMatch(app, /db\.questions=filterIntegratedCoreQuestions\(db\.quest
   'the disease questionnaire loader must not remove integrated base questions from case.answers');
 assert.match(app, /!m\|\|m\.querySelector\('#v46RiskHint'\)/,
   'the automatic risk-factor explanation must be inserted at most once per case form');
-assert.match(app, /const complete=canonical\.map\(q=>existingByLabel\.get\(normLabel\(q\.label\)\)\|\|q\)/,
-  'case form must restore missing canonical questions even when a partial questionnaire is already stored');
+assert.match(app, /const complete=canonical\.map\(q=>\{const old=existingByLabel\.get\(normLabel\(q\.label\)\);return old\?\{\.\.\.q,\.\.\.old,label:q\.label,cat:q\.cat\}:q\}\)/,
+  'case form must restore missing canonical questions and preserve disease-specific metadata when duplicate labels exist');
 assert.match(app, /const extras=existing\.filter\(q=>q&&q\.label&&!isIntegratedCoreQuestion\(q\)&&!canonicalKeys\.has\(normLabel\(q\.label\)\)\)/,
   'case form must preserve custom questions while excluding duplicates handled by integrated fields');
 assert.match(app, /db\.questions=next;/,
