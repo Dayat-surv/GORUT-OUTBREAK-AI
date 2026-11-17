@@ -165,7 +165,7 @@ const baseEnd = app.indexOf('\n];', baseStart);
 assert.ok(baseStart >= 0 && baseEnd > baseStart, 'integrated base question catalogue must exist');
 const baseLiteral = app.slice(baseStart + 'const baseQ='.length, baseEnd + 2);
 const baseQuestions = vm.runInNewContext('(' + baseLiteral + ')');
-const baseLabels = new Set(baseQuestions.map(q => q[1]));
+const baseLabels = new Set(baseQuestions.map(q => String(q[1]).trim().toLowerCase()));
 
 // Cross-catalogue overlap audit: where a disease-specific question has the
 // same meaning/label as a general field, retain the disease-specific item and
@@ -174,7 +174,7 @@ const overlapCounts = {};
 for (const [diseaseId, disease] of diseaseEntries) {
   for (const label of disease.q) {
     const key = String(label).trim().toLowerCase();
-    if (baseLabels.has(label)) overlapCounts[key] = (overlapCounts[key] || 0) + 1;
+    if (baseLabels.has(key)) overlapCounts[key] = (overlapCounts[key] || 0) + 1;
   }
 }
 assert.deepEqual(overlapCounts, {
