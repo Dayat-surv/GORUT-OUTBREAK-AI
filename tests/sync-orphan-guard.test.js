@@ -68,6 +68,8 @@ assert.match(app, /function bridgeQuestionnaireAnswers45\(answers,c=\{\},mode='a
   'integrated answers must bridge to legacy case persistence fields without duplicate visible inputs');
 assert.match(app, /function nextCaseId45\(\)/,
   'new case ID must be generated in the integrated ID question');
+assert.match(app, /const idQuestion=\(db\.questions\|\|\[\]\)\.find\(q=>questionLabelKey45\(q\.label\)==='idkasus'\);[\s\S]*?answers\[idQuestion\.id\]=id/,
+  'a generated case ID must also be stored in case.answers if the user clears the ID input');
 assert.match(app, /function modal\(x\)\{modalbox\.innerHTML='<div class="modal-close-row"><button type="button" class="modal-close-btn" onclick="closeAppModal\(\)"/,
   'all modal forms must expose a close button that closes the modal');
 assert.match(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'), /\.modal-close-row\{position:sticky/,
