@@ -2386,6 +2386,8 @@ function installLogin(){
     const lat=pick('Latitude')!==''?pick('Latitude'):(mode==='edit'?c.lat??'':'');
     const lng=pick('Longitude')!==''?pick('Longitude'):(mode==='edit'?c.lng??'':'');
     const id=pick('ID Kasus','ID')||(mode==='edit'?c.id:nextCaseId45());
+    const idQuestion=(db.questions||[]).find(q=>questionLabelKey45(q.label)==='idkasus');
+    if(idQuestion&&(answers[idQuestion.id]===undefined||String(answers[idQuestion.id]).trim()===''))answers[idQuestion.id]=id;
     const values=mode==='edit'?{en:name,ea:age,es:sex,eo:onset,et:status,eu:outcome,editMainSymptoms:symptoms,caddress:address,cprov:prov,ckab:kab,ckec:kec,cdesa:desa,clat:lat,clng:lng}:{cid:id,cn:name,ca:age,cs:sex,co:onset,ct:status,cu:outcome,caseMainSymptoms:symptoms,caddress:address,cprov:prov,ckab:kab,ckec:kec,cdesa:desa,clat:lat,clng:lng};
     Object.entries(values).forEach(([key,value])=>hiddenCompatField45(key,value));
   }
