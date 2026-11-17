@@ -4746,6 +4746,7 @@ try{installBrandingV184();}catch(e){}
     try{if(typeof save==='function')save();else localStorage.setItem('gorut-v8',JSON.stringify(window.db))}catch(e){alert('Perubahan belum dapat disimpan lokal: '+e.message);return;}
     E107('modal')?.classList.remove('show');
     try{if(typeof window.renderCaseListRecovery106==='function')window.renderCaseListRecovery106();else if(typeof window.cases==='function')window.cases()}catch(e){console.warn('Refresh daftar kasus:',e)}
+    try{if(typeof window.renderQuestionnaireMatrixV125==='function')window.renderQuestionnaireMatrixV125()}catch(e){console.warn('Refresh tabel jawaban kuesioner:',e)}
     alert('Perubahan kasus berhasil disimpan pada aplikasi. Jawaban kuesioner tetap dipertahankan. Jika menggunakan Supabase, jalankan Sinkronisasi Supabase untuk mengirim perubahan ke server.');
   }
   window.editCase=edit107;
@@ -5316,6 +5317,7 @@ try{installBrandingV184();}catch(e){}
     try{if(typeof save==='function')save();else localStorage.setItem('gorut-v8',JSON.stringify(window.db))}catch(e){alert('Perubahan belum dapat disimpan lokal: '+e.message);return}
     document.getElementById('modal').classList.remove('show');
     try{if(typeof window.renderCaseListRecovery106==='function')window.renderCaseListRecovery106();else if(typeof window.cases==='function')window.cases()}catch(e){console.warn('Refresh daftar kasus:',e)}
+    try{if(typeof window.renderQuestionnaireMatrixV125==='function')window.renderQuestionnaireMatrixV125()}catch(e){console.warn('Refresh tabel jawaban kuesioner:',e)}
     alert('Perubahan disimpan pada rekaman sumber yang dipilih. Jawaban kuesioner lain tetap dipertahankan. Jalankan Sinkronisasi Supabase untuk mengirim perubahan ke server.');
   };
   window.GORUT_V116={version:'v118',features:['edit selected source record by unique server ID','duplicate-group Edit opens source selection','preserve questionnaire answers and server identifiers']};
@@ -5380,6 +5382,8 @@ try{installBrandingV184();}catch(e){}
       var blob=new Blob([content],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='GORUT-OUTBREAK-AI-jawaban-lengkap.csv';a.click();setTimeout(function(){URL.revokeObjectURL(url)},1000);
     };
   }
+  // Expose a read-only renderer so every successful case edit refreshes this matrix.
+  window.renderQuestionnaireMatrixV125=renderMatrix125;
   function renderInvestigationPicker125(){
     var host=E('v125InvestigationPicker');if(!host)return;
     var db=window.db||{},invs=Array.isArray(db.investigations)?db.investigations:[];
