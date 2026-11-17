@@ -166,6 +166,39 @@ assert.ok(baseStart >= 0 && baseEnd > baseStart, 'integrated base question catal
 const baseLiteral = app.slice(baseStart + 'const baseQ='.length, baseEnd + 2);
 const baseQuestions = vm.runInNewContext('(' + baseLiteral + ')');
 const baseLabels = new Set(baseQuestions.map(q => q[1]));
+
+// Cross-catalogue overlap audit: where a disease-specific question has the
+// same meaning/label as a general field, retain the disease-specific item and
+// suppress only the duplicate general copy for that disease.
+const overlapCounts = {};
+for (const [diseaseId, disease] of diseaseEntries) {
+  for (const label of disease.q) {
+    const key = String(label).trim().toLowerCase();
+    if (baseLabels.has(label)) overlapCounts[key] = (overlapCounts[key] || 0) + 1;
+  }
+}
+assert.deepEqual(overlapCounts, {
+  'hasil laboratorium':29,
+  'sekolah/tempat kerja':1,
+  'tanggal lahir':1,
+  'jenis spesimen':1
+}, 'all exact general-vs-disease overlaps must be accounted for');
+assert.match(app, /function buildCaseQuestionList45\(diseaseId\)[\s\S]*?const specificKeys=new Set\(specific\.map\(q=>questionLabelKey45\(q\.label\)\)\)[\s\S]*?const general=baseQ\.map\(q=>buildQuestion\(q\[1\],q\[0\]\)\)\.filter\(q=>!specificKeys\.has\(questionLabelKey45\(q\.label\)\)\)/,
+  'disease-specific questions must take precedence over identical general questionnaire labels');
+assert.match(app, /const canonical=buildCaseQuestionList45\(diseaseId\)/,
+  'case questionnaire reconstruction must use the cross-catalogue deduplicated list');
+assert.match(app, /db\.questions=buildCaseQuestionList45\(db\.selectedDisease\)/,
+  'manual questionnaire loading must also use the deduplicated list');
+assert.match(app, /const complete=canonical\.map\(q=>\{const old=existingByLabel\.get\(normLabel\(q\.label\)\);return old\?\{\.\.\.q,\.\.\.old,label:q\.label,cat:q\.cat\}:q\}\)/,
+  'existing answer IDs and settings must be preserved while canonical disease-specific category/label takes precedence');
+for (const [diseaseId, disease] of diseaseEntries) {
+  const specific = disease.q.filter(label => !integratedGenericLabels.has(String(label).trim().toLowerCase()));
+  const specificKeys = new Set(specific.map(label => String(label).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')));
+  const general = baseQuestions.map(q => q[1]).filter(label => !specificKeys.has(String(label).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')));
+  const merged = [...general, ...specific].map(label => String(label).trim().toLowerCase().replace(/[^a-z0-9]+/g,''));
+  assert.equal(new Set(merged).size, merged.length, diseaseId + ' integrated general + specific list must not contain duplicate labels');
+}
+
 for (const label of [
   'ID Kasus','Nama lengkap','Umur','Jenis kelamin','Tanggal onset gejala',
   'Status kasus','Status kesehatan','Outcome','Alamat lengkap','Provinsi',
