@@ -2285,16 +2285,13 @@ function installLogin(){
     // The case-entry form must always contain the complete standard instrument.
     // The questionnaire menu can retain a user-filtered subset, so a non-empty
     // db.questions array is not proof that all required questions are present.
-    const canonical=[
-      ...baseQ.map(q=>buildQuestion(q[1],q[0])),
-      ...filterIntegratedCoreQuestions((Array.isArray(disease.q)?disease.q:[]).map(x=>buildQuestion(x,'Spesifik — '+disease.name)))
-    ];
+    const canonical=buildCaseQuestionList45(diseaseId);
     const existing=Array.isArray(db.questions)?db.questions:[];
     const normLabel=value=>String(value||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
     const existingByLabel=new Map();
-    existing.forEach(q=>{if(q&&q.label){const key=normLabel(q.label);if(key&&!existingByLabel.has(key))existingByLabel.set(key,q)}});
+    existing.forEach(q=>{if(q&&q.label){const key=normLabel(q.label),previous=existingByLabel.get(key);if(key&&(!previous||/^spesifik/i.test(String(q.cat||''))))existingByLabel.set(key,q)}});
     const canonicalKeys=new Set(canonical.map(q=>normLabel(q.label)));
-    const complete=canonical.map(q=>existingByLabel.get(normLabel(q.label))||q);
+    const complete=canonical.map(q=>{const old=existingByLabel.get(normLabel(q.label));return old?{...q,...old,label:q.label,cat:q.cat}:q});
     const extras=existing.filter(q=>q&&q.label&&!isIntegratedCoreQuestion(q)&&!canonicalKeys.has(normLabel(q.label)));
     const next=[...complete,...extras];
     const currentSignature=existing.map(q=>q&&q.label?normLabel(q.label):'').join('|');
@@ -2310,6 +2307,14 @@ function installLogin(){
   }
   function ensureQuestionIds(){(db.questions||[]).forEach((q,i)=>{if(!q.id)q.id='Q_'+String(i+1).padStart(3,'0')});}
   function questionLabelKey45(value){return String(value??'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
+  function buildCaseQuestionList45(diseaseId){
+    const disease=diseases[resolveCaseDiseaseId(diseaseId)||diseaseId];
+    if(!disease)return baseQ.map(q=>buildQuestion(q[1],q[0]));
+    const specific=filterIntegratedCoreQuestions((Array.isArray(disease.q)?disease.q:[]).map(x=>buildQuestion(x,'Spesifik — '+disease.name)));
+    const specificKeys=new Set(specific.map(q=>questionLabelKey45(q.label)));
+    const general=baseQ.map(q=>buildQuestion(q[1],q[0])).filter(q=>!specificKeys.has(questionLabelKey45(q.label)));
+    return [...general,...specific];
+  }
   function nextCaseId45(){let n=(db.cases||[]).length+1,id='';do{id='K'+String(n).padStart(3,'0');n++}while((db.cases||[]).some(c=>String(c.id)===id));return id}
   function questionnaireAnswersForCase(c={}){
     const answers={...(c.answers||{})};
@@ -2415,6 +2420,7 @@ function installLogin(){
   const oldLoad=window.loadDiseaseQuestions;
   window.loadDiseaseQuestions=function(){
     oldLoad();
+    db.questions=buildCaseQuestionList45(db.selectedDisease);
     ensureQuestionIds();
     save();
     if(typeof window.renderQ==='function')window.renderQ();
