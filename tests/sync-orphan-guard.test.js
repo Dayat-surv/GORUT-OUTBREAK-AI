@@ -250,17 +250,16 @@ assert.ok(baseLabels.has('pelacakan kontak dilakukan'),
   'the integrated yes/no contact-tracing indicator must remain available');
 assert.ok(diseaseCatalogue['flu-burung'].q.includes('Pelacakan kontak'),
   'disease-specific contact-tracing detail must remain available');
-assert.match(app, /'Pelacakan kontak dilakukan':\\{type:'choice',options:\\['Ya','Tidak','Sedang berlangsung'\\]\\}/,
+assert.ok(app.includes("'Pelacakan kontak dilakukan':{type:'choice',options:['Ya','Tidak','Sedang berlangsung']}"),
   'integrated contact-tracing indicator must remain a structured choice');
-assert.match(app, /\\/Riwayat\\|Alamat\\|Gejala\\|Hipotesis\\|Intervensi\\|Lokasi paparan\\|Pekerjaan\\|Sekolah\\|Kontak\\|Paparan\\|Kondisi\\|Jenis \\.\\*spesimen\\|Outcome\\/i,'textarea'/,
+assert.ok(app.includes("[/Riwayat|Alamat|Gejala|Hipotesis|Intervensi|Lokasi paparan|Pekerjaan|Sekolah|Kontak|Paparan|Kondisi|Jenis .*spesimen|Outcome/i,'textarea']"),
   'disease-specific contact history/detail must remain a free-text response rather than duplicate the integrated yes/no indicator');
-assert.match(app, /'Spesimen diambil':\\{type:'choice',options:\\['Ya','Tidak','Direncanakan'\\]\\}/,
+assert.ok(app.includes("'Spesimen diambil':{type:'choice',options:['Ya','Tidak','Direncanakan']}"),
   'integrated specimen-collected indicator must remain a structured choice');
-assert.match(app, /'Spesimen tinja pertama'/,
+assert.ok(app.includes("'Spesimen tinja pertama'"),
   'AFP-specific specimen identity must remain independently captured');
 assert.equal((app.match(/id='v46RiskHint'/g) || []).length, 1,
   'the informational risk-factor notice must be defined only once');
-assert.match(app, /m\\.querySelector\\('#v46RiskHint'\\)/,
+assert.ok(app.includes("m.querySelector('#v46RiskHint')"),
   'risk-factor notice insertion must be idempotent when the add-case form is reopened');
 console.log('Semantic-overlap regression checks passed (distinct specimen, contact-tracing, and disease-specific details retained).');
-
