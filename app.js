@@ -4781,6 +4781,7 @@ try{installBrandingV184();}catch(e){}
               desa:c.desa??c.admin?.desa??'',
               symptoms:c.symptoms??'',
               updatedAt:c.updatedAt??'',
+              name:c.name??'',
               admin:c.admin&&typeof c.admin==='object'?{...c.admin}:{}
             }
           };
@@ -4811,6 +4812,7 @@ try{installBrandingV184();}catch(e){}
           c.desa=meta.desa??c.desa??'';
           c.symptoms=meta.symptoms??c.symptoms??'';
           c.updatedAt=meta.updatedAt??c.updatedAt??'';
+          if(meta.name!==undefined&&meta.name!==null&&String(meta.name).trim()!=='')c.name=String(meta.name);
           c.admin=Object.assign({},c.admin||{},meta.admin||{},{
             prov:c.prov||c.admin?.prov||'',
             kab:c.kab||c.admin?.kab||'',
