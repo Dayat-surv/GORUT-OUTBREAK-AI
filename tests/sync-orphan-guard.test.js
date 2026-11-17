@@ -171,8 +171,10 @@ for (const label of [
 ]) assert.ok(baseLabels.has(label), 'integrated questionnaire must retain core field: ' + label);
 assert.match(app, /'Outcome':\{type:'choice',options:\['Rawat jalan','Dirawat','Sembuh','Meninggal','Belum diketahui'\]\}/,
   'integrated Outcome must preserve the user-facing epidemiological options');
-assert.match(app, /function coreFromAnswers\(c,a\)[\s\S]*?find\('Outcome','Keadaan akhir','Status kesehatan'\)/,
+assert.match(app, /function coreFromAnswers\(c,a\)[\s\S]*?find\('Outcome','Keadaan akhir'\)/,
   'integrated Outcome must populate the structured case outcome field');
+assert.doesNotMatch(app, /const outcome=pick\('Outcome','Keadaan akhir'\)\|\|pick\('Status kesehatan'\)/,
+  'current health status must not be silently conflated with case outcome');
 assert.match(app, /c\.answers=answers;coreFromAnswers\(c,c\.answers\)/,
   'all integrated questionnaire answers must be retained on each case');
 assert.match(app, /questionnaire_response:\{\.\.\.\(c\.answers\|\|\{\}\)/,
