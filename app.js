@@ -110,14 +110,14 @@ function buildQuestion(label,cat='Spesifik'){
 const baseQ=[
 ['Identitas','ID Kasus','text'],['Identitas','Nama lengkap','text'],['Identitas','NIK/ID lokal','text'],['Identitas','Tanggal lahir','date'],['Identitas','Umur','number'],['Identitas','Satuan umur','choice'],['Identitas','Jenis kelamin','choice'],
 ['Sosiodemografi','Alamat lengkap','textarea'],['Sosiodemografi','Desa/Kelurahan','text'],['Sosiodemografi','Kecamatan','text'],['Sosiodemografi','Kabupaten','text'],['Sosiodemografi','Provinsi','text'],['Sosiodemografi','Puskesmas','text'],['Sosiodemografi','No. HP','text'],['Sosiodemografi','Pekerjaan','text'],['Sosiodemografi','Sekolah/Tempat kerja','text'],
-['Klinis','Tanggal onset gejala','date'],['Klinis','Tanggal pertama berobat','date'],['Klinis','Tanggal dirawat','date'],['Klinis','Gejala utama','textarea'],['Klinis','Status kasus','choice'],['Klinis','Status kesehatan','choice'],['Klinis','Tanggal meninggal bila ada','date'],
+['Klinis','Tanggal onset gejala','date'],['Klinis','Tanggal pertama berobat','date'],['Klinis','Tanggal dirawat','date'],['Klinis','Gejala utama','textarea'],['Klinis','Status kasus','choice'],['Klinis','Status kesehatan','choice'],['Klinis','Outcome','choice'],['Klinis','Tanggal meninggal bila ada','date'],
 ['Paparan','Riwayat kontak dengan kasus','choice'],['Paparan','Nama/ID kontak bila diketahui','text'],['Paparan','Jenis hubungan kontak','choice'],['Paparan','Tanggal kontak terakhir','date'],['Paparan','Riwayat perjalanan 14–21 hari sebelum onset','textarea'],['Paparan','Lokasi paparan utama','textarea'],
 ['Spesimen','Spesimen diambil','choice'],['Spesimen','Jenis spesimen','text'],['Spesimen','Tanggal pengambilan','date'],['Spesimen','Laboratorium tujuan','text'],['Spesimen','Hasil laboratorium','textarea'],
 ['Tindakan','Isolasi/karantina bila relevan','choice'],['Tindakan','Pengobatan/tatalaksana','textarea'],['Tindakan','Pelacakan kontak dilakukan','choice'],['Tindakan','Jumlah kontak ditemukan','number'],['Tindakan','Intervensi lapangan','textarea'],
 ['Lokasi','Latitude','number'],['Lokasi','Longitude','number'],['Lokasi','Tanggal investigasi lapangan','date'],['Lokasi','Petugas investigator','text']
 ];
 const fieldMeta={
-'Jenis kelamin':{type:'choice',options:['Laki-laki','Perempuan','Tidak diketahui']},'Satuan umur':{type:'choice',options:['Tahun','Bulan','Hari']},'Status kasus':{type:'choice',options:['Suspek','Probable','Konfirmasi','Bukan kasus','Meninggal','Belum diklasifikasi']},'Status kesehatan':{type:'choice',options:['Sakit','Sembuh','Masih dirawat','Meninggal','Tidak diketahui']},'Riwayat kontak dengan kasus':{type:'choice',options:['Ya','Tidak','Tidak diketahui']},'Jenis hubungan kontak':{type:'choice',options:['Serumah','Sekolah','Tempat kerja','Fasilitas kesehatan','Tetangga','Teman','Lainnya']},'Spesimen diambil':{type:'choice',options:['Ya','Tidak','Direncanakan']},'Isolasi/karantina bila relevan':{type:'choice',options:['Ya','Tidak','Tidak relevan']},'Pelacakan kontak dilakukan':{type:'choice',options:['Ya','Tidak','Sedang berlangsung']}
+'Jenis kelamin':{type:'choice',options:['Laki-laki','Perempuan','Tidak diketahui']},'Satuan umur':{type:'choice',options:['Tahun','Bulan','Hari']},'Status kasus':{type:'choice',options:['Suspek','Probable','Konfirmasi','Bukan kasus','Meninggal','Belum diklasifikasi']},'Status kesehatan':{type:'choice',options:['Sakit','Sembuh','Masih dirawat','Meninggal','Tidak diketahui']},'Outcome':{type:'choice',options:['Rawat jalan','Dirawat','Sembuh','Meninggal','Belum diketahui']},'Riwayat kontak dengan kasus':{type:'choice',options:['Ya','Tidak','Tidak diketahui']},'Jenis hubungan kontak':{type:'choice',options:['Serumah','Sekolah','Tempat kerja','Fasilitas kesehatan','Tetangga','Teman','Lainnya']},'Spesimen diambil':{type:'choice',options:['Ya','Tidak','Direncanakan']},'Isolasi/karantina bila relevan':{type:'choice',options:['Ya','Tidak','Tidak relevan']},'Pelacakan kontak dilakukan':{type:'choice',options:['Ya','Tidak','Sedang berlangsung']}
 };
 const priorityClinicalEpi={
   'campak':{title:'Campak — Panel Prioritas',fields:[['demamHari','Durasi demam (hari)','number'],['ruamHari','Hari ke-berapa ruam muncul sejak demam','number'],['immunization','Status imunisasi MR/MMR','select','Lengkap|Tidak lengkap|Tidak diketahui'],['doseCount','Jumlah dosis MR/MMR','number'],['epiLink','Keterkaitan epidemiologis/klaster','select','Ada|Tidak ada|Belum diketahui'],['specimenType','Spesimen utama','select','Serum|Urine|Swab tenggorok|Serum + urine/swab|Tidak diambil'],['classification','Klasifikasi akhir','select','Suspek|Probable|Konfirmasi|Discarded|Belum diklasifikasi']]},
@@ -2260,8 +2260,8 @@ function installLogin(){
     return found?found[0]:'';
   }
   const integratedCoreQuestionLabels=new Set([
-    'id kasus','nama lengkap','umur','jenis kelamin','tanggal onset gejala',
-    'tanggal onset','status kasus','status kesehatan','outcome',
+    'id','id kasus','nama','nama lengkap','inisial nama (tanpa nama lengkap)','umur','jenis kelamin',
+    'onset','tanggal onset','tanggal onset gejala','status','status kasus','status kesehatan','outcome',
     'alamat lengkap','alamat lengkap tempat tinggal/kejadian',
     'provinsi','kabupaten','kabupaten/kota','kecamatan','desa/kelurahan',
     'puskesmas','latitude','longitude'
@@ -2285,10 +2285,10 @@ function installLogin(){
     // The case-entry form must always contain the complete standard instrument.
     // The questionnaire menu can retain a user-filtered subset, so a non-empty
     // db.questions array is not proof that all required questions are present.
-    const canonical=filterIntegratedCoreQuestions([
+    const canonical=[
       ...baseQ.map(q=>buildQuestion(q[1],q[0])),
-      ...(Array.isArray(disease.q)?disease.q:[]).map(x=>buildQuestion(x,'Spesifik — '+disease.name))
-    ]);
+      ...filterIntegratedCoreQuestions((Array.isArray(disease.q)?disease.q:[]).map(x=>buildQuestion(x,'Spesifik — '+disease.name)))
+    ];
     const existing=Array.isArray(db.questions)?db.questions:[];
     const normLabel=value=>String(value||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
     const existingByLabel=new Map();
@@ -2309,40 +2309,110 @@ function installLogin(){
     }
   }
   function ensureQuestionIds(){(db.questions||[]).forEach((q,i)=>{if(!q.id)q.id='Q_'+String(i+1).padStart(3,'0')});}
-  function questionnaireCasePanel(c={}){ensureCaseQuestionnaire(c);ensureQuestionIds();const qs=db.questions||[];if(!qs.length)return '<div class="notice">Belum ada kuesioner aktif. Buka menu Kuesioner → pilih penyakit → Muat Kuesioner.</div>';return '<div class="card" style="margin-top:10px;border-left:4px solid #1769aa"><h4>📋 Kuesioner Epidemiologi Terintegrasi</h4><p class="small">Semua jawaban disimpan pada <code>case.answers</code>, digunakan oleh variable dictionary/analisis dan ikut dibawa ke sinkronisasi backend.</p>'+qs.map((q,i)=>'<div class="field"><label>'+esc45((i+1)+'. '+q.label)+(q.required?' *':'')+'</label>'+qField(q,i,c.answers||{})+'<small class="small">'+esc45(q.cat||'PE')+' · '+esc45(q.version||'')+'</small></div>').join('')+'</div>'}
-  function coreFromAnswers(c,a){const find=(...labels)=>{for(const q of (db.questions||[])){if(labels.some(l=>String(q.label).toLowerCase()===l.toLowerCase())){const v=a[q.id];if(v!==undefined&&v!=='')return v}}return ''};
-    if(!c.id)c.id=find('ID Kasus'); if(!c.name)c.name=find('Nama lengkap'); if(!c.age)c.age=Number(find('Umur'))||0; if(!c.sex)c.sex=find('Jenis kelamin'); if(!c.onset)c.onset=find('Tanggal onset gejala'); if(!c.status)c.status=find('Status kasus'); if(!c.outcome)c.outcome=find('Keadaan akhir','Outcome','Status kesehatan');
-    c.address=c.address||find('Alamat lengkap');c.desa=c.desa||find('Desa/Kelurahan');c.kec=c.kec||find('Kecamatan');c.kab=c.kab||find('Kabupaten');c.prov=c.prov||find('Provinsi');c.pkm=c.pkm||find('Puskesmas');c.lat=c.lat??(Number(find('Latitude'))||null);c.lng=c.lng??(Number(find('Longitude'))||null);return c;
+  function questionLabelKey45(value){return String(value??'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
+  function nextCaseId45(){let n=(db.cases||[]).length+1,id='';do{id='K'+String(n).padStart(3,'0');n++}while((db.cases||[]).some(c=>String(c.id)===id));return id}
+  function questionnaireAnswersForCase(c={}){
+    const answers={...(c.answers||{})};
+    const defaults={
+      idkasus:c.id||nextCaseId45(),umur:c.age??'',satuanumur:c.ageUnit||(c.age!==undefined&&c.age!==null&&c.age!==''?'Tahun':''),
+      jeniskelamin:c.sex||'',tanggalonsetgejala:c.onset||'',statuskasus:c.status||'',outcome:c.outcome||'',
+      gejalautama:c.symptoms||'',alamatlengkap:c.address||'',desakelurahan:c.desa||'',kecamatan:c.kec||'',
+      kabupaten:c.kab||'',provinsi:c.prov||'',puskesmas:c.pkm||c.puskesmas||'',latitude:c.lat??'',longitude:c.lng??''
+    };
+    (db.questions||[]).forEach(q=>{
+      const current=answers[q.id]??answers[q.label];
+      if(current!==undefined&&current!==null&&String(current)!=='')return;
+      const key=questionLabelKey45(q.label);
+      if(Object.prototype.hasOwnProperty.call(defaults,key)){
+        const value=defaults[key];
+        if(value!==undefined&&value!==null&&String(value)!=='')answers[q.id]=value;
+      }
+    });
+    return answers;
+  }
+  function questionnaireCasePanel(c={}){
+    ensureCaseQuestionnaire(c);ensureQuestionIds();
+    const qs=db.questions||[],answers=questionnaireAnswersForCase(c);
+    if(!qs.length)return '<div class="notice">Belum ada kuesioner aktif. Buka menu Kuesioner → pilih penyakit → Muat Kuesioner.</div>';
+    return '<div class="card" style="margin-top:10px;border-left:4px solid #1769aa"><h4>📋 Kuesioner Epidemiologi Terintegrasi</h4><p class="small">Semua jawaban disimpan pada <code>case.answers</code>, digunakan oleh variable dictionary/analisis dan ikut dibawa ke sinkronisasi backend.</p>'+qs.map((q,i)=>{let field=qField(q,i,answers);if(c.id&&!c._new&&questionLabelKey45(q.label)==='idkasus')field=field.replace('<input ','<input readonly ');return '<div class="field"><label>'+esc45((i+1)+'. '+q.label)+(q.required?' *':'')+'</label>'+field+'<small class="small">'+esc45(q.cat||'PE')+' · '+esc45(q.version||'')+'</small></div>'}).join('')+'</div><div class="field" style="margin-top:10px"><button type="button" onclick="resolveQuestionnaireRBI()">🗺️ Identifikasi wilayah dari koordinat (RBI)</button><div id="rbiQuestionnaireResult" class="small" style="margin-top:6px"></div></div>';
+  }
+  function coreFromAnswers(c,a){
+    const find=(...labels)=>{
+      const wanted=labels.map(questionLabelKey45);
+      for(const q of (db.questions||[]))if(wanted.includes(questionLabelKey45(q.label))){const v=a[q.id]??a[q.label];if(v!==undefined&&v!==null&&v!=='')return v}
+      return '';
+    };
+    if(!c.id)c.id=find('ID Kasus','ID');
+    if(!c.name)c.name=find('Nama lengkap','Nama','Inisial nama (tanpa nama lengkap)');
+    if(!c.age)c.age=Number(find('Umur'))||0;
+    if(!c.sex)c.sex=find('Jenis kelamin');
+    if(!c.onset)c.onset=find('Tanggal onset gejala','Onset');
+    if(!c.status)c.status=find('Status kasus','Status');
+    if(!c.outcome)c.outcome=find('Outcome','Keadaan akhir','Status kesehatan');
+    c.address=c.address||find('Alamat lengkap','Alamat lengkap tempat tinggal/kejadian');
+    c.desa=c.desa||find('Desa/Kelurahan');c.kec=c.kec||find('Kecamatan');c.kab=c.kab||find('Kabupaten','Kabupaten/Kota');c.prov=c.prov||find('Provinsi');
+    c.pkm=c.pkm||find('Puskesmas');c.puskesmas=c.puskesmas||c.pkm;
+    c.lat=c.lat??(Number(find('Latitude'))||null);c.lng=c.lng??(Number(find('Longitude'))||null);
+    return c;
   }
   function auditQuestionnaire(){
     const rows=Object.entries(diseases||{}).map(([id,d])=>{const q=Array.isArray(d.q)?d.q:[], unique=new Set(q.map(x=>String(x).toLowerCase()));const warn=[];if(!q.length)warn.push('Tidak ada pertanyaan spesifik');if(unique.size!==q.length)warn.push('Ada pertanyaan spesifik duplikat');if(q.some(x=>!x||!x[1]))warn.push('Ada pertanyaan tanpa label');return {id,name:d.name||id,group:d.group||'-',n:q.length,status:warn.length?'WARN':'PASS',warn};});return rows}
   window.runQuestionnaireAudit=function(){ensureQuestionIds();const rows=auditQuestionnaire(),el=document.getElementById('qAudit');if(!el)return;const pass=rows.filter(x=>x.status==='PASS').length,warn=rows.length-pass;el.innerHTML='<div class="card"><h3>Audit Kuesioner v45</h3><div class="grid"><div class="stat"><small>Penyakit/sindrom</small><b>'+rows.length+'</b></div><div class="stat"><small>PASS</small><b>'+pass+'</b></div><div class="stat"><small>WARN</small><b>'+warn+'</b></div><div class="stat"><small>Integrasi jawaban</small><b>AKTIF</b></div></div><div class="notice">Audit memeriksa keberadaan pertanyaan spesifik, duplikasi, label kosong, dan kesiapan integrasi jawaban ke <code>case.answers</code>. Ini bukan validasi substantif terhadap formulir resmi Kemenkes.</div><div style="overflow:auto"><table><thead><tr><th>Penyakit/Sindrom</th><th>Kelompok</th><th>Q spesifik</th><th>Status</th><th>Catatan</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc45(r.name)+'</td><td>'+esc45(r.group)+'</td><td>'+r.n+'</td><td><span class="badge">'+r.status+'</span></td><td>'+esc45(r.warn.join(' · ')||'Struktur spesifik tersedia')+'</td></tr>').join('')+'</tbody></table></div></div>'}
   // Patch case creation/edit to collect questionnaire answers without removing v44 address/priority/food behavior.
-  const oldAdd=window.addCase;
+  function answerByLabels45(answers,...labels){
+    const wanted=labels.map(questionLabelKey45);
+    for(const q of (db.questions||[]))if(wanted.includes(questionLabelKey45(q.label))){const value=answers[q.id]??answers[q.label];if(value!==undefined&&value!==null)return value}
+    return '';
+  }
+  function hiddenCompatField45(id,value){
+    let el=document.getElementById(id);
+    if(!el){el=document.createElement('input');el.type='hidden';el.id=id;el.setAttribute('data-questionnaire-compat','1');const host=(typeof modalbox!=='undefined'&&modalbox)||document.getElementById('modal')||document.body;host.appendChild(el)}
+    el.value=value==null?'':String(value);
+  }
+  function bridgeQuestionnaireAnswers45(answers,c={},mode='add'){
+    const pick=(...labels)=>answerByLabels45(answers,...labels);
+    const name=pick('Nama lengkap','Nama','Inisial nama (tanpa nama lengkap)')||(mode==='edit'?c.name||'':'');
+    const age=pick('Umur')!==''?pick('Umur'):(mode==='edit'?c.age??'':'');
+    const sex=pick('Jenis kelamin')||(mode==='edit'?c.sex||'':'');
+    const onset=pick('Tanggal onset gejala','Onset')||(mode==='edit'?c.onset||'':'');
+    const status=pick('Status kasus','Status')||(mode==='edit'?c.status||'':'');
+    const outcome=pick('Outcome','Keadaan akhir')||pick('Status kesehatan')||(mode==='edit'?c.outcome||'':'');
+    const symptoms=pick('Gejala utama')||(mode==='edit'?c.symptoms||'':'');
+    const address=pick('Alamat lengkap','Alamat lengkap tempat tinggal/kejadian')||(mode==='edit'?c.address||'':'');
+    const prov=pick('Provinsi')||(mode==='edit'?c.prov||'':'');
+    const kab=pick('Kabupaten','Kabupaten/Kota')||(mode==='edit'?c.kab||'':'');
+    const kec=pick('Kecamatan')||(mode==='edit'?c.kec||'':'');
+    const desa=pick('Desa/Kelurahan')||(mode==='edit'?c.desa||'':'');
+    const lat=pick('Latitude')!==''?pick('Latitude'):(mode==='edit'?c.lat??'':'');
+    const lng=pick('Longitude')!==''?pick('Longitude'):(mode==='edit'?c.lng??'':'');
+    const id=pick('ID Kasus','ID')||(mode==='edit'?c.id:nextCaseId45());
+    const values=mode==='edit'?{en:name,ea:age,es:sex,eo:onset,et:status,eu:outcome,editMainSymptoms:symptoms,caddress:address,cprov:prov,ckab:kab,ckec:kec,cdesa:desa,clat:lat,clng:lng}:{cid:id,cn:name,ca:age,cs:sex,co:onset,ct:status,cu:outcome,caseMainSymptoms:symptoms,caddress:address,cprov:prov,ckab:kab,ckec:kec,cdesa:desa,clat:lat,clng:lng};
+    Object.entries(values).forEach(([key,value])=>hiddenCompatField45(key,value));
+  }
   window.addCase=function(){
     if(!act())return alert('Pilih investigasi terlebih dahulu.');
-    const food=act().disease==='keracunan-pangan',diseaseId=act().disease,extraPriority=priorityPanel(diseaseId,{}),extraFood=food?'<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>'+f('Makanan/minuman dikonsumsi','caseFood','text','')+f('Waktu konsumsi','caseConsumedAt','datetime-local','')+f('Waktu onset','caseOnsetTime','datetime-local','')+f('Masa inkubasi (jam)','caseIncubation','number','')+f('Gejala utama','caseSymptoms','text','')+f('Sumber pangan','caseFoodSource','text','')+f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')+f('Spesimen klinis','caseClinicalSpecimen','text','')+'</div>':'',qPanel=questionnaireCasePanel({});
-    modal('<h2>Tambah Kasus</h2>'+f('ID','cid','text','K'+String(db.cases.length+1).padStart(3,'0'))+f('Nama','cn','text','')+f('Umur','ca','number','')+f('Jenis kelamin','cs','select','Laki-laki|Perempuan')+f('Onset','co',food?'datetime-local':'date','')+f('Status','ct','select','Suspek|Probable|Konfirmasi')+f('Outcome','cu','select','Rawat jalan|Dirawat|Sembuh|Meninggal')+window.addressFields({})+extraFood+extraPriority+qPanel+'<button class="primary" onclick="saveCase()">Simpan</button>');
+    const food=act().disease==='keracunan-pangan',diseaseId=act().disease,extraPriority=priorityPanel(diseaseId,{}),draft={id:nextCaseId45(),_new:true};
+    const extraFood=food?'<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>'+f('Makanan/minuman dikonsumsi','caseFood','text','')+f('Waktu konsumsi','caseConsumedAt','datetime-local','')+f('Waktu onset setelah konsumsi','caseOnsetTime','datetime-local','')+f('Masa inkubasi (jam)','caseIncubation','number','')+f('Gejala terkait kejadian pangan','caseSymptoms','text','')+f('Sumber pangan','caseFoodSource','text','')+f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')+f('Spesimen klinis','caseClinicalSpecimen','text','')+'</div>':'';
+    const qPanel=questionnaireCasePanel(draft);
+    modal('<h2>Tambah Kasus</h2>'+extraFood+extraPriority+qPanel+'<button class="primary" onclick="saveCase()">Simpan</button>');
   };
   const oldSave=window.saveCase;
   window.saveCase=async function(){
-    const answers=collectQ45(); const before=db.cases.length; await oldSave(); const c=db.cases[before]; if(!c)return; c.answers=answers; coreFromAnswers(c,c.answers); c.disease=act()?.disease||db.selectedDisease||c.disease; if(c.lat!==null&&c.lng!==null&&!c.admin&&typeof lookupAdmin==='function'){try{c.admin=await lookupAdmin(c.lat,c.lng)}catch(e){}}
+    const answers=collectQ45();const before=db.cases.length;bridgeQuestionnaireAnswers45(answers,{},'add');await oldSave();const c=db.cases[before];if(!c)return;c.answers=answers;coreFromAnswers(c,c.answers);c.disease=act()?.disease||db.selectedDisease||c.disease;if(c.lat!==null&&c.lng!==null&&!c.admin&&typeof lookupAdmin==='function'){try{c.admin=await lookupAdmin(c.lat,c.lng)}catch(e){}}
     save();cases();
   };
   const oldEdit=window.editCase;
   window.editCase=function(id){
-    const c=db.cases.find(x=>String(x.id)===String(id));if(!c)return;const food=act()?.disease==='keracunan-pangan',diseaseId=act()?.disease,fc=c.foodCase||{},extraPriority=priorityPanel(diseaseId,c.priority||{}),extraFood=food?'<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>'+f('Makanan/minuman dikonsumsi','caseFood','text',fc.food||'')+f('Waktu konsumsi','caseConsumedAt','datetime-local',fc.consumedAt||'')+f('Waktu onset','caseOnsetTime','datetime-local',fc.onsetAt||'')+f('Masa inkubasi (jam)','caseIncubation','number',fc.incubationHours??'')+f('Gejala utama','caseSymptoms','text',fc.symptoms||'')+f('Sumber pangan','caseFoodSource','text',fc.foodSource||'')+f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')+f('Spesimen klinis','caseClinicalSpecimen','text',fc.clinicalSpecimen||'')+'</div>':'',qPanel=questionnaireCasePanel(c);
-    modal('<h2>Edit '+esc(c.id)+'</h2>'+f('Nama','en','text',c.name)+f('Umur','ea','number',c.age)+f('Jenis kelamin','es','select','Laki-laki|Perempuan')+f('Onset','eo',food?'datetime-local':'date',c.onset)+f('Status','et','select','Suspek|Probable|Konfirmasi')+f('Outcome','eu','select','Rawat jalan|Dirawat|Sembuh|Meninggal')+window.addressFields(c)+extraFood+extraPriority+qPanel+'<button class="primary" onclick="upd(\''+esc45(c.id)+'\')">Simpan</button>');
-    const s=document.getElementById('es'),t=document.getElementById('et'),u=document.getElementById('eu');if(s)s.value=c.sex||'';if(t)t.value=c.status||'Suspek';if(u)u.value=c.outcome||'';if(food&&document.getElementById('caseHospitalized'))caseHospitalized.value=fc.hospitalized||'Tidak';
+    const c=db.cases.find(x=>String(x.id)===String(id));if(!c)return;const food=act()?.disease==='keracunan-pangan',diseaseId=act()?.disease,fc=c.foodCase||{},extraPriority=priorityPanel(diseaseId,c.priority||{}),extraFood=food?'<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>'+f('Makanan/minuman dikonsumsi','caseFood','text',fc.food||'')+f('Waktu konsumsi','caseConsumedAt','datetime-local',fc.consumedAt||'')+f('Waktu onset setelah konsumsi','caseOnsetTime','datetime-local',fc.onsetAt||'')+f('Masa inkubasi (jam)','caseIncubation','number',fc.incubationHours??'')+f('Gejala terkait kejadian pangan','caseSymptoms','text',fc.symptoms||'')+f('Sumber pangan','caseFoodSource','text',fc.foodSource||'')+f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')+f('Spesimen klinis','caseClinicalSpecimen','text',fc.clinicalSpecimen||'')+'</div>':'',qPanel=questionnaireCasePanel(c);
+    modal('<h2>Edit '+esc(c.id)+'</h2>'+extraFood+extraPriority+qPanel+'<button class="primary" onclick="upd(\\''+esc45(c.id)+'\\')">Simpan</button>');
   };
   const oldUpd=window.upd;
   window.upd=async function(id){
-    const a=collectQ45(); const c=db.cases.find(x=>String(x.id)===String(id));if(!c)return; await oldUpd(id); c.answers=a; coreFromAnswers(c,a); c.disease=act()?.disease||c.disease; save();cases();
+    const answers=collectQ45();const c=db.cases.find(x=>String(x.id)===String(id));if(!c)return;bridgeQuestionnaireAnswers45(answers,c,'edit');await oldUpd(id);c.answers=answers;coreFromAnswers(c,answers);c.disease=act()?.disease||c.disease;save();cases();
   };
   const oldLoad=window.loadDiseaseQuestions;
   window.loadDiseaseQuestions=function(){
     oldLoad();
-    db.questions=filterIntegratedCoreQuestions(db.questions);
     ensureQuestionIds();
     save();
     if(typeof window.renderQ==='function')window.renderQ();
@@ -3840,73 +3910,78 @@ try{installBrandingV184();}catch(e){}
   const esc70=v=>typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   function mapping(desa){return byDesa.get(norm(desa))||null}
   function field(id){return document.getElementById(id)}
-  function ensurePkmField(current=''){
-    const desa=field('cdesa'), kec=field('ckec');
+  function questionInput(label){
+    const wanted=norm(label),q=(db.questions||[]).find(x=>norm(x.label)===wanted);
+    if(!q)return null;
+    const i=db.questions.indexOf(q),id='v45q_'+String(q.id||'Q_'+i).replace(/[^a-zA-Z0-9_]/g,'_')+'_'+i;
+    return field(id);
+  }
+  function ensurePkmField(){
+    const desa=questionInput('Desa/Kelurahan'),kec=questionInput('Kecamatan'),pkm=questionInput('Puskesmas');
     if(!desa)return;
-    let p=field('cpkm');
-    if(!p){
-      const wrap=desa.closest('.field');
-      if(wrap){
-        const div=document.createElement('div');div.className='field';div.innerHTML='<label>Puskesmas (otomatis dari Desa)</label><input id="cpkm" readonly style="background:#f3f6f8;font-weight:600">';
-        wrap.parentNode.insertBefore(div,wrap.nextSibling);p=field('cpkm');
-      }
-    }
     const apply=()=>{
       const m=mapping(desa.value);
-      if(m){ if(kec)kec.value=m.kec; if(p)p.value=m.puskesmas; desa.style.borderColor='#2e7d32'; }
-      else { if(p)p.value=''; desa.style.borderColor=''; }
+      if(m){
+        if(kec)kec.value=m.kec;
+        if(pkm){pkm.value=m.puskesmas;pkm.readOnly=true;pkm.title='Terisi otomatis berdasarkan Desa/Kelurahan';}
+        desa.style.borderColor='#2e7d32';
+      }else{
+        if(pkm)pkm.readOnly=false;
+        desa.style.borderColor='';
+      }
     };
-    desa.onchange=apply; desa.oninput=()=>{const m=mapping(desa.value);if(m){if(kec)kec.value=m.kec;if(p)p.value=m.puskesmas;}};
-    if(current)desa.value=current;
-    apply();
-    const note=document.createElement('div');note.className='small';note.style.marginTop='5px';note.innerHTML='Pilih desa dari daftar master. <b>Kecamatan dan Puskesmas akan terisi otomatis.</b>';
-    const old=desa.parentNode.querySelector('.v70-village-help');if(!old){note.className+=' v70-village-help';desa.parentNode.appendChild(note)}
+    desa.onchange=apply;desa.oninput=apply;apply();
+    const wrap=desa.closest('.field');
+    if(wrap&&!wrap.querySelector('.v70-village-help')){
+      const note=document.createElement('div');note.className='small v70-village-help';note.style.marginTop='5px';note.innerHTML='Pilih desa dari daftar master. <b>Kecamatan dan Puskesmas akan terisi otomatis.</b>';wrap.appendChild(note);
+    }
   }
   function injectVillageSelect(){
-    const desa=field('cdesa'); if(!desa)return;
+    const desa=questionInput('Desa/Kelurahan');if(!desa)return;
     const current=desa.value||'';
-    const sel=document.createElement('select');sel.id='cdesa';sel.name=desa.name||'';sel.innerHTML='<option value="">Pilih Desa/Kelurahan...</option>'+flat.map(x=>`<option value="${esc70(x.desa)}">${esc70(x.desa)} — ${esc70(x.puskesmas)}</option>`).join('');
-    sel.value=current;desa.replaceWith(sel);ensurePkmField(current);
-    sel.dispatchEvent(new Event('change',{bubbles:true}));
+    if(desa.tagName==='SELECT'){ensurePkmField();return}
+    const sel=document.createElement('select');sel.id=desa.id;sel.name=desa.name||'';
+    sel.innerHTML='<option value="">Pilih Desa/Kelurahan...</option>'+flat.map(x=>'<option value="'+esc70(x.desa)+'">'+esc70(x.desa)+' — '+esc70(x.puskesmas)+'</option>').join('');
+    if(current&&!flat.some(x=>norm(x.desa)===norm(current)))sel.innerHTML+='<option value="'+esc70(current)+'">'+esc70(current)+' — (data lama/tidak ada di master)</option>';
+    sel.value=current;desa.replaceWith(sel);ensurePkmField();sel.dispatchEvent(new Event('change',{bubbles:true}));
   }
-  function injectEditVillageSelect(){
-    const desa=field('cdesa'); if(!desa)return;
-    const current=desa.value||'';
-    const sel=document.createElement('select');sel.id='cdesa';sel.name=desa.name||'';sel.innerHTML='<option value="">Pilih Desa/Kelurahan...</option>'+flat.map(x=>`<option value="${esc70(x.desa)}">${esc70(x.desa)} — ${esc70(x.puskesmas)}</option>`).join('');
-    sel.value=current;desa.replaceWith(sel);ensurePkmField(current);
-  }
+  function injectEditVillageSelect(){injectVillageSelect()}
   function setCaseMapping(c){
     const m=mapping(c?.desa);
     if(m){c.desa=m.desa;c.kec=m.kec;c.pkm=m.puskesmas;c.puskesmas=m.puskesmas;c.wilayahKerja={desa:m.desa,puskesmas:m.puskesmas,kecamatan:m.kec,source:'Master Desa/Puskesmas v69'};}
     return c;
   }
+  window.resolveQuestionnaireRBI=async function(){
+    const lat=questionInput('Latitude')?.value,lng=questionInput('Longitude')?.value,el=field('rbiQuestionnaireResult');
+    if(el)el.textContent='Menghubungkan ke RBI BIG...';
+    try{
+      if(!lat||!lng)throw new Error('Koordinat belum diisi');
+      const a=await lookupAdmin(lat,lng);if(!a)throw new Error('Wilayah tidak ditemukan');
+      const values={'Provinsi':a.prov,'Kabupaten':a.kab,'Kecamatan':a.kec,'Desa/Kelurahan':a.desa};
+      Object.entries(values).forEach(([label,value])=>{const input=questionInput(label);if(input)input.value=value||''});
+      const m=mapping(a.desa);
+      if(m){const kec=questionInput('Kecamatan'),pkm=questionInput('Puskesmas');if(kec)kec.value=m.kec;if(pkm){pkm.value=m.puskesmas;pkm.readOnly=true}}
+      if(el)el.textContent='RBI: '+[a.desa,a.kec,a.kab,a.prov].filter(Boolean).join(' · ');
+    }catch(e){if(el)el.textContent='Identifikasi RBI gagal. Periksa koneksi dan koordinat. '+(e?.message||'')}
+  };
   const oldAdd=window.addCase;
-  window.addCase=function(){
-    if(typeof oldAdd==='function')oldAdd.apply(this,arguments);
-    setTimeout(()=>{injectVillageSelect();},40);
-  };
+  window.addCase=function(){if(typeof oldAdd==='function')oldAdd.apply(this,arguments);setTimeout(()=>injectVillageSelect(),40)};
   const oldEdit=window.editCase;
-  window.editCase=function(id){
-    if(typeof oldEdit==='function')oldEdit.apply(this,arguments);
-    setTimeout(()=>{injectEditVillageSelect();},40);
-  };
+  window.editCase=function(id){if(typeof oldEdit==='function')oldEdit.apply(this,arguments);setTimeout(()=>injectEditVillageSelect(),40)};
   const oldSave=window.saveCase;
   window.saveCase=async function(){
-    const desa=field('cdesa')?.value||'';const m=mapping(desa);
-    if(m){if(field('ckec'))field('ckec').value=m.kec;}
-    const before=(db.cases||[]).length;
-    const r=typeof oldSave==='function'?await oldSave.apply(this,arguments):undefined;
-    const c=(db.cases||[])[before];
-    if(c){setCaseMapping(c);save();if(typeof cases==='function')cases();}
+    const desa=questionInput('Desa/Kelurahan')?.value||'',m=mapping(desa);
+    if(m){const kec=questionInput('Kecamatan'),pkm=questionInput('Puskesmas');if(kec)kec.value=m.kec;if(pkm)pkm.value=m.puskesmas}
+    const before=(db.cases||[]).length,r=typeof oldSave==='function'?await oldSave.apply(this,arguments):undefined,c=(db.cases||[])[before];
+    if(c){setCaseMapping(c);save();if(typeof cases==='function')cases()}
     return r;
   };
   const oldUpd=window.upd;
   window.upd=async function(id){
-    const desa=field('cdesa')?.value||'';const m=mapping(desa);
-    if(m&&field('ckec'))field('ckec').value=m.kec;
-    const r=typeof oldUpd==='function'?await oldUpd.apply(this,arguments):undefined;
-    const c=(db.cases||[]).find(x=>String(x.id)===String(id));
-    if(c){setCaseMapping(c);save();if(typeof cases==='function')cases();}
+    const desa=questionInput('Desa/Kelurahan')?.value||'',m=mapping(desa);
+    if(m){const kec=questionInput('Kecamatan'),pkm=questionInput('Puskesmas');if(kec)kec.value=m.kec;if(pkm)pkm.value=m.puskesmas}
+    const r=typeof oldUpd==='function'?await oldUpd.apply(this,arguments):undefined,c=(db.cases||[]).find(x=>String(x.id)===String(id));
+    if(c){setCaseMapping(c);save();if(typeof cases==='function')cases()}
     return r;
   };
   function renderCaseMappingBanner(){
@@ -3916,8 +3991,8 @@ try{installBrandingV184();}catch(e){}
     if(!b){b=document.createElement('div');b.id='v70CaseMappingInfo';b.className='notice';b.style.marginTop='10px';const card=page.querySelector('.card');if(card)card.appendChild(b)}
     b.innerHTML='<b>🔗 Pemetaan wilayah aktif:</b> Desa/Kelurahan menggunakan Master Desa v69. Saat input kasus, Desa → <b>Puskesmas → Kecamatan</b> diisi otomatis. Master saat ini: <b>'+flat.length+' desa · 15 Puskesmas · 11 Kecamatan</b>.';
   }
-  const oldPage=window.page;window.page=function(id,b){const r=typeof oldPage==='function'?oldPage.apply(this,arguments):undefined;setTimeout(()=>{if(id==='kasus')renderCaseMappingBanner();},180);return r};
-  window.GORUT_V70={version:'v70',totalDesa:flat.length,puskesmas:15,kecamatan:11,features:['desa select from master','automatic puskesmas mapping','automatic kecamatan mapping','case wilayahKerja persistence']};
+  const oldPage=window.page;window.page=function(id,b){const r=typeof oldPage==='function'?oldPage.apply(this,arguments):undefined;setTimeout(()=>{if(id==='kasus')renderCaseMappingBanner()},180);return r};
+  window.GORUT_V70={version:'v70',totalDesa:flat.length,puskesmas:15,kecamatan:11,features:['desa select from integrated questionnaire','automatic puskesmas mapping','automatic kecamatan mapping','RBI from integrated coordinates','case wilayahKerja persistence']};
   setTimeout(()=>{try{renderCaseMappingBanner()}catch(e){}},3600);
 })();
 
