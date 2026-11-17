@@ -4735,7 +4735,11 @@ try{installBrandingV184();}catch(e){}
     const coord=id=>{const x=v(id);if(x.trim()==='')return null;const n=Number(x);return Number.isFinite(n)?n:NaN};
     const lat=coord('ed107_lat'),lng=coord('ed107_lng');
     if(Number.isNaN(lat)||Number.isNaN(lng)||(lat!==null&&(lat < -90||lat>90))||(lng!==null&&(lng < -180||lng>180))){alert('Latitude harus -90 sampai 90 dan longitude -180 sampai 180.');return;}
-    Object.assign(c,{name:v('ed107_name').trim(),age:age===null?0:age,sex:v('ed107_sex'),onset:v('ed107_onset'),status:v('ed107_status'),outcome:v('ed107_outcome'),symptoms:v('ed107_symptoms'),address:v('ed107_address'),prov:v('ed107_prov'),kab:v('ed107_kab'),kec:v('ed107_kec'),desa:v('ed107_desa'),lat:lat,lng:lng,updatedAt:new Date().toISOString()});
+    const editedName=v('ed107_name').trim();
+    const editedAt=new Date().toISOString();
+    Object.assign(c,{name:editedName,age:age===null?0:age,sex:v('ed107_sex'),onset:v('ed107_onset'),status:v('ed107_status'),outcome:v('ed107_outcome'),symptoms:v('ed107_symptoms'),address:v('ed107_address'),prov:v('ed107_prov'),kab:v('ed107_kab'),kec:v('ed107_kec'),desa:v('ed107_desa'),lat:lat,lng:lng,updatedAt:editedAt});
+    /* A case_code may have multiple source rows (different server IDs). Keep the canonical case name consistent across those rows without touching their questionnaire answers. */
+    (window.db?.cases||[]).forEach(row=>{if(row!==c&&String(row.id)===String(c.id)&&String(row.investigationId)===String(c.investigationId)){row.name=editedName;row.updatedAt=editedAt;}});
     c.admin=Object.assign({},c.admin||{},{prov:c.prov||c.admin?.prov||'',kab:c.kab||c.admin?.kab||'',kec:c.kec||c.admin?.kec||'',desa:c.desa||c.admin?.desa||'',lat:lat,lng:lng,source:c.admin?.source||'input manual'});
     const inv=(window.db?.investigations||[]).find(x=>String(x.id)===String(c.investigationId));
     if(inv?.disease==='keracunan-pangan'||c.foodCase){
