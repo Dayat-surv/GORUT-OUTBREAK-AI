@@ -5103,12 +5103,12 @@ try{installBrandingV183();}catch(e){}
     // Stable, readable column order: core case fields first, then every saved questionnaire answer key.
     var core=['ID Kasus','Nama','Umur','Jenis kelamin','Alamat','Desa/Kelurahan','Kecamatan','Tanggal onset','Gejala utama','Status kasus','Outcome'];
     var h='<div class="v125-matrix-card"><div class="v125-matrix-head"><div><h3 style="margin:0">Jawaban Kuesioner Lengkap</h3><div class="small">'+(inv?esc125(invName125(inv)):'Semua investigasi')+' · '+allRows.length+' rekaman sumber · '+keys.length+' kolom jawaban kuesioner</div></div><button type="button" id="v125Export">Ekspor tabel lengkap CSV</button></div>';
-    h+='<div class="notice">Tabel ini memuat seluruh jawaban yang tersimpan pada setiap rekaman sumber. Kolom dapat digeser ke samping; nilai kosong ditampilkan sebagai “—”. Rekaman sumber tidak digabung atau dihapus.</div>';
+    h+='<div class="notice">Tabel ini memuat seluruh jawaban yang tersimpan pada setiap rekaman sumber. Kolom dapat digeser ke samping; nilai kosong ditampilkan sebagai “—”. Tombol Hapus pada salah satu rekaman akan menghapus seluruh rekaman sumber dengan ID Kasus dan investigasi yang sama setelah konfirmasi server STAGING.</div>';
     h+='<div class="v125-matrix-scroll"><table class="report-table v125-matrix"><thead><tr><th>No.</th><th>Investigasi</th>'+core.map(function(k){return '<th>'+esc125(k)+'</th>'}).join('')+keys.map(function(k){return '<th>'+esc125(k)+'</th>'}).join('')+'<th>Aksi</th></tr></thead><tbody>';
     h+=allRows.map(function(c,i){
       var iv=invs.find(function(x){return String(x.id)===String(c.investigationId)});
       return '<tr><td>'+(i+1)+'</td><td>'+esc125(iv?invName125(iv):c.investigationId||'—')+'</td>'+core.map(function(k){var v=k==='Outcome'?c.outcome:coreValue125(c,k);return '<td>'+esc125(v||'—')+'</td>'}).join('')+keys.map(function(k){var a=c.answers&&typeof c.answers==='object'?c.answers:{};return '<td>'+esc125(val125(a[k])||'—')+'</td>'}).join('')+'<td><button type="button" class="danger" data-v192-delete="'+esc125(String(c.id||'')+'::'+String(c.investigationId||''))+'">Hapus kasus</button></td></tr>';
-    }).join('')||'<tr><td colspan="'+(core.length+keys.length+2)+'">Belum ada rekaman kasus pada investigasi ini.</td></tr>';
+    }).join('')||'<tr><td colspan="'+(core.length+keys.length+3)+'">Belum ada rekaman kasus pada investigasi ini.</td></tr>';
     h+='</tbody></table></div></div>';
     host.innerHTML=h;
     host.querySelectorAll('[data-v192-delete]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.deleteCaseGroupRecovery192(btn.getAttribute('data-v192-delete'))}});
