@@ -2251,7 +2251,7 @@ function installLogin(){
   // ---------- Questionnaire integration ----------
   function qId(q,i){return 'v45q_'+(q.id||('Q_'+i)).replace(/[^a-zA-Z0-9_]/g,'_')+'_'+i}
   function qField(q,i,answers){const id=qId(q,i),v=answers?.[q.id]??answers?.[q.label]??'';if(q.type==='choice')return '<select id="'+id+'"><option value="">Pilih...</option>'+((q.options||[]).map(o=>'<option '+(String(o)===String(v)?'selected':'')+'>'+esc45(o)+'</option>').join(''))+'</select>';if(q.type==='textarea')return '<textarea id="'+id+'" rows="2">'+esc45(v)+'</textarea>';return '<input id="'+id+'" type="'+(q.type==='number'?'number':q.type==='date'?'date':'text')+'" value="'+esc45(v)+'">'}
-  function collectQ45(){const qs=db.questions||[],a={},geoFields={alamatlengkap:'caddress',alamatlengkapt tinggalkejadian:'caddress',provinsi:'cprov',kabupaten:'ckab',kabupatenkota:'ckab',kecamatan:'ckec',desakelurahan:'cdesa',puskesmas:'cpuskesmas',latitude:'clat',longitude:'clng'};qs.forEach((q,i)=>{if(!q.id)q.id='Q_'+i;const key=questionLabelKey45(q.label),mainId=geoFields[key],main=mainId&&document.getElementById(mainId),e=document.getElementById(qId(q,i));if(main)a[q.id]=main.value;else if(e)a[q.id]=e.value;});return a}
+  function collectQ45(){const qs=db.questions||[],a={},geoFields={alamatlengkap:'caddress',alamatlengkaptempattinggalkejadian:'caddress',provinsi:'cprov',kabupaten:'ckab',kabupatenkota:'ckab',kecamatan:'ckec',desakelurahan:'cdesa',latitude:'clat',longitude:'clng'};qs.forEach((q,i)=>{if(!q.id)q.id='Q_'+i;const key=questionLabelKey45(q.label),mainId=geoFields[key],main=mainId&&document.getElementById(mainId),e=document.getElementById(qId(q,i));if(main)a[q.id]=main.value;else if(e)a[q.id]=e.value;});return a}
   function resolveCaseDiseaseId(value){
     if(value==null||value==='')return '';
     const raw=String(value).trim();
@@ -2407,7 +2407,7 @@ function installLogin(){
     const food=act().disease==='keracunan-pangan',diseaseId=act().disease,extraPriority=priorityPanel(diseaseId,{}),draft={id:nextCaseId45(),_new:true};
     const extraFood=food?'<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>'+f('Makanan/minuman dikonsumsi','caseFood','text','')+f('Waktu konsumsi','caseConsumedAt','datetime-local','')+f('Waktu onset setelah konsumsi','caseOnsetTime','datetime-local','')+f('Masa inkubasi (jam)','caseIncubation','number','')+f('Gejala terkait kejadian pangan','caseSymptoms','text','')+f('Sumber pangan','caseFoodSource','text','')+f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')+f('Spesimen klinis','caseClinicalSpecimen','text','')+'</div>':'';
     const qPanel=questionnaireCasePanel(draft);
-    modal('<h2>Tambah Kasus</h2>'+addressFields(draft)+extraFood+extraPriority+qPanel+'<button class="primary" onclick="saveCase()">Simpan</button>');
+    modal('<h2>Tambah Kasus</h2>'+window.addressFields(draft)+extraFood+extraPriority+qPanel+'<button class="primary" onclick="saveCase()">Simpan</button>');
   };
   const oldSave=window.saveCase;
   window.saveCase=async function(){
@@ -5316,7 +5316,7 @@ try{installBrandingV184();}catch(e){}
     if(!questionList.length&&Array.isArray(window.db&&window.db.questions)){
       appendQuestionSource(window.db.questions,'Kuesioner tersimpan — fallback');
     }
-    function isGeographyAnswer120(value){var k=String(value==null?'':value).trim().toLowerCase().replace(/[^a-z0-9]+/g,'');return ['alamatlengkap','alamatlengkaptempattinggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','latitude','longitude','qalamat','qprovinsi','qkabupaten','qkecamatan','qdesa','qkelurahan'].includes(k)||k==='__gorutcasem etav1'.replace(/\s/g,'')}
+    function isGeographyAnswer120(value){var k=String(value==null?'':value).trim().toLowerCase().replace(/[^a-z0-9]+/g,'');return ['alamatlengkap','alamatlengkaptempattinggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','latitude','longitude','qalamatlengkap','qalamat','qprovinsi','qkabupaten','qkecamatan','qdesakelurahan','qdesa','qkelurahan','qlatitude','qlongitude'].includes(k)||k==='__gorutcasem etav1'.replace(/\s/g,'')}
     questionList.splice(0,questionList.length,...questionList.filter(function(q){return !isGeographyAnswer120(q.label)&&!isGeographyAnswer120(q.id)}));
     var usedAnswerKeys={};
     function normAnswerKey120(x){return String(x==null?'':x).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
