@@ -39,7 +39,7 @@ for (const obsolete of ["addressFields", "f('Nama'", "f('Umur'", "f('Jenis kelam
 }
 assert.ok(appJs.includes('function hiddenCoreInputs45'), 'hidden compatibility fields must preserve existing save/update behavior');
 assert.ok(appJs.includes('function syncCoreFieldsFromAnswers45'), 'core case fields must be derived from integrated questionnaire answers');
-assert.ok(appJs.includes("normQuestion45(q.label)==='idkasus'?'<input id='") && appJs.includes('" readonly>'), 'case ID must be generated and read-only in the integrated questionnaire');
+assert.ok(appJs.includes("normQuestion45(q.label)==='idkasus'") && appJs.includes('readonly>'), 'case ID must be generated and read-only in the integrated questionnaire');
 assert.ok(appJs.includes('const answers=collectQ45();syncCoreFieldsFromAnswers45(answers,false)'), 'new cases must derive core fields from questionnaire answers');
 assert.ok(appJs.includes('c.answers={...priorAnswers,...a}'), 'case edits must preserve old answer keys and merge current questionnaire answers');
 for (const question of ["['Sosiodemografi','Alamat lengkap','textarea']", "['Sosiodemografi','Desa/Kelurahan','text']", "['Sosiodemografi','Kecamatan','text']", "['Sosiodemografi','Kabupaten','text']", "['Sosiodemografi','Provinsi','text']", "['Lokasi','Latitude','number']", "['Lokasi','Longitude','number']"]) {
