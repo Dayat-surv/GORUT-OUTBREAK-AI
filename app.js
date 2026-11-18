@@ -2251,7 +2251,7 @@ function installLogin(){
   // ---------- Questionnaire integration ----------
   function qId(q,i){return 'v45q_'+(q.id||('Q_'+i)).replace(/[^a-zA-Z0-9_]/g,'_')+'_'+i}
   function qField(q,i,answers){const id=qId(q,i),v=answers?.[q.id]??answers?.[q.label]??'';if(q.type==='choice')return '<select id="'+id+'"><option value="">Pilih...</option>'+((q.options||[]).map(o=>'<option '+(String(o)===String(v)?'selected':'')+'>'+esc45(o)+'</option>').join(''))+'</select>';if(q.type==='textarea')return '<textarea id="'+id+'" rows="2">'+esc45(v)+'</textarea>';return '<input id="'+id+'" type="'+(q.type==='number'?'number':q.type==='date'?'date':'text')+'" value="'+esc45(v)+'">'}
-  function collectQ45(){const qs=db.questions||[],a={};qs.forEach((q,i)=>{if(!q.id)q.id='Q_'+i;const e=document.getElementById(qId(q,i));if(e)a[q.id]=e.value;});return a}
+  function collectQ45(){const qs=db.questions||[],a={},geoFields={alamatlengkap:'caddress',alamatlengkapt tinggalkejadian:'caddress',provinsi:'cprov',kabupaten:'ckab',kabupatenkota:'ckab',kecamatan:'ckec',desakelurahan:'cdesa',puskesmas:'cpuskesmas',latitude:'clat',longitude:'clng'};qs.forEach((q,i)=>{if(!q.id)q.id='Q_'+i;const key=questionLabelKey45(q.label),mainId=geoFields[key],main=mainId&&document.getElementById(mainId),e=document.getElementById(qId(q,i));if(main)a[q.id]=main.value;else if(e)a[q.id]=e.value;});return a}
   function resolveCaseDiseaseId(value){
     if(value==null||value==='')return '';
     const raw=String(value).trim();
@@ -2272,6 +2272,10 @@ function installLogin(){
   }
   function filterIntegratedCoreQuestions(questions){
     return (Array.isArray(questions)?questions:[]).filter(q=>!isIntegratedCoreQuestion(q));
+  }
+  function isIntegratedGeographyQuestion45(q){
+    const key=String(q&&q.label||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
+    return ['alamatlengkap','alamatlengkapt inggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','puskesmas','latitude','longitude'].includes(key);
   }
   function ensureCaseQuestionnaire(c={}){
     const diseaseId=resolveCaseDiseaseId(c.disease)||resolveCaseDiseaseId(act()?.disease)||resolveCaseDiseaseId(db.selectedDisease);
@@ -2337,9 +2341,10 @@ function installLogin(){
   }
   function questionnaireCasePanel(c={}){
     ensureCaseQuestionnaire(c);ensureQuestionIds();
-    const qs=db.questions||[],answers=questionnaireAnswersForCase(c);
+    const allQs=db.questions||[],qs=allQs.filter(q=>!isIntegratedGeographyQuestion45(q)),answers=questionnaireAnswersForCase(c);
     if(!qs.length)return '<div class="notice">Belum ada kuesioner aktif. Buka menu Kuesioner → pilih penyakit → Muat Kuesioner.</div>';
-    return '<div class="card" style="margin-top:10px;border-left:4px solid #1769aa"><h4>📋 Kuesioner Epidemiologi Terintegrasi</h4><p class="small">Semua jawaban disimpan pada <code>case.answers</code>, digunakan oleh variable dictionary/analisis dan ikut dibawa ke sinkronisasi backend.</p>'+qs.map((q,i)=>{let field=qField(q,i,answers);if(c.id&&!c._new&&questionLabelKey45(q.label)==='idkasus')field=field.replace('<input ','<input readonly ');return '<div class="field"><label>'+esc45((i+1)+'. '+q.label)+(q.required?' *':'')+'</label>'+field+'<small class="small">'+esc45(q.cat||'PE')+' · '+esc45(q.version||'')+'</small></div>'}).join('')+'</div><div class="field" style="margin-top:10px"><button type="button" onclick="resolveQuestionnaireRBI()">🗺️ Identifikasi wilayah dari koordinat (RBI)</button><div id="rbiQuestionnaireResult" class="small" style="margin-top:6px"></div></div>';
+    const hiddenGeo=allQs.map((q,i)=>{if(!isIntegratedGeographyQuestion45(q))return '';const value=answers[q.id]??answers[q.label]??'';return '<input type="hidden" id="'+qId(q,i)+'" value="'+esc45(value)+'">'}).join('');
+    return '<div class="card" style="margin-top:10px;border-left:4px solid #1769aa"><h4>📋 Kuesioner Epidemiologi Terintegrasi</h4><p class="small">Pertanyaan epidemiologi tersimpan pada <code>case.answers</code> untuk kamus variabel, analisis, dan sinkronisasi. Identitas wilayah dikelola satu kali pada bagian Alamat dan Wilayah.</p>'+hiddenGeo+qs.map((q,i)=>{let field=qField(q,i,answers);if(c.id&&!c._new&&questionLabelKey45(q.label)==='idkasus')field=field.replace('<input ','<input readonly ');return '<div class="field"><label>'+esc45((i+1)+'. '+q.label)+(q.required?' *':'')+'</label>'+field+'<small class="small">'+esc45(q.cat||'PE')+' · '+esc45(q.version||'')+'</small></div>'}).join('')+'</div>';
   }
   function coreFromAnswers(c,a){
     const find=(...labels)=>{
@@ -2383,13 +2388,14 @@ function installLogin(){
     const status=pick('Status kasus','Status')||(mode==='edit'?c.status||'':'');
     const outcome=pick('Outcome','Keadaan akhir')||(mode==='edit'?c.outcome||'':'');
     const symptoms=pick('Gejala utama')||(mode==='edit'?c.symptoms||'':'');
-    const address=pick('Alamat lengkap','Alamat lengkap tempat tinggal/kejadian')||(mode==='edit'?c.address||'':'');
-    const prov=pick('Provinsi')||(mode==='edit'?c.prov||'':'');
-    const kab=pick('Kabupaten','Kabupaten/Kota')||(mode==='edit'?c.kab||'':'');
-    const kec=pick('Kecamatan')||(mode==='edit'?c.kec||'':'');
-    const desa=pick('Desa/Kelurahan')||(mode==='edit'?c.desa||'':'');
-    const lat=pick('Latitude')!==''?pick('Latitude'):(mode==='edit'?c.lat??'':'');
-    const lng=pick('Longitude')!==''?pick('Longitude'):(mode==='edit'?c.lng??'':'');
+    const identityValue=(id,key)=>{const el=document.getElementById(id);return el?el.value:(mode==='edit'?(c[key]??''):'')};
+    const address=identityValue('caddress','address');
+    const prov=identityValue('cprov','prov');
+    const kab=identityValue('ckab','kab');
+    const kec=identityValue('ckec','kec');
+    const desa=identityValue('cdesa','desa');
+    const lat=identityValue('clat','lat');
+    const lng=identityValue('clng','lng');
     const id=pick('ID Kasus','ID')||(mode==='edit'?c.id:nextCaseId45());
     const idQuestion=(db.questions||[]).find(q=>questionLabelKey45(q.label)==='idkasus');
     if(idQuestion&&(answers[idQuestion.id]===undefined||String(answers[idQuestion.id]).trim()===''))answers[idQuestion.id]=id;
@@ -2401,7 +2407,7 @@ function installLogin(){
     const food=act().disease==='keracunan-pangan',diseaseId=act().disease,extraPriority=priorityPanel(diseaseId,{}),draft={id:nextCaseId45(),_new:true};
     const extraFood=food?'<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>'+f('Makanan/minuman dikonsumsi','caseFood','text','')+f('Waktu konsumsi','caseConsumedAt','datetime-local','')+f('Waktu onset setelah konsumsi','caseOnsetTime','datetime-local','')+f('Masa inkubasi (jam)','caseIncubation','number','')+f('Gejala terkait kejadian pangan','caseSymptoms','text','')+f('Sumber pangan','caseFoodSource','text','')+f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')+f('Spesimen klinis','caseClinicalSpecimen','text','')+'</div>':'';
     const qPanel=questionnaireCasePanel(draft);
-    modal('<h2>Tambah Kasus</h2>'+extraFood+extraPriority+qPanel+'<button class="primary" onclick="saveCase()">Simpan</button>');
+    modal('<h2>Tambah Kasus</h2>'+addressFields(draft)+extraFood+extraPriority+qPanel+'<button class="primary" onclick="saveCase()">Simpan</button>');
   };
   const oldSave=window.saveCase;
   window.saveCase=async function(){
@@ -5310,6 +5316,8 @@ try{installBrandingV184();}catch(e){}
     if(!questionList.length&&Array.isArray(window.db&&window.db.questions)){
       appendQuestionSource(window.db.questions,'Kuesioner tersimpan — fallback');
     }
+    function isGeographyAnswer120(value){var k=String(value==null?'':value).trim().toLowerCase().replace(/[^a-z0-9]+/g,'');return ['alamatlengkap','alamatlengkapt inggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','puskesmas','latitude','longitude','qalamat','qprovinsi','qkabupaten','qkecamatan','qdesa','qkelurahan'].includes(k)||k==='__gorutcasem etav1'.replace(/\s/g,'')}
+    questionList.splice(0,questionList.length,...questionList.filter(function(q){return !isGeographyAnswer120(q.label)&&!isGeographyAnswer120(q.id)}));
     var usedAnswerKeys={};
     function normAnswerKey120(x){return String(x==null?'':x).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
     function findAnswerKey120(q){
@@ -5326,7 +5334,7 @@ try{installBrandingV184();}catch(e){}
       var targetKey=key||q.id||('pertanyaan_'+(i+1));
       html+='<div class="field" style="margin:8px 0"><label for="ed116_answer_'+i+'">'+(i+1)+'. '+esc116(q.label||targetKey)+'</label><small style="display:block;opacity:.65">'+esc116(q.cat||'Kuesioner')+(q.required?' · Wajib':'')+'</small><textarea class="answer-edit-v116" id="ed116_answer_'+i+'" data-answer-key="'+esc116(targetKey)+'" rows="2">'+esc116(shown)+'</textarea></div>';
     });
-    var extraKeys=Object.keys(answersForEdit).filter(function(k){return !usedAnswerKeys[k]});
+    var extraKeys=Object.keys(answersForEdit).filter(function(k){return !usedAnswerKeys[k]&&!isGeographyAnswer120(k)});
     if(extraKeys.length){
       html+='<h4>Jawaban/field tambahan dari rekaman ini</h4><p class="muted">Field berikut tidak cocok dengan ID/label pertanyaan pada instrumen aktif. Isinya tetap dipertahankan.</p>';
       extraKeys.forEach(function(k,j){
