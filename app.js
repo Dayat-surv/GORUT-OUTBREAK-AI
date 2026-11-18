@@ -6012,3 +6012,70 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   }
   window.GORUT_CASE_ID_GUARD_VERSION='v194';
 })();
+
+
+/* ==================== STAGING v195 — SYNC GENERATED ID TO QUESTIONNAIRE ====================
+   v194 updated the hidden legacy field, while the integrated readonly ID question remained
+   seeded with the previous value. collectQ45() then copied that stale value back over cid.
+   Keep the visible readonly questionnaire answer and hidden core field identical.
+*/
+(function(){
+  'use strict';
+  function appDb(){return typeof db!=='undefined'&&db?db:(window.db||{});}
+  function activeId(){return appDb().active;}
+  function nextId(invId){
+    var rows=(Array.isArray(appDb().cases)?appDb().cases:[]).filter(function(c){return String(c.investigationId)===String(invId);});
+    var used=new Set();
+    rows.forEach(function(c){var m=String(c.id??'').trim().match(/^K(\d+)$/i);if(m)used.add(Number(m[1]));});
+    var n=1;while(used.has(n))n++;
+    return 'K'+String(n).padStart(3,'0');
+  }
+  function idQuestionInput(){
+    var questions=Array.isArray(appDb().questions)?appDb().questions:[];
+    for(var i=0;i<questions.length;i++){
+      var q=questions[i],label=String(q.label||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+      if(label==='idkasus'){
+        var qid=String(q.id||('Q_'+i)).replace(/[^a-zA-Z0-9_]/g,'_');
+        return document.getElementById('v45q_'+qid+'_'+i);
+      }
+    }
+    return null;
+  }
+  function writeId(code){
+    var hidden=document.getElementById('cid');
+    if(hidden){hidden.value=code;hidden.setAttribute('data-auto-case-id','v195');}
+    var visible=idQuestionInput();
+    if(visible){visible.value=code;visible.setAttribute('data-auto-case-id','v195');}
+    return {hidden:!!hidden,questionnaire:!!visible};
+  }
+  window.GORUT_NEXT_CASE_CODE=nextId;
+  window.GORUT_SYNC_CASE_ID_FIELDS=writeId;
+
+  var priorAdd=window.addCase;
+  if(typeof priorAdd==='function'){
+    window.addCase=function(){
+      var result=priorAdd.apply(this,arguments);
+      var inv=activeId();
+      if(inv!==undefined&&inv!==null){
+        var code=nextId(inv);
+        var fields=writeId(code);
+        window.GORUT_CASE_ID_AUTOFILL_RESULT={version:'v195',caseId:code,investigationId:String(inv),fields,at:new Date().toISOString()};
+        if(!fields.questionnaire)console.warn('v195: ID question input was not found; verify questionnaire ID label/configuration.');
+      }
+      return result;
+    };
+  }
+
+  var priorSave=window.saveCase;
+  if(typeof priorSave==='function'){
+    window.saveCase=async function(){
+      var hidden=document.getElementById('cid');
+      var visible=idQuestionInput();
+      var code=String((visible&&visible.value)||(hidden&&hidden.value)||'').trim();
+      if(code)writeId(code);
+      var result=await priorSave.apply(this,arguments);
+      return result;
+    };
+  }
+  window.GORUT_CASE_ID_AUTOFILL_VERSION='v195';
+})();
