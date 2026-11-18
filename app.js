@@ -5404,9 +5404,9 @@ try{installBrandingV184();}catch(e){}
       var mergedAnswers=Object.assign({},serverAnswers,localAnswers);
       var priorMeta=serverAnswers.__gorut_case_meta_v1&&typeof serverAnswers.__gorut_case_meta_v1==='object'?serverAnswers.__gorut_case_meta_v1:{};
       mergedAnswers.__gorut_case_meta_v1=Object.assign({},priorMeta,{
-        address:c.address??'',prov:c.prov??c.admin&&c.admin.prov??'',
-        kab:c.kab??c.admin&&c.admin.kab??'',kec:c.kec??c.admin&&c.admin.kec??'',
-        desa:c.desa??c.admin&&c.admin.desa??'',symptoms:c.symptoms??'',
+        address:c.address??'',prov:c.prov??(c.admin&&c.admin.prov)??'',
+        kab:c.kab??(c.admin&&c.admin.kab)??'',kec:c.kec??(c.admin&&c.admin.kec)??'',
+        desa:c.desa??(c.admin&&c.admin.desa)??'',symptoms:c.symptoms??'',
         updatedAt:c.updatedAt??new Date().toISOString(),name:c.name??'',
         admin:Object.assign({},priorMeta.admin||{},c.admin||{})
       });
