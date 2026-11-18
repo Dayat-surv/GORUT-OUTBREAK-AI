@@ -29,14 +29,20 @@ assert.match(appJs, /food_investigation:inv\.foodInvestigation\|\|null/, 'new fo
 assert.match(appJs, /surveyAnswerByResponseId\.set\(String\(response\.id\),response\.payload\)/, 'stored questionnaire answers must be mapped to cases by exact response ID');
 assert.doesNotMatch(appJs, /from\('survey_responses'\)\.select\('response_id,payload'\)/, 'app must not query a nonexistent response_id table column');
 
-// STAGING v190: address fields appear once in the case form, while all original
-// questionnaire answer keys continue to receive the canonical address values.
-assert.match(appJs, /function isAddressQuestion45\(label\)/, 'address-question classifier must be present');
-assert.match(appJs, /filter\(x=>!isAddressQuestion45\(x\.q\.label\)\)/, 'duplicate address questions must not be rendered a second time');
-for (const key of ["alamatlengkap:'caddress'", "provinsi:'cprov'", "kabupaten:'ckab'", "kecamatan:'ckec'", "desakelurahan:'cdesa'", "latitude:'clat'", "longitude:'clng'"]) {
-  assert.ok(appJs.includes(key), 'canonical address input must map to its original questionnaire answer key: ' + key);
+// STAGING v191: the integrated questionnaire is the only visible core case form.
+const singleFormStart = appJs.indexOf('v191 — SINGLE INTEGRATED CASE FORM');
+const singleFormEnd = appJs.indexOf('const oldLoad=window.loadDiseaseQuestions', singleFormStart);
+assert.ok(singleFormStart >= 0 && singleFormEnd > singleFormStart, 'single integrated case form override must be present');
+const singleForm = appJs.slice(singleFormStart, singleFormEnd);
+assert.doesNotMatch(singleForm, /addressFields|f\\('Nama'|f\\('Umur'|f\\('Jenis kelamin'|f\\('Onset'|f\\('Status'|f\\('Outcome'/, 'separate identity/address form fields must not be rendered');
+assert.match(appJs, /function hiddenCoreInputs45/, 'hidden compatibility fields must preserve existing save/update behavior');
+assert.match(appJs, /function syncCoreFieldsFromAnswers45/, 'core case fields must be derived from integrated questionnaire answers');
+assert.match(appJs, /normQuestion45\\(q\\.label\\)==='idkasus'.*readonly/, 'case ID must be generated and read-only in the integrated questionnaire');
+assert.match(appJs, /const answers=collectQ45\\(\\);syncCoreFieldsFromAnswers45\\(answers,false\\)/, 'new cases must derive core fields from questionnaire answers');
+assert.match(appJs, /c\\.answers=\\{\\.\\.\\.priorAnswers,\\.\\.\\.a\\}/, 'case edits must preserve old answer keys and merge current questionnaire answers');
+for (const question of ["['Sosiodemografi','Alamat lengkap','textarea']", "['Sosiodemografi','Desa/Kelurahan','text']", "['Sosiodemografi','Kecamatan','text']", "['Sosiodemografi','Kabupaten','text']", "['Sosiodemografi','Provinsi','text']", "['Lokasi','Latitude','number']", "['Lokasi','Longitude','number']"]) {
+  assert.ok(appJs.includes(question), 'integrated questionnaire must retain core address/location question: ' + question);
 }
-assert.match(appJs, /if\(id&&el&&q\.id\)a\[q\.id\]=el\.value/, 'canonical address values must be retained in case.answers');
 
 assert.match(appJs, /Inisial nama \(tanpa nama lengkap\)/, 'master questionnaire must request initials rather than full names');
 assert.match(publicSurvey, /Isi inisial saja, jangan tuliskan nama lengkap\./, 'public questionnaire must guide respondents to enter initials');
