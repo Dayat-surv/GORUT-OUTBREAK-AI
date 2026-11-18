@@ -1902,7 +1902,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
       '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
-      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v193</div>'+
+      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v194</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
@@ -2068,8 +2068,8 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       `<div style="overflow:auto"><table><thead><tr><th>Nama</th><th>Jenis</th><th>WhatsApp</th><th>Status</th><th>Daftar</th><th>Aksi</th></tr></thead><tbody>${users.map(u=>`<tr><td><b>${esc45(u.name)}</b><br><small>${esc45(u.id)}</small></td><td>${esc45(roleShort[u.role]||u.role)}</td><td>${esc45(u.whatsapp||'-')}</td><td><span class="badge">${esc45(u.status)}</span></td><td>${new Date(u.requestedAt).toLocaleString('id-ID')}</td><td>${u.role!=='admin'&&u.status==='menunggu'?`<button class="primary" onclick="v45Approve('${esc45(u.id)}')">✓ Izinkan</button> <button onclick="v45Reject('${esc45(u.id)}')">Tolak</button>`:'—'}</td></tr>`).join('')||'<tr><td colspan="6">Belum ada pengguna.</td></tr>'}</tbody></table></div>`;
   }
   function installBrandingV183(){
-  document.documentElement.setAttribute('data-gorut-brand','v192');
-  const t=document.querySelector('title'); if(t) t.textContent='GORUT-OUTBREAK AI v192 — Surveilans Epidemiologi Gorontalo Utara';
+  document.documentElement.setAttribute('data-gorut-brand','v194');
+  const t=document.querySelector('title'); if(t) t.textContent='GORUT-OUTBREAK AI v194 — Surveilans Epidemiologi Gorontalo Utara';
 }
 function installLogin(){
     // Retire v43 open-access startup and restore the requested login page.
@@ -5946,4 +5946,69 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     }
   };
   window.GORUT_CASE_EDIT_SYNC_VERSION='v189';
+})();
+
+
+/* ==================== STAGING v194 — UNIQUE CASE ID GUARD ====================
+   Generate an unused human-readable case code within the active investigation.
+   Reject a duplicate before the v188 persistence/sync wrapper runs.
+   Existing case IDs, source rows, questionnaire answers and server rows are untouched.
+*/
+(function(){
+  'use strict';
+  function nextUnusedCaseCode(investigationId){
+    var rows=(window.db&&Array.isArray(window.db.cases)?window.db.cases:[])
+      .filter(function(row){return String(row.investigationId)===String(investigationId);});
+    var used=new Set();
+    rows.forEach(function(row){
+      var match=String(row.id??'').trim().match(/^K(\d+)$/i);
+      if(match)used.add(Number(match[1]));
+    });
+    var n=1;
+    while(used.has(n))n++;
+    return 'K'+String(n).padStart(3,'0');
+  }
+  window.GORUT_NEXT_CASE_CODE=nextUnusedCaseCode;
+
+  var previousAddCase=window.addCase;
+  if(typeof previousAddCase==='function'){
+    window.addCase=function(){
+      var result=previousAddCase.apply(this,arguments);
+      var invId=window.db&&window.db.active;
+      var idField=document.getElementById('cid');
+      if(idField&&invId!==undefined&&invId!==null){
+        idField.value=nextUnusedCaseCode(invId);
+        idField.setAttribute('data-auto-case-id','v194');
+      }
+      return result;
+    };
+  }
+
+  var previousSaveCase=window.saveCase;
+  if(typeof previousSaveCase==='function'){
+    window.saveCase=async function(){
+      var field=document.getElementById('cid');
+      var invId=window.db&&window.db.active;
+      if(!invId){alert('Pilih investigasi terlebih dahulu. Tidak ada data yang disimpan.');return false;}
+      var caseCode=String(field&&field.value||'').trim();
+      if(!caseCode){
+        caseCode=nextUnusedCaseCode(invId);
+        if(field)field.value=caseCode;
+      }
+      var duplicate=(window.db.cases||[]).some(function(row){
+        return String(row.investigationId)===String(invId)&&String(row.id??'').trim().toLowerCase()===caseCode.toLowerCase();
+      });
+      if(duplicate){
+        alert('ID Kasus "'+caseCode+'" sudah digunakan pada investigasi ini. Data belum disimpan. Gunakan ID lain atau tutup formulir lalu buka kembali agar ID otomatis dibuat ulang.');
+        if(field){field.focus();field.select();}
+        window.GORUT_CASE_ID_GUARD_RESULT={success:false,reason:'duplicate',caseId:caseCode,investigationId:String(invId),at:new Date().toISOString()};
+        return false;
+      }
+      if(field)field.value=caseCode;
+      var result=await previousSaveCase.apply(this,arguments);
+      window.GORUT_CASE_ID_GUARD_RESULT={success:true,caseId:caseCode,investigationId:String(invId),at:new Date().toISOString()};
+      return result;
+    };
+  }
+  window.GORUT_CASE_ID_GUARD_VERSION='v194';
 })();
