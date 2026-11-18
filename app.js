@@ -2275,7 +2275,7 @@ function installLogin(){
   }
   function isIntegratedGeographyQuestion45(q){
     const key=String(q&&q.label||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
-    return ['alamatlengkap','alamatlengkapt empattinggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','latitude','longitude'].includes(key);
+    return ['alamatlengkap','alamatlengkaptempattinggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','latitude','longitude'].includes(key);
   }
   function ensureCaseQuestionnaire(c={}){
     const diseaseId=resolveCaseDiseaseId(c.disease)||resolveCaseDiseaseId(act()?.disease)||resolveCaseDiseaseId(db.selectedDisease);
@@ -5316,7 +5316,7 @@ try{installBrandingV184();}catch(e){}
     if(!questionList.length&&Array.isArray(window.db&&window.db.questions)){
       appendQuestionSource(window.db.questions,'Kuesioner tersimpan — fallback');
     }
-    function isGeographyAnswer120(value){var k=String(value==null?'':value).trim().toLowerCase().replace(/[^a-z0-9]+/g,'');return ['alamatlengkap','alamatlengkapt empattinggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','latitude','longitude','qalamat','qprovinsi','qkabupaten','qkecamatan','qdesa','qkelurahan'].includes(k)||k==='__gorutcasem etav1'.replace(/\s/g,'')}
+    function isGeographyAnswer120(value){var k=String(value==null?'':value).trim().toLowerCase().replace(/[^a-z0-9]+/g,'');return ['alamatlengkap','alamatlengkaptempattinggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','latitude','longitude','qalamat','qprovinsi','qkabupaten','qkecamatan','qdesa','qkelurahan'].includes(k)||k==='__gorutcasem etav1'.replace(/\s/g,'')}
     questionList.splice(0,questionList.length,...questionList.filter(function(q){return !isGeographyAnswer120(q.label)&&!isGeographyAnswer120(q.id)}));
     var usedAnswerKeys={};
     function normAnswerKey120(x){return String(x==null?'':x).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
