@@ -1902,7 +1902,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
       '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
-      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v191</div>'+
+      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v192</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
@@ -2068,8 +2068,8 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
       `<div style="overflow:auto"><table><thead><tr><th>Nama</th><th>Jenis</th><th>WhatsApp</th><th>Status</th><th>Daftar</th><th>Aksi</th></tr></thead><tbody>${users.map(u=>`<tr><td><b>${esc45(u.name)}</b><br><small>${esc45(u.id)}</small></td><td>${esc45(roleShort[u.role]||u.role)}</td><td>${esc45(u.whatsapp||'-')}</td><td><span class="badge">${esc45(u.status)}</span></td><td>${new Date(u.requestedAt).toLocaleString('id-ID')}</td><td>${u.role!=='admin'&&u.status==='menunggu'?`<button class="primary" onclick="v45Approve('${esc45(u.id)}')">✓ Izinkan</button> <button onclick="v45Reject('${esc45(u.id)}')">Tolak</button>`:'—'}</td></tr>`).join('')||'<tr><td colspan="6">Belum ada pengguna.</td></tr>'}</tbody></table></div>`;
   }
   function installBrandingV183(){
-  document.documentElement.setAttribute('data-gorut-brand','v191');
-  const t=document.querySelector('title'); if(t) t.textContent='GORUT-OUTBREAK AI v191 — Surveilans Epidemiologi Gorontalo Utara';
+  document.documentElement.setAttribute('data-gorut-brand','v192');
+  const t=document.querySelector('title'); if(t) t.textContent='GORUT-OUTBREAK AI v192 — Surveilans Epidemiologi Gorontalo Utara';
 }
 function installLogin(){
     // Retire v43 open-access startup and restore the requested login page.
@@ -4736,6 +4736,47 @@ try{installBrandingV183();}catch(e){}
     else window.alert('Panel detail belum tersedia. Muat ulang aplikasi; data sumber tidak diubah.');
   }
   /* v118.1: direct, delegated-safe button entry points for the main case table. */
+  window.deleteCaseGroupRecovery192=async function(key){
+    var g=groups().find(function(x){return x.key===String(key||'')});
+    if(!g){alert('Kelompok kasus tidak ditemukan. Tidak ada data yang dihapus.');return false}
+    var caseId=String(g.primary&&g.primary.id||'').trim();
+    var invId=String(g.primary&&g.primary.investigationId||'').trim();
+    var inv=(window.db&&window.db.investigations||[]).find(function(x){return String(x.id)===invId});
+    if(!caseId||!inv||!inv.serverId){alert('ID kasus atau ID server investigasi tidak tersedia. Penghapusan dibatalkan.');return false}
+    if(!g.rows.length||g.rows.some(function(row){return !row.serverId})){
+      alert('Sebagian rekaman sumber belum memiliki ID server. Sinkronkan data ke STAGING dan muat ulang sebelum menghapus. Tidak ada data yang diubah.');
+      return false;
+    }
+    var label=String(g.view&&g.view.name||'Nama tidak tersedia');
+    if(!window.confirm('KONFIRMASI HAPUS KASUS\\n\\nID: '+caseId+'\\nNama: '+label+'\\nRekaman sumber: '+g.rows.length+'\\n\\nSemua rekaman sumber untuk kasus ini, serta kontak dan spesimen yang tertaut, akan dihapus dari STAGING dan kedua tabel. Tindakan tidak dapat dibatalkan.'))return false;
+    try{
+      var sb=await backendClient();
+      if(!sb)throw new Error('Koneksi Supabase STAGING tidak tersedia.');
+      var auth=await sb.auth.getUser();
+      if(auth.error)throw auth.error;
+      if(!auth.data||!auth.data.user)throw new Error('Sesi login tidak ditemukan. Silakan login kembali.');
+      var result=await sb.rpc('delete_case_group',{p_investigation_id:String(inv.serverId),p_case_code:caseId});
+      if(result.error)throw result.error;
+      var summary=result.data||{};
+      if(summary.deleted!==true||Number(summary.case_records)<1)throw new Error('Server tidak mengonfirmasi penghapusan seluruh rekaman kasus.');
+      var localCaseIds=g.rows.map(function(row){return String(row.id)});
+      window.db.cases=(window.db.cases||[]).filter(function(row){return !(String(row.id)===caseId&&String(row.investigationId)===invId)});
+      window.db.contacts=(window.db.contacts||[]).filter(function(row){return localCaseIds.indexOf(String(row.caseId||row.linkedCaseId||''))<0});
+      window.db.specimens=(window.db.specimens||[]).filter(function(row){return localCaseIds.indexOf(String(row.caseId||''))<0});
+      if(typeof window.save==='function')window.save();
+      if(typeof window.closeAppModal==='function')window.closeAppModal();
+      render();
+      if(typeof window.cases==='function')window.cases();
+      alert('Penghapusan berhasil dikonfirmasi oleh server STAGING.\\nRekaman sumber dihapus: '+summary.case_records+'\\nKontak terkait: '+(summary.contacts||0)+'\\nSpesimen terkait: '+(summary.specimens||0)+'.');
+      window.GORUT_CASE_GROUP_DELETE_RESULT={success:true,caseId:caseId,investigationId:invId,server:summary,at:new Date().toISOString()};
+      return true;
+    }catch(error){
+      console.error('Penghapusan kelompok kasus STAGING gagal:',error);
+      alert('Kasus TIDAK dihapus dari tampilan lokal karena server STAGING belum mengonfirmasi tindakan.\\n\\n'+String(error&&error.message||error));
+      window.GORUT_CASE_GROUP_DELETE_RESULT={success:false,caseId:caseId,error:String(error&&error.message||error),at:new Date().toISOString()};
+      return false;
+    }
+  };
   window.openCaseDetailRecovery118=function(btn){
     try{var key=btn&&btn.getAttribute('data-v115-detail');if(!key){alert('ID kelompok kasus tidak ditemukan.');return false}detail(key)}
     catch(e){console.error('Detail kasus gagal dibuka:',e);alert('Detail belum dapat dibuka: '+(e&&e.message||e))}
@@ -4768,14 +4809,15 @@ try{installBrandingV183();}catch(e){}
       var risk=positive.length?positive.slice(0,3).map(function(x){return '<span class="risk-chip"><span>'+esc(x.label||x.question||'Faktor risiko')+'</span><b>'+esc(x.value===undefined?x.answer:x.value)+'</b></span>'}).join('')+(positive.length>3?' <span class="risk-none">+'+(positive.length-3)+' lainnya</span>':''):'<span class="risk-none">Belum teridentifikasi</span>';
       var keyAttr=esc(g.key);
       return '<tr><td>'+esc(c.id||'-')+'</td>'+
-        '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||'-')+'</td><td>'+esc(c.kec||'-')+'</td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'" onclick="return window.openCaseDetailRecovery118(this)">Detail</button> <button type="button" data-v116-edit-group="'+keyAttr+'" onclick="return window.openCaseEditRecovery118(this)">Edit</button></td></tr>';
+        '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||'-')+'</td><td>'+esc(c.kec||'-')+'</td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'" onclick="return window.openCaseDetailRecovery118(this)">Detail</button> <button type="button" data-v116-edit-group="'+keyAttr+'" onclick="return window.openCaseEditRecovery118(this)">Edit</button> <button type="button" class="danger" data-v192-delete="'+keyAttr+'">Hapus</button></td></tr>';
     }).join('')||'<tr><td colspan="13"><div class="notice">Belum ada kasus yang cocok dengan pencarian.</div></td></tr>';
     if(body.innerHTML!==html){body.innerHTML=html;lastHtml=html}
     else lastHtml=html;
     body.querySelectorAll('[data-v115-detail]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.openCaseDetailRecovery118(btn)}});
     body.querySelectorAll('[data-v116-edit-group]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.openCaseEditRecovery118(btn)}});
+    body.querySelectorAll('[data-v192-delete]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.deleteCaseGroupRecovery192(btn.getAttribute('data-v192-delete'))}});
     var note=document.getElementById('caseListRecoveryNote106');
-    if(note)note.textContent='Menampilkan '+gs.length+' kelompok kasus aktif. Detail menampilkan setiap rekaman sumber secara terpisah; Edit pada tabel utama membuka rekaman terakhir (Sumber 2 bila ada dua). Tidak ada rekaman yang digabung atau dihapus.';
+    if(note)note.textContent='Menampilkan '+gs.length+' kelompok kasus aktif. Detail/Edit mempertahankan setiap rekaman sumber; Hapus menghapus seluruh rekaman sumber pada kelompok kasus setelah konfirmasi server STAGING.';
   }
   var busy=false;
   function schedule(){if(busy)return;busy=true;setTimeout(function(){busy=false;try{render()}catch(e){console.error('GORUT v115 render',e)}},30)}
@@ -4792,7 +4834,7 @@ try{installBrandingV183();}catch(e){}
     if(target)new MutationObserver(function(){if(target.innerHTML!==lastHtml)schedule()}).observe(target,{childList:true,subtree:true,characterData:true});
   }
   [100,800,2200,4500,8000].forEach(function(ms){setTimeout(schedule,ms)});
-  window.GORUT_V115={version:'v115',features:['one main row per case ID and investigation','record-level detail for every associated source row','preserve conflicting questionnaire answers','no database writes, merges, or deletions']};
+  window.GORUT_V115={version:'v192',features:['one main row per case ID and investigation','record-level detail for every associated source row','preserve conflicting questionnaire answers','owner-scoped server-confirmed case-group deletion']};
 })();
 
 
@@ -5061,14 +5103,15 @@ try{installBrandingV183();}catch(e){}
     // Stable, readable column order: core case fields first, then every saved questionnaire answer key.
     var core=['ID Kasus','Nama','Umur','Jenis kelamin','Alamat','Desa/Kelurahan','Kecamatan','Tanggal onset','Gejala utama','Status kasus','Outcome'];
     var h='<div class="v125-matrix-card"><div class="v125-matrix-head"><div><h3 style="margin:0">Jawaban Kuesioner Lengkap</h3><div class="small">'+(inv?esc125(invName125(inv)):'Semua investigasi')+' · '+allRows.length+' rekaman sumber · '+keys.length+' kolom jawaban kuesioner</div></div><button type="button" id="v125Export">Ekspor tabel lengkap CSV</button></div>';
-    h+='<div class="notice">Tabel ini memuat seluruh jawaban yang tersimpan pada setiap rekaman sumber. Kolom dapat digeser ke samping; nilai kosong ditampilkan sebagai “—”. Rekaman sumber tidak digabung atau dihapus.</div>';
-    h+='<div class="v125-matrix-scroll"><table class="report-table v125-matrix"><thead><tr><th>No.</th><th>Investigasi</th>'+core.map(function(k){return '<th>'+esc125(k)+'</th>'}).join('')+keys.map(function(k){return '<th>'+esc125(k)+'</th>'}).join('')+'</tr></thead><tbody>';
+    h+='<div class="notice">Tabel ini memuat seluruh jawaban yang tersimpan pada setiap rekaman sumber. Kolom dapat digeser ke samping; nilai kosong ditampilkan sebagai “—”. Tombol Hapus pada salah satu rekaman akan menghapus seluruh rekaman sumber dengan ID Kasus dan investigasi yang sama setelah konfirmasi server STAGING.</div>';
+    h+='<div class="v125-matrix-scroll"><table class="report-table v125-matrix"><thead><tr><th>No.</th><th>Investigasi</th>'+core.map(function(k){return '<th>'+esc125(k)+'</th>'}).join('')+keys.map(function(k){return '<th>'+esc125(k)+'</th>'}).join('')+'<th>Aksi</th></tr></thead><tbody>';
     h+=allRows.map(function(c,i){
       var iv=invs.find(function(x){return String(x.id)===String(c.investigationId)});
-      return '<tr><td>'+(i+1)+'</td><td>'+esc125(iv?invName125(iv):c.investigationId||'—')+'</td>'+core.map(function(k){var v=k==='Outcome'?c.outcome:coreValue125(c,k);return '<td>'+esc125(v||'—')+'</td>'}).join('')+keys.map(function(k){var a=c.answers&&typeof c.answers==='object'?c.answers:{};return '<td>'+esc125(val125(a[k])||'—')+'</td>'}).join('')+'</tr>';
-    }).join('')||'<tr><td colspan="'+(core.length+keys.length+2)+'">Belum ada rekaman kasus pada investigasi ini.</td></tr>';
+      return '<tr><td>'+(i+1)+'</td><td>'+esc125(iv?invName125(iv):c.investigationId||'—')+'</td>'+core.map(function(k){var v=k==='Outcome'?c.outcome:coreValue125(c,k);return '<td>'+esc125(v||'—')+'</td>'}).join('')+keys.map(function(k){var a=c.answers&&typeof c.answers==='object'?c.answers:{};return '<td>'+esc125(val125(a[k])||'—')+'</td>'}).join('')+'<td><button type="button" class="danger" data-v192-delete="'+esc125(String(c.id||'')+'::'+String(c.investigationId||''))+'">Hapus kasus</button></td></tr>';
+    }).join('')||'<tr><td colspan="'+(core.length+keys.length+3)+'">Belum ada rekaman kasus pada investigasi ini.</td></tr>';
     h+='</tbody></table></div></div>';
     host.innerHTML=h;
+    host.querySelectorAll('[data-v192-delete]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.deleteCaseGroupRecovery192(btn.getAttribute('data-v192-delete'))}});
     var ex=E('v125Export');if(ex)ex.onclick=function(){
       var cols=['No.','Investigasi'].concat(core,keys);
       var csv=[cols].concat(allRows.map(function(c,i){var iv=invs.find(function(x){return String(x.id)===String(c.investigationId)});return [i+1,iv?invName125(iv):c.investigationId||'',...core.map(function(k){return k==='Outcome'?c.outcome:coreValue125(c,k)}),...keys.map(function(k){return val125(c.answers&&c.answers[k])})]}));
@@ -5127,7 +5170,7 @@ try{installBrandingV183();}catch(e){}
   if(typeof oldCases==='function')window.cases=function(){var r=oldCases.apply(this,arguments);if(E('kasus'))setTimeout(function(){renderInvestigationPicker125();renderMatrix125()},30);return r};
   document.addEventListener('DOMContentLoaded',function(){setTimeout(install125,900)});
   [1500,3500,7000].forEach(function(ms){setTimeout(install125,ms)});
-  window.GORUT_V125={version:'v125',features:['canonical questionnaire deduplication','clickable investigation selector','full source-record answer matrix','CSV export of all stored answers','no deletion or merge of case records']};
+  window.GORUT_V125={version:'v192',features:['canonical questionnaire deduplication','clickable investigation selector','full source-record answer matrix','CSV export of all stored answers','owner-scoped server-confirmed case-group deletion']};
 })();
 
 
