@@ -214,8 +214,8 @@ assert.match(app, /c\.answers=answers;coreFromAnswers\(c,c\.answers\)/,
   'all integrated questionnaire answers must be retained on each case');
 assert.match(app, /questionnaire_response:\{\.\.\.\(c\.answers\|\|\{\}\)/,
   'all integrated answers must be included in backend case synchronization');
-assert.match(app, /resolveQuestionnaireRBI\(\)/,
-  'RBI location identification must remain available from the integrated questionnaire');
+assert.match(app, /onclick="resolveModalRBI\(\)"/,
+  'RBI location identification must remain available from the single canonical address form');
 const v70Start = app.indexOf('/* ==================== v70 — OTOMATISASI DESA');
 const v70End = app.indexOf('/* ==================== v72 — DEMOGRAPHY', v70Start);
 assert.ok(v70Start >= 0 && v70End > v70Start, 'village-to-Puskesmas integration module must exist');
