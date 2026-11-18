@@ -12,9 +12,13 @@ const sw = read('sw.js');
 
 assert.match(index, /premium\.css\?v=158/, 'main page must load the premium release stylesheet');
 assert.match(index, /favicon\.svg/, 'main page must declare the branded favicon');
-assert.match(index, /app\.js\?v=184/, 'main page must use the release cache-busted application script');
-assert.match(sw, /gorut-outbreak-ai-final-v184/, 'service worker cache version must match the release');
-assert.match(sw, /app\.js\?v=184/, 'service worker must precache the release application script');
+const appVersion = index.match(/app\.js\?v=(\d+)/)?.[1];
+assert.ok(appVersion, 'main page must declare a cache-busted application script version');
+assert.ok(
+  sw.includes('gorut-outbreak-ai-final-v' + appVersion) || sw.includes('gorut-outbreak-ai-staging-v' + appVersion),
+  'service worker cache version must match the application version'
+);
+assert.ok(sw.includes('app.js?v=' + appVersion), 'service worker must precache the matching application script');
 assert.match(sw, /premium\.css\?v=158/, 'service worker must precache premium styling');
 const appJs = read('app.js');
 const publicSurvey = read('public_survey.html');
@@ -24,6 +28,15 @@ assert.match(appJs, /foodInvestigation:r\.metadata\?\.food_investigation\|\|null
 assert.match(appJs, /food_investigation:inv\.foodInvestigation\|\|null/, 'new food-poisoning investigations must persist their detail payload');
 assert.match(appJs, /surveyAnswerByResponseId\.set\(String\(response\.id\),response\.payload\)/, 'stored questionnaire answers must be mapped to cases by exact response ID');
 assert.doesNotMatch(appJs, /from\('survey_responses'\)\.select\('response_id,payload'\)/, 'app must not query a nonexistent response_id table column');
+
+// STAGING v190: address fields appear once in the case form, while all original
+// questionnaire answer keys continue to receive the canonical address values.
+assert.match(appJs, /function isAddressQuestion45\(label\)/, 'address-question classifier must be present');
+assert.match(appJs, /filter\(x=>!isAddressQuestion45\(x\.q\.label\)\)/, 'duplicate address questions must not be rendered a second time');
+for (const key of ["alamatlengkap:'caddress'", "provinsi:'cprov'", "kabupaten:'ckab'", "kecamatan:'ckec'", "desakelurahan:'cdesa'", "latitude:'clat'", "longitude:'clng'"]) {
+  assert.ok(appJs.includes(key), 'canonical address input must map to its original questionnaire answer key: ' + key);
+}
+assert.match(appJs, /if\(id&&el&&q\.id\)a\[q\.id\]=el\.value/, 'canonical address values must be retained in case.answers');
 
 assert.match(appJs, /Inisial nama \(tanpa nama lengkap\)/, 'master questionnaire must request initials rather than full names');
 assert.match(publicSurvey, /Isi inisial saja, jangan tuliskan nama lengkap\./, 'public questionnaire must guide respondents to enter initials');

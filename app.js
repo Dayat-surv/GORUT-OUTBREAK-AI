@@ -2082,9 +2082,10 @@ function installLogin(){
   // ---------- Questionnaire integration ----------
   function qId(q,i){return 'v45q_'+(q.id||('Q_'+i)).replace(/[^a-zA-Z0-9_]/g,'_')+'_'+i}
   function qField(q,i,answers){const id=qId(q,i),v=answers?.[q.id]??answers?.[q.label]??'';if(q.type==='choice')return '<select id="'+id+'"><option value="">Pilih...</option>'+((q.options||[]).map(o=>'<option '+(String(o)===String(v)?'selected':'')+'>'+esc45(o)+'</option>').join(''))+'</select>';if(q.type==='textarea')return '<textarea id="'+id+'" rows="2">'+esc45(v)+'</textarea>';return '<input id="'+id+'" type="'+(q.type==='number'?'number':q.type==='date'?'date':'text')+'" value="'+esc45(v)+'">'}
-  function collectQ45(){const qs=db.questions||[],a={};qs.forEach((q,i)=>{if(!q.id)q.id='Q_'+i;const e=document.getElementById(qId(q,i));if(e)a[q.id]=e.value;});return a}
+  function isAddressQuestion45(label){const k=String(label||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');return /^(alamat|alamatlengkap|alamatrumah|provinsi|prov|kabupaten|kabupatenkota|kecamatan|kec|desa|desakelurahan|kelurahan|latitude|longitude|lintang|bujur)$/.test(k)}
+  function collectQ45(){const qs=db.questions||[],a={};qs.forEach((q,i)=>{if(!q.id)q.id='Q_'+i;const e=document.getElementById(qId(q,i));if(e)a[q.id]=e.value;});const addressInputs={alamat:'caddress',alamatlengkap:'caddress',alamatrumah:'caddress',provinsi:'cprov',prov:'cprov',kabupaten:'ckab',kabupatenkota:'ckab',kecamatan:'ckec',kec:'ckec',desa:'cdesa',desakelurahan:'cdesa',kelurahan:'cdesa',latitude:'clat',lintang:'clat',longitude:'clng',bujur:'clng'};qs.forEach(q=>{const k=String(q.label||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');const id=addressInputs[k];const el=id&&document.getElementById(id);if(id&&el&&q.id)a[q.id]=el.value;});return a}
   function ensureQuestionIds(){(db.questions||[]).forEach((q,i)=>{if(!q.id)q.id='Q_'+String(i+1).padStart(3,'0')});}
-  function questionnaireCasePanel(c={}){ensureQuestionIds();const qs=db.questions||[];if(!qs.length)return '<div class="notice">Belum ada kuesioner aktif. Buka menu Kuesioner → pilih penyakit → Muat Kuesioner.</div>';return '<div class="card" style="margin-top:10px;border-left:4px solid #1769aa"><h4>📋 Kuesioner Epidemiologi Terintegrasi</h4><p class="small">Semua jawaban disimpan pada <code>case.answers</code>, digunakan oleh variable dictionary/analisis dan ikut dibawa ke sinkronisasi backend.</p>'+qs.map((q,i)=>'<div class="field"><label>'+esc45((i+1)+'. '+q.label)+(q.required?' *':'')+'</label>'+qField(q,i,c.answers||{})+'<small class="small">'+esc45(q.cat||'PE')+' · '+esc45(q.version||'')+'</small></div>').join('')+'</div>'}
+  function questionnaireCasePanel(c={}){ensureQuestionIds();const qs=db.questions||[];if(!qs.length)return '<div class="notice">Belum ada kuesioner aktif. Buka menu Kuesioner → pilih penyakit → Muat Kuesioner.</div>';const visible=qs.map((q,i)=>({q,i})).filter(x=>!isAddressQuestion45(x.q.label));return '<div class="card" style="margin-top:10px;border-left:4px solid #1769aa"><h4>📋 Kuesioner Epidemiologi Terintegrasi</h4><p class="small">Semua jawaban disimpan pada <code>case.answers</code> untuk variable dictionary, analisis, dan sinkronisasi backend. Isian alamat dan wilayah administratif dikelola satu kali pada bagian Alamat & Wilayah Administratif di atas; nilainya tetap disalin ke kunci jawaban kuesioner yang sesuai.</p>'+visible.map(({q,i})=>'<div class="field"><label>'+esc45((i+1)+'. '+q.label)+(q.required?' *':'')+'</label>'+qField(q,i,c.answers||{})+'<small class="small">'+esc45(q.cat||'PE')+' · '+esc45(q.version||'')+'</small></div>').join('')+'</div>'}
   function coreFromAnswers(c,a){const find=(...labels)=>{for(const q of (db.questions||[])){if(labels.some(l=>String(q.label).toLowerCase()===l.toLowerCase())){const v=a[q.id];if(v!==undefined&&v!=='')return v}}return ''};
     if(!c.id)c.id=find('ID Kasus'); if(!c.name)c.name=find('Nama lengkap'); if(!c.age)c.age=Number(find('Umur'))||0; if(!c.sex)c.sex=find('Jenis kelamin'); if(!c.onset)c.onset=find('Tanggal onset gejala'); if(!c.status)c.status=find('Status kasus'); if(!c.outcome)c.outcome=find('Keadaan akhir','Outcome','Status kesehatan');
     c.address=c.address||find('Alamat lengkap');c.desa=c.desa||find('Desa/Kelurahan');c.kec=c.kec||find('Kecamatan');c.kab=c.kab||find('Kabupaten');c.prov=c.prov||find('Provinsi');c.pkm=c.pkm||find('Puskesmas');c.lat=c.lat??(Number(find('Latitude'))||null);c.lng=c.lng??(Number(find('Longitude'))||null);return c;
@@ -5835,4 +5836,66 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     return result;
   };
   window.GORUT_V188={version:'v188',feature:'save-case-then-confirm-staging-sync',preservesCaseAnswers:true,productionChanges:false};
+})();
+
+
+/* ==================== v189 STAGING — CASE EDIT SERVER PERSISTENCE ====================
+   Keep case edits on the same server-backed path as case creation.
+   Fail closed: do not report a successful edit unless Supabase confirms the upsert.
+   STAGING branch only; no production configuration or data changes.
+*/
+(function(){
+  const previousUpd=window.upd;
+  if(typeof previousUpd!=='function') return;
+  const cloneCase=(c)=>JSON.parse(JSON.stringify(c));
+  window.upd=async function(id){
+    const c=(window.db?.cases||[]).find(x=>String(x.id)===String(id));
+    if(!c) return;
+    const before=cloneCase(c);
+    await previousUpd.apply(this,arguments);
+    const current=(window.db?.cases||[]).find(x=>String(x.id)===String(id));
+    if(!current) return;
+    try{
+      const sb=await backendClient();
+      if(!sb) throw new Error('Backend STAGING tidak tersedia; perubahan tidak dapat diverifikasi di server.');
+      const auth=await sb.auth.getUser();
+      if(auth.error) throw auth.error;
+      const user=auth.data?.user;
+      if(!user) throw new Error('Sesi Supabase tidak ditemukan. Silakan login kembali.');
+      const investigation=(window.db?.investigations||[]).find(x=>String(x.id)===String(current.investigationId));
+      if(!investigation) throw new Error('Investigasi induk kasus tidak ditemukan.');
+      const serverId=current.serverId||(window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():uuidFrom(String(Date.now())+Math.random()+Math.random()));
+      const row={
+        id:serverId,
+        owner_id:user.id,
+        investigation_id:investigation.serverId||uuidFrom(current.investigationId),
+        case_code:String(current.id||''),
+        full_name:current.name||'',
+        age:Number(current.age)||null,
+        sex:current.sex||null,
+        onset_date:current.onset||null,
+        status:current.status||null,
+        outcome:current.outcome||null,
+        latitude:current.lat||null,
+        longitude:current.lng||null,
+        questionnaire_response:{...(current.answers||{}),foodCase:current.foodCase||null,priority:current.priority||null}
+      };
+      const result=await sb.from('cases').upsert(row,{onConflict:'id'});
+      if(result.error) throw result.error;
+      current.serverId=serverId;
+      if(typeof save==='function') save();
+      if(typeof cases==='function') cases();
+      window.GORUT_CASE_EDIT_SYNC_RESULT={success:true,caseId:String(id),serverId,at:new Date().toISOString()};
+      console.info('v189: edit kasus terkonfirmasi tersimpan di Supabase STAGING.',window.GORUT_CASE_EDIT_SYNC_RESULT);
+    }catch(error){
+      const index=(window.db?.cases||[]).findIndex(x=>String(x.id)===String(id));
+      if(index>=0) window.db.cases[index]=before;
+      if(typeof save==='function') save();
+      if(typeof cases==='function') cases();
+      window.GORUT_CASE_EDIT_SYNC_RESULT={success:false,caseId:String(id),error:String(error?.message||error),at:new Date().toISOString()};
+      console.error('v189: edit kasus gagal disimpan ke Supabase STAGING.',error);
+      alert('Perubahan kasus TIDAK tersimpan ke server STAGING. Data lokal dikembalikan ke kondisi sebelum edit.\n\n'+String(error?.message||error));
+    }
+  };
+  window.GORUT_CASE_EDIT_SYNC_VERSION='v189';
 })();
