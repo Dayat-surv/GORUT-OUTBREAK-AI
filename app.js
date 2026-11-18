@@ -5241,7 +5241,7 @@ try{installBrandingV184();}catch(e){}
             kecamatan:'kecamatan',kec:'kecamatan',
             kabupaten:'kabupaten',kabupatenkota:'kabupaten',
             provinsi:'provinsi',prov:'provinsi',
-            puskesmas:fasilitaskesehatan:
+            puskesmas:'puskesmas',fasilitaskesehatan:'puskesmas',
             tanggalonset:'tanggalonset',tanggalonsetgejala:'tanggalonset',tanggalonsetdemam:'tanggalonset',
           };
           if(aliases[n])return aliases[n];
