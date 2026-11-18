@@ -1902,7 +1902,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
       '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
-      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v192</div>'+
+      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v193</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
@@ -4834,7 +4834,7 @@ try{installBrandingV183();}catch(e){}
     if(target)new MutationObserver(function(){if(target.innerHTML!==lastHtml)schedule()}).observe(target,{childList:true,subtree:true,characterData:true});
   }
   [100,800,2200,4500,8000].forEach(function(ms){setTimeout(schedule,ms)});
-  window.GORUT_V115={version:'v192',features:['one main row per case ID and investigation','record-level detail for every associated source row','preserve conflicting questionnaire answers','owner-scoped server-confirmed case-group deletion']};
+  window.GORUT_V115={version:'v193',features:['one main row per case ID and investigation','record-level detail for every associated source row','preserve conflicting questionnaire answers','owner-scoped server-confirmed case-group deletion']};
 })();
 
 
@@ -5170,7 +5170,7 @@ try{installBrandingV183();}catch(e){}
   if(typeof oldCases==='function')window.cases=function(){var r=oldCases.apply(this,arguments);if(E('kasus'))setTimeout(function(){renderInvestigationPicker125();renderMatrix125()},30);return r};
   document.addEventListener('DOMContentLoaded',function(){setTimeout(install125,900)});
   [1500,3500,7000].forEach(function(ms){setTimeout(install125,ms)});
-  window.GORUT_V125={version:'v192',features:['canonical questionnaire deduplication','clickable investigation selector','full source-record answer matrix','CSV export of all stored answers','owner-scoped server-confirmed case-group deletion']};
+  window.GORUT_V125={version:'v193',features:['canonical questionnaire deduplication','clickable investigation selector','full source-record answer matrix','CSV export of all stored answers','owner-scoped server-confirmed case-group deletion']};
 })();
 
 
@@ -5926,7 +5926,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
         outcome:current.outcome||null,
         latitude:current.lat||null,
         longitude:current.lng||null,
-        questionnaire_response:{...(current.answers||{}),foodCase:current.foodCase||null,priority:current.priority||null}
+        questionnaire_response:{...(current.answers||{}),foodCase:current.foodCase||null,priority:current.priority||null,__gorut_case_meta_v1:{address:current.address??'',prov:current.prov??current.admin?.prov??'',kab:current.kab??current.admin?.kab??'',kec:current.kec??current.admin?.kec??'',desa:current.desa??current.admin?.desa??'',symptoms:current.symptoms??'',admin:current.admin&&typeof current.admin==='object'?{...current.admin}:{}}}
       };
       const result=await sb.from('cases').upsert(row,{onConflict:'id'});
       if(result.error) throw result.error;
