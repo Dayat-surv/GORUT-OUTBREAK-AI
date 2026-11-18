@@ -1902,7 +1902,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
       '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
-      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v196</div>'+
+      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v197</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
@@ -6084,4 +6084,61 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     };
   }
   window.GORUT_CASE_ID_AUTOFILL_VERSION='v196';
+})();
+
+
+/* ================= STAGING v197 — EXPLICIT SUPABASE SYNC FEEDBACK =================
+   Wrap the final sync entry point so success, failure, safety-stop and unconfirmed
+   outcomes are visible to the operator. Never converts an unconfirmed sync to success.
+   Does not modify records, schemas, RLS, or production configuration.
+*/
+(function(){
+  'use strict';
+  var priorSync=window.syncNow;
+  if(typeof priorSync!=='function') return;
+  window.syncNow=async function(){
+    window.GORUT_LAST_SYNC_RESULT=null;
+    try{
+      var result=await priorSync.apply(this,arguments);
+      var status=window.GORUT_LAST_SYNC_RESULT;
+      var badge=document.getElementById('backendBadge');
+      var detail=document.getElementById('backendDetail');
+      if(result===false || (status && status.success!==true)){
+        if(!status){
+          status={ok:0,fail:1,success:false,reason:'sync-safety-check-or-unconfirmed',at:new Date().toISOString()};
+          window.GORUT_LAST_SYNC_RESULT=status;
+        }
+        var failed=Number.isFinite(Number(status.fail))?Number(status.fail):'tidak diketahui';
+        if(badge)badge.textContent='Backend: sinkronisasi belum berhasil';
+        if(detail)detail.textContent='Sinkronisasi belum berhasil/terkonfirmasi. Berhasil: '+(status.ok||0)+'; gagal: '+failed+'. Periksa Console dan jangan logout dahulu.';
+        alert('Sinkronisasi Supabase STAGING BELUM BERHASIL atau belum terkonfirmasi. Berhasil: '+(status.ok||0)+'; gagal: '+failed+'. Periksa detail backend/Console. Data lokal tidak dihapus.');
+        return result;
+      }
+      if(status && status.success===true){
+        if(badge)badge.textContent='Backend: tersinkron';
+        if(detail)detail.textContent='Sinkronisasi selesai dan dikonfirmasi. Berhasil: '+status.ok+'; gagal: 0.';
+        alert('Sinkronisasi Supabase STAGING berhasil dikonfirmasi. Berhasil: '+status.ok+'; gagal: 0.');
+        return result;
+      }
+      // Base sync can return early (e.g. backend/session unavailable) without a result.
+      // Treat this as unconfirmed, never as success.
+      status={ok:0,fail:1,success:false,reason:'no-completion-result',at:new Date().toISOString()};
+      window.GORUT_LAST_SYNC_RESULT=status;
+      if(badge)badge.textContent='Backend: hasil sinkronisasi belum terkonfirmasi';
+      if(detail)detail.textContent='Fungsi sinkronisasi berhenti sebelum memberikan hasil. Periksa konfigurasi dan sesi Supabase; antrean lokal dipertahankan.';
+      alert('Sinkronisasi Supabase STAGING belum dapat dikonfirmasi. Tidak ada status berhasil yang diterima. Periksa sesi/configuration dan Console.');
+      return result;
+    }catch(error){
+      var message=error&&error.message?error.message:String(error);
+      window.GORUT_LAST_SYNC_RESULT={ok:0,fail:1,success:false,reason:'exception',error:message,at:new Date().toISOString()};
+      var badge=document.getElementById('backendBadge');
+      var detail=document.getElementById('backendDetail');
+      if(badge)badge.textContent='Backend: sinkronisasi gagal';
+      if(detail)detail.textContent='Sinkronisasi gagal: '+message+'. Data lokal dan antrean tidak dianggap tersinkron.';
+      console.error('GORUT STAGING v197 sync feedback:',error);
+      alert('Sinkronisasi Supabase STAGING GAGAL.\n\n'+message+'\n\nData lokal tetap dipertahankan; jangan logout dahulu.');
+      return false;
+    }
+  };
+  window.GORUT_SYNC_FEEDBACK_VERSION='v197';
 })();
