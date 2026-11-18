@@ -2127,7 +2127,7 @@ function installLogin(){
   const oldEdit=window.editCase;
   window.editCase=function(id){
     const c=db.cases.find(x=>String(x.id)===String(id));if(!c)return;const diseaseId=c.disease||act()?.disease;ensureCaseQuestionnaire(diseaseId);const food=diseaseId==='keracunan-pangan',fc=c.foodCase||{},extraPriority=priorityPanel(diseaseId,c.priority||{}),extraFood=food?'<div class="card" style="margin-top:10px"><h4>🍱 Detail Paparan Keracunan Pangan</h4>'+f('Makanan/minuman dikonsumsi','caseFood','text',fc.food||'')+f('Waktu konsumsi','caseConsumedAt','datetime-local',fc.consumedAt||'')+f('Waktu onset','caseOnsetTime','datetime-local',fc.onsetAt||'')+f('Masa inkubasi (jam)','caseIncubation','number',fc.incubationHours??'')+f('Sumber pangan','caseFoodSource','text',fc.foodSource||'')+f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')+f('Spesimen klinis','caseClinicalSpecimen','text',fc.clinicalSpecimen||'')+'</div>':'';
-    modal('<h2>Edit Kasus '+esc(c.id)+'</h2>'+hiddenCoreInputs45(c)+questionnaireCasePanel(c)+extraFood+extraPriority+'<button type="button" onclick="closeAppModal()">Tutup</button><button class="primary" onclick="upd(\\''+esc45(c.id)+'\\')">Simpan Perubahan</button>');
+    modal('<h2>Edit Kasus '+esc(c.id)+'</h2>'+hiddenCoreInputs45(c)+questionnaireCasePanel(c)+extraFood+extraPriority+'<button type="button" onclick="closeAppModal()">Tutup</button><button class="primary" onclick="upd(\''+esc45(c.id)+'\')">Simpan Perubahan</button>');
     const h=document.getElementById('caseHospitalized');if(h)h.value=fc.hospitalized||'Tidak';
   };
   const oldUpd=window.upd;
