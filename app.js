@@ -2399,7 +2399,9 @@ function installLogin(){
     const oldSave=window.saveCase;
     if(typeof oldSave==='function')window.saveCase=async function(){await oldSave();const c=db.cases[db.cases.length-1];if(c){syncCoreRisk46(c);queueSync&&queueSync('cases');save();}try{cases()}catch(e){}};
     const oldUpd=window.upd;
-    if(typeof oldUpd==='function')window.upd=async function(id){await oldUpd(id);const c=db.cases.find(x=>String(x.id)===String(id));if(c){syncCoreRisk46(c);save();}try{cases()}catch(e){}};
+    // STAGING v189 owns server persistence for case edits. Do not let this
+    // delayed v46 enhancer replace its wrapper after page load/render.
+    if(typeof oldUpd==='function' && window.GORUT_CASE_EDIT_SYNC_VERSION!=='v189')window.upd=async function(id){await oldUpd(id);const c=db.cases.find(x=>String(x.id)===String(id));if(c){syncCoreRisk46(c);save();}try{cases()}catch(e){}};
   }
 
   function fieldOptions46(){
@@ -5903,6 +5905,9 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     await previousUpd.apply(this,arguments);
     const current=(window.db?.cases||[]).find(x=>String(x.id)===String(id));
     if(!current) return;
+    // Preserve v46 derived risk fields without allowing its delayed wrapper
+    // to replace this server-persistence path.
+    if(typeof window.syncCoreRisk46==='function') window.syncCoreRisk46(current);
     try{
       const sb=await backendClient();
       if(!sb) throw new Error('Backend STAGING tidak tersedia; perubahan tidak dapat diverifikasi di server.');
