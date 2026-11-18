@@ -3926,7 +3926,9 @@ try{installBrandingV184();}catch(e){}
   function mapping(desa){return byDesa.get(norm(desa))||null}
   function field(id){return document.getElementById(id)}
   function questionInput(label){
-    const wanted=norm(label),q=(db.questions||[]).find(x=>norm(x.label)===wanted);
+    const wanted=norm(label),directIds={'desakelurahan':'cdesa','desa':'cdesa','kecamatan':'ckec','kec':'ckec','kabupaten':'ckab','kabupatenkota':'ckab','provinsi':'cprov','prov':'cprov','latitude':'clat','longitude':'clng'};
+    const directId=directIds[wanted],direct=directId&&field(directId);if(direct)return direct;
+    const q=(db.questions||[]).find(x=>norm(x.label)===wanted);
     if(!q)return null;
     const i=db.questions.indexOf(q),id='v45q_'+String(q.id||'Q_'+i).replace(/[^a-zA-Z0-9_]/g,'_')+'_'+i;
     return field(id);
