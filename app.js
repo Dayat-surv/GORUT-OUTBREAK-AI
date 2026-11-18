@@ -5395,9 +5395,25 @@ try{installBrandingV184();}catch(e){}
       if(!c.serverId)throw new Error('ID server rekaman sumber tidak tersedia; pembaruan otomatis dibatalkan untuk mencegah duplikasi.');
       var inv=(window.db.investigations||[]).find(function(x){return String(x.id)===String(c.investigationId)});
       if(!inv||!inv.serverId)throw new Error('ID server investigasi tidak tersedia; pembaruan otomatis dibatalkan.');
-      var row={id:c.serverId,owner_id:auth.data.user.id,investigation_id:inv.serverId,case_code:String(c.id||''),full_name:c.name||'',age:Number(c.age)||null,sex:c.sex||null,onset_date:c.onset||null,status:c.status||null,outcome:c.outcome||null,latitude:c.lat||null,longitude:c.lng||null,questionnaire_response:{...(c.answers||{}),foodCase:c.foodCase||null,priority:c.priority||null}};
-      var result=await sb.from('cases').upsert(row,{onConflict:'id'});
+      /* Preserve server-side questionnaire keys and store operational address/geography
+         in the reserved metadata key consumed by v108 hydration. Raw Q_* answers remain untouched. */
+      var current=await sb.from('cases').select('questionnaire_response').eq('id',String(c.serverId)).eq('owner_id',auth.data.user.id).single();
+      if(current.error)throw new Error(current.error.message);
+      var serverAnswers=current.data&&current.data.questionnaire_response&&typeof current.data.questionnaire_response==='object'&&!Array.isArray(current.data.questionnaire_response)?current.data.questionnaire_response:{};
+      var localAnswers=c.answers&&typeof c.answers==='object'&&!Array.isArray(c.answers)?c.answers:{};
+      var mergedAnswers=Object.assign({},serverAnswers,localAnswers);
+      var priorMeta=serverAnswers.__gorut_case_meta_v1&&typeof serverAnswers.__gorut_case_meta_v1==='object'?serverAnswers.__gorut_case_meta_v1:{};
+      mergedAnswers.__gorut_case_meta_v1=Object.assign({},priorMeta,{
+        address:c.address??'',prov:c.prov??c.admin&&c.admin.prov??'',
+        kab:c.kab??c.admin&&c.admin.kab??'',kec:c.kec??c.admin&&c.admin.kec??'',
+        desa:c.desa??c.admin&&c.admin.desa??'',symptoms:c.symptoms??'',
+        updatedAt:c.updatedAt??new Date().toISOString(),name:c.name??'',
+        admin:Object.assign({},priorMeta.admin||{},c.admin||{})
+      });
+      var patch={full_name:c.name||'',age:Number(c.age)||null,sex:c.sex||null,onset_date:c.onset||null,status:c.status||null,outcome:c.outcome||null,latitude:c.lat??null,longitude:c.lng??null,questionnaire_response:Object.assign({},mergedAnswers,{foodCase:c.foodCase||null,priority:c.priority||null})};
+      var result=await sb.from('cases').update(patch).eq('id',String(c.serverId)).eq('owner_id',auth.data.user.id).select('id').single();
       if(result.error)throw new Error(result.error.message);
+      if(!result.data||!result.data.id)throw new Error('Tidak ada rekaman server yang diperbarui.');
       var pending=Array.isArray(syncQueue)?syncQueue.findIndex(function(x){return x.entity==='cases'}):-1;
       if(pending>=0){syncQueue.splice(pending,1);localStorage.setItem('gorut-sync-queue',JSON.stringify(syncQueue));}
       if(typeof updateSyncBadge==='function')updateSyncBadge();
@@ -5425,7 +5441,7 @@ try{installBrandingV184();}catch(e){}
   function val125(v){if(v===null||v===undefined||v==='')return '';if(Array.isArray(v))return v.map(val125).join(', ');if(typeof v==='object')return JSON.stringify(v);return String(v)}
   function answerKeys125(c){
     var ans=c&&c.answers&&typeof c.answers==='object'?c.answers:{};
-    return Object.keys(ans).filter(function(k){return k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId'});
+    return Object.keys(ans).filter(function(k){return k!=='foodCase'&&k!=='priority'&&k!=='disease'&&k!=='diseaseId'&&k!=='__gorut_case_meta_v1'});
   }
   function coreValue125(c,k){
     var a=c.answers&&typeof c.answers==='object'?c.answers:{};
