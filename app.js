@@ -1902,7 +1902,7 @@ setTimeout(()=>{try{injectDeletes();v30RefreshAdmin()}catch(e){}},1200);
     l.innerHTML=
       '<div class="loginbox v45-loginbox" style="text-align:center">'+
       '<div class="login-brand-logos"><img src="logo-gorontalo-utara-official.png" onerror="this.onerror=null;this.src=&quot;logo-gorontalo-utara.svg&quot;" alt="Logo Kabupaten Gorontalo Utara"><img src="logo-surveilans-epidemiologi-official.png" onerror="this.onerror=null;this.src=&quot;logo-surveilans-epidemiologi.svg&quot;" alt="Logo Surveilans Epidemiologi"></div>'+
-      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v195</div>'+
+      '<div class="premium-badge">🛡️ GORUT-OUTBREAK AI · v196</div>'+
       '<h2 style="margin:12px 0 4px">Login Pengguna</h2>'+
       '<p class="small">Platform investigasi epidemiologi, PE/KLB, surveilans dan analisis epidemiologi.</p>'+
       (msg?'<div class="notice" style="border-left-color:#b42318">'+esc45(msg)+'</div>':'')+
@@ -6044,9 +6044,9 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   }
   function writeId(code){
     var hidden=document.getElementById('cid');
-    if(hidden){hidden.value=code;hidden.setAttribute('data-auto-case-id','v195');}
+    if(hidden){hidden.value=code;hidden.setAttribute('data-auto-case-id','v196');}
     var visible=idQuestionInput();
-    if(visible){visible.value=code;visible.setAttribute('data-auto-case-id','v195');}
+    if(visible){visible.value=code;visible.setAttribute('data-auto-case-id','v196');}
     return {hidden:!!hidden,questionnaire:!!visible};
   }
   window.GORUT_NEXT_CASE_CODE=nextId;
@@ -6060,7 +6060,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       if(inv!==undefined&&inv!==null){
         var code=nextId(inv);
         var fields=writeId(code);
-        window.GORUT_CASE_ID_AUTOFILL_RESULT={version:'v195',caseId:code,investigationId:String(inv),fields,at:new Date().toISOString()};
+        window.GORUT_CASE_ID_AUTOFILL_RESULT={version:'v196',caseId:code,investigationId:String(inv),fields,at:new Date().toISOString()};
         if(!fields.questionnaire)console.warn('v195: ID question input was not found; verify questionnaire ID label/configuration.');
       }
       return result;
@@ -6078,5 +6078,5 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       return result;
     };
   }
-  window.GORUT_CASE_ID_AUTOFILL_VERSION='v195';
+  window.GORUT_CASE_ID_AUTOFILL_VERSION='v196';
 })();
