@@ -34,12 +34,14 @@ const singleFormStart = appJs.indexOf('v191 — SINGLE INTEGRATED CASE FORM');
 const singleFormEnd = appJs.indexOf('const oldLoad=window.loadDiseaseQuestions', singleFormStart);
 assert.ok(singleFormStart >= 0 && singleFormEnd > singleFormStart, 'single integrated case form override must be present');
 const singleForm = appJs.slice(singleFormStart, singleFormEnd);
-assert.doesNotMatch(singleForm, /addressFields|f\\('Nama'|f\\('Umur'|f\\('Jenis kelamin'|f\\('Onset'|f\\('Status'|f\\('Outcome'/, 'separate identity/address form fields must not be rendered');
-assert.match(appJs, /function hiddenCoreInputs45/, 'hidden compatibility fields must preserve existing save/update behavior');
-assert.match(appJs, /function syncCoreFieldsFromAnswers45/, 'core case fields must be derived from integrated questionnaire answers');
-assert.match(appJs, /normQuestion45\\(q\\.label\\)==='idkasus'.*readonly/, 'case ID must be generated and read-only in the integrated questionnaire');
-assert.match(appJs, /const answers=collectQ45\\(\\);syncCoreFieldsFromAnswers45\\(answers,false\\)/, 'new cases must derive core fields from questionnaire answers');
-assert.match(appJs, /c\\.answers=\\{\\.\\.\\.priorAnswers,\\.\\.\\.a\\}/, 'case edits must preserve old answer keys and merge current questionnaire answers');
+for (const obsolete of ["addressFields", "f('Nama'", "f('Umur'", "f('Jenis kelamin'", "f('Onset'", "f('Status'", "f('Outcome'"]) {
+  assert.ok(!singleForm.includes(obsolete), 'separate identity/address form field must not be rendered: ' + obsolete);
+}
+assert.ok(appJs.includes('function hiddenCoreInputs45'), 'hidden compatibility fields must preserve existing save/update behavior');
+assert.ok(appJs.includes('function syncCoreFieldsFromAnswers45'), 'core case fields must be derived from integrated questionnaire answers');
+assert.ok(appJs.includes("normQuestion45(q.label)==='idkasus'?'<input id='") && appJs.includes('" readonly>'), 'case ID must be generated and read-only in the integrated questionnaire');
+assert.ok(appJs.includes('const answers=collectQ45();syncCoreFieldsFromAnswers45(answers,false)'), 'new cases must derive core fields from questionnaire answers');
+assert.ok(appJs.includes('c.answers={...priorAnswers,...a}'), 'case edits must preserve old answer keys and merge current questionnaire answers');
 for (const question of ["['Sosiodemografi','Alamat lengkap','textarea']", "['Sosiodemografi','Desa/Kelurahan','text']", "['Sosiodemografi','Kecamatan','text']", "['Sosiodemografi','Kabupaten','text']", "['Sosiodemografi','Provinsi','text']", "['Lokasi','Latitude','number']", "['Lokasi','Longitude','number']"]) {
   assert.ok(appJs.includes(question), 'integrated questionnaire must retain core address/location question: ' + question);
 }
