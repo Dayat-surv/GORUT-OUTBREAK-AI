@@ -2402,12 +2402,13 @@ function installLogin(){
     const values=mode==='edit'?{en:name,ea:age,es:sex,eo:onset,et:status,eu:outcome,editMainSymptoms:symptoms,caddress:address,cprov:prov,ckab:kab,ckec:kec,cdesa:desa,clat:lat,clng:lng}:{cid:id,cn:name,ca:age,cs:sex,co:onset,ct:status,cu:outcome,caseMainSymptoms:symptoms,caddress:address,cprov:prov,ckab:kab,ckec:kec,cdesa:desa,clat:lat,clng:lng};
     Object.entries(values).forEach(([key,value])=>hiddenCompatField45(key,value));
   }
+  function canonicalAddressPanel45(c){return typeof window.addressFields==='function'?window.addressFields(c):'<div class="notice">Formulir alamat utama tidak tersedia.</div>'}
   window.addCase=function(){
     if(!act())return alert('Pilih investigasi terlebih dahulu.');
     const food=act().disease==='keracunan-pangan',diseaseId=act().disease,extraPriority=priorityPanel(diseaseId,{}),draft={id:nextCaseId45(),_new:true};
     const extraFood=food?'<div class="card" style="margin-top:10px"><h4>🍱 Detail Kasus Keracunan Pangan</h4>'+f('Makanan/minuman dikonsumsi','caseFood','text','')+f('Waktu konsumsi','caseConsumedAt','datetime-local','')+f('Waktu onset setelah konsumsi','caseOnsetTime','datetime-local','')+f('Masa inkubasi (jam)','caseIncubation','number','')+f('Gejala terkait kejadian pangan','caseSymptoms','text','')+f('Sumber pangan','caseFoodSource','text','')+f('Dirawat inap?','caseHospitalized','select','Tidak|Ya')+f('Spesimen klinis','caseClinicalSpecimen','text','')+'</div>':'';
     const qPanel=questionnaireCasePanel(draft);
-    modal('<h2>Tambah Kasus</h2>'+window.addressFields(draft)+extraFood+extraPriority+qPanel+'<button class="primary" onclick="saveCase()">Simpan</button>');
+    modal('<h2>Tambah Kasus</h2>'+canonicalAddressPanel45(draft)+extraFood+extraPriority+qPanel+'<button class="primary" onclick="saveCase()">Simpan</button>');
   };
   const oldSave=window.saveCase;
   window.saveCase=async function(){
