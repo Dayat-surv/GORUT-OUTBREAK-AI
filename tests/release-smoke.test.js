@@ -31,12 +31,12 @@ assert.doesNotMatch(appJs, /from\('survey_responses'\)\.select\('response_id,pay
 
 // STAGING v190: address fields appear once in the case form, while all original
 // questionnaire answer keys continue to receive the canonical address values.
-assert.match(appJs, /function isAddressQuestion45\\(label\\)/, 'address-question classifier must be present');
-assert.match(appJs, /filter\\(x=>!isAddressQuestion45\\(x\\.q\\.label\\)\\)/, 'duplicate address questions must not be rendered a second time');
+assert.match(appJs, /function isAddressQuestion45\(label\)/, 'address-question classifier must be present');
+assert.match(appJs, /filter\(x=>!isAddressQuestion45\(x\.q\.label\)\)/, 'duplicate address questions must not be rendered a second time');
 for (const key of ["alamatlengkap:'caddress'", "provinsi:'cprov'", "kabupaten:'ckab'", "kecamatan:'ckec'", "desakelurahan:'cdesa'", "latitude:'clat'", "longitude:'clng'"]) {
   assert.ok(appJs.includes(key), 'canonical address input must map to its original questionnaire answer key: ' + key);
 }
-assert.match(appJs, /if\\(id&&el&&q\\.id\\)a\\[q\\.id\\]=el\\.value/, 'canonical address values must be retained in case.answers');
+assert.match(appJs, /if\(id&&el&&q\.id\)a\[q\.id\]=el\.value/, 'canonical address values must be retained in case.answers');
 
 assert.match(appJs, /Inisial nama \(tanpa nama lengkap\)/, 'master questionnaire must request initials rather than full names');
 assert.match(publicSurvey, /Isi inisial saja, jangan tuliskan nama lengkap\./, 'public questionnaire must guide respondents to enter initials');
