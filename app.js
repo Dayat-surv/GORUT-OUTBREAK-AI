@@ -290,7 +290,7 @@ function uniqueCaseRowsForAnalysis(rows) {
   groups.forEach(function(sourceRows) {
     var primary = sourceRows[sourceRows.length - 1] || {};
     var view = Object.assign({}, primary);
-    var fields = ['name','address','desa','kec','kab','prov','age','sex','onset','status','outcome','symptoms','lat','lng','disease','puskesmas','pkm','village','admin'];
+    var fields = ['name','address','desa','kec','kab','prov','age','sex','onset','status','outcome','symptoms','lat','lng','disease','pkm','village','admin'];
     function blank(v) { return v === undefined || v === null || String(v).trim() === ''; }
     fields.forEach(function(k) {
       if (blank(view[k])) {
@@ -2264,7 +2264,7 @@ function installLogin(){
     'onset','tanggal onset','tanggal onset gejala','status','status kasus','status kesehatan','outcome',
     'alamat lengkap','alamat lengkap tempat tinggal/kejadian',
     'provinsi','kabupaten','kabupaten/kota','kecamatan','desa/kelurahan',
-    'puskesmas','latitude','longitude'
+    'latitude','longitude'
   ]);
   function isIntegratedCoreQuestion(q){
     const label=String(q?.label||'').trim().toLowerCase().replace(/\s+/g,' ');
@@ -2275,7 +2275,7 @@ function installLogin(){
   }
   function isIntegratedGeographyQuestion45(q){
     const key=String(q&&q.label||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
-    return ['alamatlengkap','alamatlengkapt inggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','puskesmas','latitude','longitude'].includes(key);
+    return ['alamatlengkap','alamatlengkapt empattinggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','latitude','longitude'].includes(key);
   }
   function ensureCaseQuestionnaire(c={}){
     const diseaseId=resolveCaseDiseaseId(c.disease)||resolveCaseDiseaseId(act()?.disease)||resolveCaseDiseaseId(db.selectedDisease);
@@ -2990,7 +2990,7 @@ window.renderDemographyV49=function(){
  function renderDemoDiseaseOptions(){const s=E('demoDiseaseV49');if(!s)return;const active=typeof act==='function'?act():null,current=s.value;const opts=Object.entries(typeof diseases!=='undefined'?diseases:{}).map(([k,v])=>`<option value="${esc49(k)}">${esc49(v.name||k)}</option>`).join('');s.innerHTML='<option value="">Penyakit investigasi aktif</option>'+opts;if(current)s.value=current;else if(active?.disease)s.value=active.disease;}
  window.addDemographyYearV49=function(){const d=loadDemo(),y=prompt('Masukkan tahun demografi, misalnya 2027:',String(new Date().getFullYear()+1));if(!y)return;const n=Number(y);if(!Number.isInteger(n)||n<2000||n>2100)return alert('Tahun tidak valid.');d.years[String(n)] ||= {};saveDemo(d);renderDemographyV49();E('demoYearV49').value=String(n);renderDemographyV49();}
  window.saveDemographyV49=function(){const y=selectedYear(),d=loadDemo(),rows=rowsFor(y);document.querySelectorAll('[data-demo]').forEach(inp=>{const i=Number(inp.dataset.i);if(rows[i])rows[i][inp.dataset.demo]=inp.value});d.years[String(y)]={};rows.forEach(r=>d.years[String(y)][r.puskesmas]=r);d.meta[String(y)]={source:E('demoSourceV49')?.value||'',updated:E('demoUpdatedV49')?.value||'',note:E('demoNoteV49')?.value||''};saveDemo(d);renderDemographyV49();alert(`Master demografi ${y} tersimpan.`);}
- window.exportDemographyV49=function(){const y=selectedYear(),rows=rowsFor(y),m=metaFor(y),head=['tahun','puskesmas','kecamatan','desa_acuan','penduduk','laki_laki','perempuan','kk','luas_km2','latitude','longitude','sumber','tanggal_update','catatan'];const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv=[head.join(',')].concat(rows.map(r=>[y,r.puskesmas,r.kec,r.desa,r.population,r.male,r.female,r.households,r.areaKm2,r.lat,r.lng,m.source,m.updated,r.note].map(q).join(','))).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=`GORUT-demografi-${y}.csv`;a.click();}
+ window.exportDemographyV49=function(){const y=selectedYear(),rows=rowsFor(y),m=metaFor(y),head=['tahun','kecamatan','desa_acuan','penduduk','laki_laki','perempuan','kk','luas_km2','latitude','longitude','sumber','tanggal_update','catatan'];const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv=[head.join(',')].concat(rows.map(r=>[y,r.puskesmas,r.kec,r.desa,r.population,r.male,r.female,r.households,r.areaKm2,r.lat,r.lng,m.source,m.updated,r.note].map(q).join(','))).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=`GORUT-demografi-${y}.csv`;a.click();}
  window.importDemographyV49=function(){const inp=document.createElement('input');inp.type='file';inp.accept='.csv,text/csv';inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const lines=String(r.result).split(/\r?\n/).filter(Boolean);if(lines.length<2)return alert('CSV kosong.');const split=x=>x.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/).map(v=>v.replace(/^\"|\"$/g,'').replace(/\"\"/g,'\"'));const h=split(lines[0]).map(x=>x.toLowerCase().trim()),idx=k=>h.indexOf(k),d=loadDemo();lines.slice(1).forEach(line=>{const a=split(line),y=Number(a[idx('tahun')]||new Date().getFullYear()),name=a[idx('puskesmas')];if(!name)return;d.years[String(y)] ||= {};d.years[String(y)][name]={puskesmas:name,kec:a[idx('kecamatan')]||'',desa:a[idx('desa_acuan')]||'',population:a[idx('penduduk')]||'',male:a[idx('laki_laki')]||'',female:a[idx('perempuan')]||'',households:a[idx('kk')]||'',areaKm2:a[idx('luas_km2')]||'',lat:a[idx('latitude')]||'',lng:a[idx('longitude')]||'',note:a[idx('catatan')]||'',source:a[idx('sumber')]||''};d.meta[String(y)]={source:a[idx('sumber')]||'',updated:a[idx('tanggal_update')]||'',note:''}});saveDemo(d);renderDemographyV49();alert('CSV demografi berhasil diimpor.');};r.readAsText(f)};inp.click();}
  function activeCases(){const a=typeof act==='function'?act():{};const sel=E('demoDiseaseV49')?.value;return uniqueCaseRowsForAnalysis((db.cases||[]).filter(c=>String(c.investigationId)===String(db.active)).filter(c=>!isInvalidTestCaseForDashboard128(c)&&!isSimulationCaseForOps(c)).filter(c=>!sel||String(c.disease||a.disease)===String(sel)))}
  function casePkm(c){const a=c.answers||{};return c.pkm||c.puskesmas||a.pkm||a.Puskesmas||a.puskesmas||''}
@@ -4109,7 +4109,7 @@ try{installBrandingV184();}catch(e){}
     // No underlying record is modified; conflicting non-empty answers remain visible in the modal.
     const activeMatches=sourceCases.filter(x=>String(x.investigationId||'')===String(window.db?.active||''));
     const candidatePool=activeMatches.length?activeMatches:sourceCases;
-    const detailCompleteness=x=>['address','desa','kec','kab','prov','pkm','puskesmas','lat','lng','symptoms','status','outcome'].reduce((n,k)=>n+(x[k]!==undefined&&x[k]!==null&&String(x[k]).trim()!==''?1:0),0)+Object.values(x.answers||{}).filter(v=>v!==undefined&&v!==null&&String(v)!=='').length+Object.keys(x.admin||{}).length;
+    const detailCompleteness=x=>['address','desa','kec','kab','prov','pkm','lat','lng','symptoms','status','outcome'].reduce((n,k)=>n+(x[k]!==undefined&&x[k]!==null&&String(x[k]).trim()!==''?1:0),0)+Object.values(x.answers||{}).filter(v=>v!==undefined&&v!==null&&String(v)!=='').length+Object.keys(x.admin||{}).length;
     const activeSource=[...candidatePool].sort((a,b)=>detailCompleteness(b)-detailCompleteness(a))[0];
     const siblings=sourceCases.filter(x=>String(x.investigationId||'')===String(activeSource.investigationId||''));
     const mergedAnswers={};
@@ -4173,7 +4173,7 @@ try{installBrandingV184();}catch(e){}
   window.exportCompleteCasesV73=function(){
     const cs=(window.db?.cases||[]).filter(c=>!window.db?.active||String(c.investigationId)===String(window.db.active));
     const q=s=>`"${String(s??'').replace(/"/g,'""')}"`,keys=[...new Set(cs.flatMap(c=>Object.keys(c.answers||{})))];
-    const fixed=['id','investigationId','disease','name','age','sex','onset','status','outcome','address','prov','kab','kec','desa','pkm','puskesmas','lat','lng','createdAt','updatedAt'];
+    const fixed=['id','investigationId','disease','name','age','sex','onset','status','outcome','address','prov','kab','kec','desa','pkm','lat','lng','createdAt','updatedAt'];
     const cols=[...fixed,...keys.map(k=>'answers.'+k)];
     const lines=[cols.map(q).join(',')];cs.forEach(c=>lines.push(cols.map(k=>k.startsWith('answers.')?(c.answers||{})[k.slice(8)]:c[k]).map(v=>q(typeof v==='object'?JSON.stringify(v):v)).join(',')));
     const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),x=document.createElement('a');x.href=url;x.download=`gorut-dataset-kasus-lengkap-${new Date().toISOString().slice(0,10)}.csv`;x.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -4629,7 +4629,7 @@ try{installBrandingV184();}catch(e){}
     // v111: deduplicate display only by case ID + investigation. Keep all source records untouched.
     const completeness=c=>{
       const nonempty=v=>v!==undefined&&v!==null&&String(v).trim()!=='';
-      return ['address','desa','kec','kab','prov','pkm','puskesmas','lat','lng','symptoms','status','outcome'].reduce((n,k)=>n+(nonempty(c[k])?1:0),0)
+      return ['address','desa','kec','kab','prov','pkm','lat','lng','symptoms','status','outcome'].reduce((n,k)=>n+(nonempty(c[k])?1:0),0)
         + Object.keys(c.answers||{}).filter(k=>nonempty(c.answers[k])).length
         + (c.admin&&typeof c.admin==='object'?Object.keys(c.admin).filter(k=>nonempty(c.admin[k])).length:0);
     };
@@ -5241,7 +5241,7 @@ try{installBrandingV184();}catch(e){}
             kecamatan:'kecamatan',kec:'kecamatan',
             kabupaten:'kabupaten',kabupatenkota:'kabupaten',
             provinsi:'provinsi',prov:'provinsi',
-            puskesmas:'puskesmas',fasilitaskesehatan:'puskesmas',
+            puskesmas:fasilitaskesehatan:
             tanggalonset:'tanggalonset',tanggalonsetgejala:'tanggalonset',tanggalonsetdemam:'tanggalonset',
           };
           if(aliases[n])return aliases[n];
@@ -5316,7 +5316,7 @@ try{installBrandingV184();}catch(e){}
     if(!questionList.length&&Array.isArray(window.db&&window.db.questions)){
       appendQuestionSource(window.db.questions,'Kuesioner tersimpan — fallback');
     }
-    function isGeographyAnswer120(value){var k=String(value==null?'':value).trim().toLowerCase().replace(/[^a-z0-9]+/g,'');return ['alamatlengkap','alamatlengkapt inggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','puskesmas','latitude','longitude','qalamat','qprovinsi','qkabupaten','qkecamatan','qdesa','qkelurahan'].includes(k)||k==='__gorutcasem etav1'.replace(/\s/g,'')}
+    function isGeographyAnswer120(value){var k=String(value==null?'':value).trim().toLowerCase().replace(/[^a-z0-9]+/g,'');return ['alamatlengkap','alamatlengkapt empattinggalkejadian','provinsi','kabupaten','kabupatenkota','kecamatan','desakelurahan','latitude','longitude','qalamat','qprovinsi','qkabupaten','qkecamatan','qdesa','qkelurahan'].includes(k)||k==='__gorutcasem etav1'.replace(/\s/g,'')}
     questionList.splice(0,questionList.length,...questionList.filter(function(q){return !isGeographyAnswer120(q.label)&&!isGeographyAnswer120(q.id)}));
     var usedAnswerKeys={};
     function normAnswerKey120(x){return String(x==null?'':x).trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
