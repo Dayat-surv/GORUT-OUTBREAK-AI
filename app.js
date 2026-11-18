@@ -5964,8 +5964,9 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
       var match=String(row.id??'').trim().match(/^K(\d+)$/i);
       if(match)used.add(Number(match[1]));
     });
-    var n=1;
-    while(used.has(n))n++;
+    var n=0;
+    used.forEach(function(value){if(value>n)n=value;});
+    n++;
     return 'K'+String(n).padStart(3,'0');
   }
   window.GORUT_NEXT_CASE_CODE=nextUnusedCaseCode;
@@ -6027,7 +6028,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
     var rows=(Array.isArray(appDb().cases)?appDb().cases:[]).filter(function(c){return String(c.investigationId)===String(invId);});
     var used=new Set();
     rows.forEach(function(c){var m=String(c.id??'').trim().match(/^K(\d+)$/i);if(m)used.add(Number(m[1]));});
-    var n=1;while(used.has(n))n++;
+    var n=0;used.forEach(function(value){if(value>n)n=value;});n++;
     return 'K'+String(n).padStart(3,'0');
   }
   function idQuestionInput(){
