@@ -2369,6 +2369,7 @@ function installLogin(){
     const rows=Object.entries(diseases||{}).map(([id,d])=>{const q=Array.isArray(d.q)?d.q:[], unique=new Set(q.map(x=>String(x).toLowerCase()));const warn=[];if(!q.length)warn.push('Tidak ada pertanyaan spesifik');if(unique.size!==q.length)warn.push('Ada pertanyaan spesifik duplikat');if(q.some(x=>!x||!x[1]))warn.push('Ada pertanyaan tanpa label');return {id,name:d.name||id,group:d.group||'-',n:q.length,status:warn.length?'WARN':'PASS',warn};});return rows}
   window.runQuestionnaireAudit=function(){ensureQuestionIds();const rows=auditQuestionnaire(),el=document.getElementById('qAudit');if(!el)return;const pass=rows.filter(x=>x.status==='PASS').length,warn=rows.length-pass;el.innerHTML='<div class="card"><h3>Audit Kuesioner v45</h3><div class="grid"><div class="stat"><small>Penyakit/sindrom</small><b>'+rows.length+'</b></div><div class="stat"><small>PASS</small><b>'+pass+'</b></div><div class="stat"><small>WARN</small><b>'+warn+'</b></div><div class="stat"><small>Integrasi jawaban</small><b>AKTIF</b></div></div><div class="notice">Audit memeriksa keberadaan pertanyaan spesifik, duplikasi, label kosong, dan kesiapan integrasi jawaban ke <code>case.answers</code>. Ini bukan validasi substantif terhadap formulir resmi Kemenkes.</div><div style="overflow:auto"><table><thead><tr><th>Penyakit/Sindrom</th><th>Kelompok</th><th>Q spesifik</th><th>Status</th><th>Catatan</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc45(r.name)+'</td><td>'+esc45(r.group)+'</td><td>'+r.n+'</td><td><span class="badge">'+r.status+'</span></td><td>'+esc45(r.warn.join(' · ')||'Struktur spesifik tersedia')+'</td></tr>').join('')+'</tbody></table></div></div>'}
   // Patch case creation/edit to collect questionnaire answers without removing v44 address/priority/food behavior.
+  function canonicalAddressPanel45(c){return typeof window.addressFields==='function'?window.addressFields(c):'<div class="notice">Formulir alamat utama tidak tersedia.</div>'}
   function answerByLabels45(answers,...labels){
     const wanted=labels.map(questionLabelKey45);
     for(const q of (db.questions||[]))if(wanted.includes(questionLabelKey45(q.label))){const value=answers[q.id]??answers[q.label];if(value!==undefined&&value!==null)return value}
@@ -2402,7 +2403,6 @@ function installLogin(){
     const values=mode==='edit'?{en:name,ea:age,es:sex,eo:onset,et:status,eu:outcome,editMainSymptoms:symptoms,caddress:address,cprov:prov,ckab:kab,ckec:kec,cdesa:desa,clat:lat,clng:lng}:{cid:id,cn:name,ca:age,cs:sex,co:onset,ct:status,cu:outcome,caseMainSymptoms:symptoms,caddress:address,cprov:prov,ckab:kab,ckec:kec,cdesa:desa,clat:lat,clng:lng};
     Object.entries(values).forEach(([key,value])=>hiddenCompatField45(key,value));
   }
-  function canonicalAddressPanel45(c){return typeof window.addressFields==='function'?window.addressFields(c):'<div class="notice">Formulir alamat utama tidak tersedia.</div>'}
   window.addCase=function(){
     if(!act())return alert('Pilih investigasi terlebih dahulu.');
     const food=act().disease==='keracunan-pangan',diseaseId=act().disease,extraPriority=priorityPanel(diseaseId,{}),draft={id:nextCaseId45(),_new:true};
