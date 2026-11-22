@@ -117,6 +117,7 @@ const baseQ=[
 ['Lokasi','Latitude','number'],['Lokasi','Longitude','number'],['Lokasi','Tanggal investigasi lapangan','date'],['Lokasi','Petugas investigator','text']
 ];
 const fieldMeta={
+'Nama lengkap':{type:'text'},
 'Jenis kelamin':{type:'choice',options:['Laki-laki','Perempuan','Tidak diketahui']},'Satuan umur':{type:'choice',options:['Tahun','Bulan','Hari']},'Status kasus':{type:'choice',options:['Suspek','Probable','Konfirmasi','Bukan kasus','Meninggal','Belum diklasifikasi']},'Status kesehatan':{type:'choice',options:['Sakit','Sembuh','Masih dirawat','Meninggal','Tidak diketahui']},'Riwayat kontak dengan kasus':{type:'choice',options:['Ya','Tidak','Tidak diketahui']},'Jenis hubungan kontak':{type:'choice',options:['Serumah','Sekolah','Tempat kerja','Fasilitas kesehatan','Tetangga','Teman','Lainnya']},'Spesimen diambil':{type:'choice',options:['Ya','Tidak','Direncanakan']},'Isolasi/karantina bila relevan':{type:'choice',options:['Ya','Tidak','Tidak relevan']},'Pelacakan kontak dilakukan':{type:'choice',options:['Ya','Tidak','Sedang berlangsung']}
 };
 const priorityClinicalEpi={
