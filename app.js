@@ -4472,12 +4472,18 @@ try{installBrandingV183();}catch(e){}
             ...oldAnswers,
             __gorut_case_meta_v1:{
               address:c.address??'',
-              prov:c.prov??c.admin?.prov??'',
-              kab:c.kab??c.admin?.kab??'',
-              kec:c.kec??c.admin?.kec??'',
-              desa:c.desa??c.admin?.desa??'',
+              prov:c.prov||c.admin?.prov||'',
+              kab:c.kab||c.admin?.kab||'',
+              kec:c.kec||c.admin?.kec||'',
+              desa:c.desa||c.admin?.desa||'',
               symptoms:c.symptoms??'',
-              admin:c.admin&&typeof c.admin==='object'?{...c.admin}:{}
+              admin:{
+                ...(c.admin&&typeof c.admin==='object'?c.admin:{}),
+                prov:c.admin?.prov||c.prov||'',
+                kab:c.admin?.kab||c.kab||'',
+                kec:c.admin?.kec||c.kec||'',
+                desa:c.admin?.desa||c.desa||''
+              }
             }
           };
         }
@@ -5931,7 +5937,7 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
         outcome:current.outcome||null,
         latitude:current.lat||null,
         longitude:current.lng||null,
-        questionnaire_response:{...(current.answers||{}),foodCase:current.foodCase||null,priority:current.priority||null,__gorut_case_meta_v1:{address:current.address??'',prov:current.prov??current.admin?.prov??'',kab:current.kab??current.admin?.kab??'',kec:current.kec??current.admin?.kec??'',desa:current.desa??current.admin?.desa??'',symptoms:current.symptoms??'',admin:current.admin&&typeof current.admin==='object'?{...current.admin}:{}}}
+        questionnaire_response:{...(current.answers||{}),foodCase:current.foodCase||null,priority:current.priority||null,__gorut_case_meta_v1:{address:current.address??'',prov:current.prov||current.admin?.prov||'',kab:current.kab||current.admin?.kab||'',kec:current.kec||current.admin?.kec||'',desa:current.desa||current.admin?.desa||'',symptoms:current.symptoms??'',admin:{...(current.admin&&typeof current.admin==='object'?current.admin:{}),prov:current.admin?.prov||current.prov||'',kab:current.admin?.kab||current.kab||'',kec:current.admin?.kec||current.kec||'',desa:current.admin?.desa||current.desa||''}}}
       };
       const result=await sb.from('cases').upsert(row,{onConflict:'id'});
       if(result.error) throw result.error;
