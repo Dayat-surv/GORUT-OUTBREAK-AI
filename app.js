@@ -4683,6 +4683,35 @@ try{installBrandingV183();}catch(e){}
     if(!g)return;
     var html='<h2>Detail Lengkap — '+esc(g.view.id||'-')+'</h2>'+
       '<div class="notice">Terdapat <b>'+g.rows.length+' rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Detail/edit aktif diarahkan ke rekaman terakhir dalam kelompok (diasumsikan Sumber 2); rekaman lain tetap tersimpan dan tidak dihapus.</div>';
+    // v200: show core case/admin fields separately from questionnaire answers.
+    // Read-only display: prefer the grouped view, then fall back to its admin metadata.
+    var coreCase=g.view||g.primary||{};
+    var coreDisplay=function(value){
+      if(value===undefined||value===null||String(value).trim()==='')return 'Belum diisi';
+      return typeof value==='object'?JSON.stringify(value):String(value);
+    };
+    var coreRows=[
+      ['ID Kasus',coreCase.id],
+      ['Nama / Inisial',coreCase.name],
+      ['Alamat lengkap',coreCase.address],
+      ['Desa/Kelurahan',coreCase.desa||(coreCase.admin&&coreCase.admin.desa)],
+      ['Kecamatan',coreCase.kec||(coreCase.admin&&coreCase.admin.kec)],
+      ['Kabupaten',coreCase.kab||(coreCase.admin&&coreCase.admin.kab)],
+      ['Provinsi',coreCase.prov||(coreCase.admin&&coreCase.admin.prov)],
+      ['Puskesmas',coreCase.pkm||coreCase.puskesmas],
+      ['Umur',coreCase.age],
+      ['Jenis kelamin',coreCase.sex],
+      ['Tanggal onset',coreCase.onset],
+      ['Penyakit',coreCase.disease],
+      ['Gejala utama',coreCase.symptoms],
+      ['Status kasus',coreCase.status],
+      ['Outcome',coreCase.outcome]
+    ];
+    html+='<details open style="margin:12px 0"><summary><b>1. Data inti kasus, klinis, dan lokasi</b></summary>'+
+      '<div style="overflow:auto;max-height:45vh"><table class="report-table"><thead><tr><th>Informasi</th><th>Nilai</th></tr></thead><tbody>'+
+      coreRows.map(function(row){return '<tr><td>'+esc(row[0])+'</td><td>'+esc(coreDisplay(row[1]))+'</td></tr>'}).join('')+
+      '</tbody></table></div></details>';
+    html+='<h3 style="margin:16px 0 8px">2. Seluruh jawaban kuesioner</h3>';
     // Only source 2 is active in the detail/edit workflow. Earlier source records remain
     // preserved in storage and are not deleted; they are simply not used as the active form.
     var activeRows=g.rows.slice(); // v130: show each original source record separately; never merge or overwrite.
