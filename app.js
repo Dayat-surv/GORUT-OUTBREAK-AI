@@ -3197,11 +3197,33 @@ window.renderDemographyV49=function(){
   }
   window.showCaseRiskFactors59=function(id){const c=(db.cases||[]).find(x=>String(x.id)===String(id));if(!c)return;const items=riskItems59(c),groups={};items.forEach(x=>{const cat=n59(x.category)||'Faktor risiko';(groups[cat]??=[]).push(x)});const body=Object.entries(groups).map(([cat,arr])=>`<div class="risk-group"><h4>${e59(cat)}</h4>${arr.map(x=>`<div class="risk-detail-row"><div>${e59(x.label||'')}</div><strong>${e59(x.value??'')}</strong></div>`).join('')}</div>`).join('');modal(`<h2>🔎 Faktor Risiko — ${e59(c.id)}</h2><div class="small">Sumber: jawaban kuesioner pada <code>case.answers</code>. Tampilan ini adalah ringkasan paparan/faktor risiko, bukan penetapan hubungan kausal.</div>${body||'<div class="notice">Belum ada faktor risiko yang teridentifikasi.</div>'}<div style="margin-top:12px"><button onclick="closeAppModal()">Tutup</button></div>`)};
   window.cases=function(){
-    const q=(val('caseSearch')||'').toLowerCase();const all=(db.cases||[]).filter(c=>!db.active||String(c.investigationId)===String(db.active));
-    const r=all.filter(c=>{const rf=riskItems59(c).map(x=>`${x.label} ${x.value}`).join(' ');return !q||`${c.id} ${c.name||''} ${c.address||''} ${c.desa||c.admin?.desa||''} ${c.kec||c.admin?.kec||''} ${symptoms59(c)} ${rf}`.toLowerCase().includes(q)});
-    const rows=document.getElementById('caseRows');if(!rows)return;const th=rows.closest('table')?.querySelector('thead tr');
-    if(th)th.innerHTML='<th>ID</th><th>Nama</th><th>Alamat</th><th>Desa/Kel.</th><th>Kecamatan</th><th>Umur</th><th>JK</th><th>Tanggal Onset</th><th>Gejala Utama</th><th>Status</th><th>Faktor Risiko (Kuesioner)</th><th>Outcome</th><th>Aksi</th>';
-    rows.innerHTML=r.map(c=>`<tr><td>${e59(c.id)}</td><td><b>${e59(c.name||'-')}</b></td><td>${e59(c.address||'-')}</td><td>${e59(c.desa||c.admin?.desa||'-')}</td><td>${e59(c.kec||c.admin?.kec||'-')}</td><td>${e59(c.age??'-')}</td><td>${e59(c.sex||'-')}</td><td>${e59(onset59(c))}</td><td class="symptom-cell" title="${e59(symptoms59(c))}">${e59(symptoms59(c))}</td><td><span class="badge">${e59(c.status||'-')}</span></td><td>${riskCell59(c)}</td><td>${e59(c.outcome||'-')}</td><td class="table-actions"><button onclick="editCase('${e59(c.id)}')">Edit</button> <button class="danger" data-v30-delete onclick="deleteRecord('cases','${e59(c.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="13"><div class="notice">Belum ada kasus.</div></td></tr>';
+    const q=(val('caseSearch')||'').toLowerCase();
+    const all=(db.cases||[]).filter(c=>!db.active||String(c.investigationId)===String(db.active));
+    const r=all.filter(c=>{
+      const rf=riskItems59(c).map(x=>`${x.label} ${x.value}`).join(' ');
+      return !q||`${c.id} ${c.name||''} ${c.address||''} ${c.desa||c.admin?.desa||''} ${c.kec||c.admin?.kec||''} ${symptoms59(c)} ${rf}`.toLowerCase().includes(q);
+    });
+    const rows=document.getElementById('caseRows');if(!rows)return;
+    const th=rows.closest('table')?.querySelector('thead tr');
+    if(th)th.innerHTML='<th>ID Kasus</th><th>Nama / Inisial</th><th>Umur</th><th>Jenis kelamin</th><th>Desa/Kelurahan</th><th>Kecamatan</th><th>Tanggal onset</th><th>Gejala utama</th><th>Status kasus</th><th>Faktor risiko (kuesioner)</th><th>Outcome</th><th>Aksi</th>';
+    rows.innerHTML=r.map(c=>`<tr>
+      <td>${e59(c.id)}</td>
+      <td><b>${e59(c.name||'-')}</b></td>
+      <td>${e59(c.age??'-')}</td>
+      <td>${e59(c.sex||'-')}</td>
+      <td>${e59(c.desa||c.admin?.desa||'-')}</td>
+      <td>${e59(c.kec||c.admin?.kec||'-')}</td>
+      <td>${e59(onset59(c))}</td>
+      <td class="symptom-cell" title="${e59(symptoms59(c))}">${e59(symptoms59(c))}</td>
+      <td><span class="badge">${e59(c.status||'-')}</span></td>
+      <td>${riskCell59(c)}</td>
+      <td>${e59(c.outcome||'-')}</td>
+      <td class="table-actions">
+        <button onclick="showCaseQuestionnaireV73('${e59(c.id)}')">Detail</button>
+        <button onclick="editCase('${e59(c.id)}')">Edit</button>
+        <button class="danger" data-v30-delete onclick="deleteRecord('cases','${e59(c.id)}')">Hapus</button>
+      </td>
+    </tr>`).join('')||'<tr><td colspan="12"><div class="notice">Belum ada kasus.</div></td></tr>';
   };
   const oldExportCSV59=window.exportCSV;
   window.exportCSV=function(){const cs=(db.cases||[]).filter(c=>c.investigationId===db.active);const cols=['ID','Nama','Alamat','Provinsi','Kabupaten/Kota','Kecamatan','Desa/Kelurahan','Latitude','Longitude','Tanggal Onset','Gejala Utama','Status','Faktor Risiko (dari kuesioner)','Outcome','Sumber Wilayah'];const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;const lines=[cols.join(','),...cs.map(c=>{const rf=riskItems59(c).map(x=>`${x.label}: ${x.value}`).join(' | ');return [c.id,c.name,c.address,c.prov,c.kab,c.kec,c.desa,c.lat,c.lng,onset59(c),symptoms59(c),c.status,rf,c.outcome,c.admin?.source||''].map(q).join(',' )})];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}));a.download='kasus-KLB-lengkap-onset-gejala-faktor-risiko.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
