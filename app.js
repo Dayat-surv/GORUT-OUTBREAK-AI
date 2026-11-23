@@ -4865,7 +4865,7 @@ try{installBrandingV183();}catch(e){}
     var gs=groups();
     var table=body.closest('table');
     var head=table&&table.querySelector('thead tr');
-    if(head)head.innerHTML='<th>ID</th><th>Nama</th><th>Alamat</th><th>Desa/Kel.</th><th>Kecamatan</th><th>Umur</th><th>JK</th><th>Tanggal Onset</th><th>Gejala Utama</th><th>Status</th><th>Faktor Risiko (Kuesioner)</th><th>Outcome</th><th>Aksi</th>';
+    if(head)head.innerHTML='<th>ID Kasus</th><th>Nama / Inisial</th><th>Umur</th><th>Jenis kelamin</th><th>Desa/Kelurahan</th><th>Kecamatan</th><th>Tanggal onset</th><th>Gejala utama</th><th>Status kasus</th><th>Faktor risiko (kuesioner)</th><th>Outcome</th><th>Aksi</th>';
     var html=gs.map(function(g){
       var c=g.view,rf=[];
       try{if(typeof window.deriveRiskFactors46==='function')rf=window.deriveRiskFactors46(c)||[];else rf=c.riskFactors||[]}catch(e){}
@@ -4873,8 +4873,8 @@ try{installBrandingV183();}catch(e){}
       var risk=positive.length?positive.slice(0,3).map(function(x){return '<span class="risk-chip"><span>'+esc(x.label||x.question||'Faktor risiko')+'</span><b>'+esc(x.value===undefined?x.answer:x.value)+'</b></span>'}).join('')+(positive.length>3?' <span class="risk-none">+'+(positive.length-3)+' lainnya</span>':''):'<span class="risk-none">Belum teridentifikasi</span>';
       var keyAttr=esc(g.key);
       return '<tr><td>'+esc(c.id||'-')+'</td>'+
-        '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.address||'-')+'</td><td>'+esc(c.desa||'-')+'</td><td>'+esc(c.kec||'-')+'</td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'" onclick="return window.openCaseDetailRecovery118(this)">Detail</button> <button type="button" data-v116-edit-group="'+keyAttr+'" onclick="return window.openCaseEditRecovery118(this)">Edit</button> <button type="button" class="danger" data-v192-delete="'+keyAttr+'">Hapus</button></td></tr>';
-    }).join('')||'<tr><td colspan="13"><div class="notice">Belum ada kasus yang cocok dengan pencarian.</div></td></tr>';
+        '<td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.age===undefined||c.age===null||c.age===''?'-':c.age)+'</td><td>'+esc(c.sex||'-')+'</td><td>'+esc(c.desa||c.admin&&c.admin.desa||'-')+'</td><td>'+esc(c.kec||c.admin&&c.admin.kec||'-')+'</td><td>'+esc(c.onset||'-')+'</td><td>'+esc(c.symptoms||c.answers&& (c.answers.symptoms||c.answers.symptom||c.answers.gejala||c.answers.gejalaUtama)||'-')+'</td><td><span class="badge">'+esc(c.status||'-')+'</span></td><td><div class="risk-chips" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px">'+risk+'</div></td><td>'+esc(c.outcome||'-')+'</td><td class="table-actions"><button type="button" data-v115-detail="'+keyAttr+'" onclick="return window.openCaseDetailRecovery118(this)">Detail</button> <button type="button" data-v116-edit-group="'+keyAttr+'" onclick="return window.openCaseEditRecovery118(this)">Edit</button> <button type="button" class="danger" data-v192-delete="'+keyAttr+'">Hapus</button></td></tr>';
+    }).join('')||'<tr><td colspan="12"><div class="notice">Belum ada kasus yang cocok dengan pencarian.</div></td></tr>';
     if(body.innerHTML!==html){body.innerHTML=html;lastHtml=html}
     else lastHtml=html;
     body.querySelectorAll('[data-v115-detail]').forEach(function(btn){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}return window.openCaseDetailRecovery118(btn)}});
