@@ -6178,3 +6178,121 @@ function selectInvestigationSnapshot126(state,activeInvestigationId){
   };
   window.GORUT_SYNC_FEEDBACK_VERSION='v197';
 })();
+
+
+/* ================= STAGING v202 — QUESTIONNAIRE VILLAGE ADMIN AUTOFILL ================= */
+/* Map the integrated questionnaire's village answer to the existing user-provided
+   village/Puskesmas master. Keep answer keys and stored village value unchanged. */
+(function(){
+  'use strict';
+  var master=(window.GORUT_VILLAGE_MASTER_V69&&Array.isArray(window.GORUT_VILLAGE_MASTER_V69.data))
+    ?window.GORUT_VILLAGE_MASTER_V69.data:[];
+  var rows=master.flatMap(function(group){
+    return (Array.isArray(group.desa)?group.desa:[]).map(function(desa){
+      return {desa:String(desa),kec:String(group.kec||''),puskesmas:String(group.puskesmas||'')};
+    });
+  });
+  function norm(value){
+    return String(value==null?'':value).toLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  }
+  function question(label){
+    var qs=Array.isArray(window.db&&window.db.questions)?window.db.questions:[];
+    var wanted=norm(label);
+    for(var i=0;i<qs.length;i++){
+      if(norm(qs[i].label)!==wanted) continue;
+      var qid=String(qs[i].id||('Q_'+i)).replace(/[^a-zA-Z0-9_]/g,'_');
+      var el=document.getElementById('v45q_'+qid+'_'+i);
+      if(el) return el;
+    }
+    return null;
+  }
+  function setQuestion(label,value){
+    var el=question(label);
+    if(!el)return false;
+    el.value=value==null?'':String(value);
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+    return true;
+  }
+  function applySelection(select, row){
+    if(!row)return;
+    setQuestion('Kecamatan',row.kec);
+    setQuestion('Kabupaten','Gorontalo Utara');
+    setQuestion('Kabupaten/Kota','Gorontalo Utara');
+    setQuestion('Provinsi','Gorontalo');
+    setQuestion('Puskesmas',row.puskesmas);
+    var hidden={
+      cdesa:row.desa,ckec:row.kec,ckab:'Gorontalo Utara',
+      cprov:'Gorontalo',cpkm:row.puskesmas
+    };
+    Object.keys(hidden).forEach(function(id){
+      var el=document.getElementById(id);
+      if(el)el.value=hidden[id];
+    });
+    select.style.borderColor='#2e7d32';
+    var note=select.parentNode&&select.parentNode.querySelector('.v202-village-note');
+    if(note)note.textContent='Wilayah terisi otomatis: '+row.kec+' · Kabupaten Gorontalo Utara · Provinsi Gorontalo · '+row.puskesmas;
+  }
+  function install(){
+    var village=question('Desa/Kelurahan')||question('Desa')||question('Kelurahan');
+    if(!village||!rows.length)return;
+    if(village.dataset&&village.dataset.v202VillageReady==='1')return;
+    var current=String(village.value||'');
+    var kecField=question('Kecamatan');
+    var currentKec=String(kecField&&kecField.value||'');
+    var matches=rows.filter(function(r){return norm(r.desa)===norm(current)});
+    var select=document.createElement('select');
+    select.id=village.id;select.name=village.name||'';
+    select.className=village.className||'';
+    select.style.cssText=village.style.cssText||'';
+    select.innerHTML='<option value="">Pilih Desa/Kelurahan...</option>'+
+      rows.map(function(r,i){
+        var duplicate=rows.filter(function(x){return norm(x.desa)===norm(r.desa)}).length>1;
+        var label=r.desa+(duplicate?' — '+r.kec+' — '+r.puskesmas:' — '+r.puskesmas);
+        return '<option data-master-index="'+i+'" value="'+String(r.desa).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')+'">'+
+          String(label).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')+'</option>';
+      }).join('');
+    village.replaceWith(select);
+    select.dataset.v202VillageReady='1';
+    var chosen=-1;
+    if(matches.length===1) chosen=rows.indexOf(matches[0]);
+    else if(matches.length>1&&currentKec){
+      chosen=rows.findIndex(function(r){return norm(r.desa)===norm(current)&&norm(r.kec)===norm(currentKec)});
+    }
+    if(chosen>=0){
+      select.selectedIndex=chosen+1;
+      applySelection(select,rows[chosen]);
+    } else if(current){
+      select.value='';
+      select.style.borderColor='#b45309';
+    }
+    select.addEventListener('change',function(){
+      var option=select.options[select.selectedIndex];
+      var index=option?Number(option.getAttribute('data-master-index')):-1;
+      if(Number.isInteger(index)&&index>=0&&rows[index])applySelection(select,rows[index]);
+    });
+    var note=document.createElement('small');
+    note.className='small v202-village-note';
+    note.style.display='block';note.style.marginTop='5px';
+    note.textContent=matches.length>1&&!currentKec
+      ?'Nama desa tercatat lebih dari satu wilayah. Pilih entri yang sesuai dengan Kecamatan dan Puskesmas.'
+      :'Pilih desa; Kecamatan, Kabupaten, Provinsi, dan Puskesmas akan terisi otomatis.';
+    select.parentNode.appendChild(note);
+  }
+  function scheduleInstall(){
+    setTimeout(function(){try{install()}catch(error){console.warn('v202 village autofill',error)}},60);
+  }
+  var priorAdd=window.addCase;
+  if(typeof priorAdd==='function')window.addCase=function(){
+    var result=priorAdd.apply(this,arguments);scheduleInstall();return result;
+  };
+  var priorEdit=window.editCase;
+  if(typeof priorEdit==='function')window.editCase=function(){
+    var result=priorEdit.apply(this,arguments);scheduleInstall();return result;
+  };
+  window.GORUT_V202={version:'v202',masterRows:rows.length,features:[
+    'integrated questionnaire village dropdown','automatic subdistrict, district, province and health-centre fill',
+    'duplicate village disambiguation','preserve original questionnaire answer IDs and village values'
+  ]};
+})();
