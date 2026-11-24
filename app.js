@@ -5090,7 +5090,20 @@ try{installBrandingV183();}catch(e){}
     if(food){html+='<details open style="margin-top:12px"><summary><b>Detail keracunan pangan</b></summary>'+f('Makanan/minuman dikonsumsi','ed116_food','text',fc.food||fc.exposureFood||'')+f('Waktu konsumsi','ed116_consumed','datetime-local',dateValue116(fc.consumedAt,'datetime-local'))+f('Waktu onset','ed116_foodonset','datetime-local',dateValue116(fc.onsetAt||fc.onsetTime,'datetime-local'))+f('Masa inkubasi (jam)','ed116_incubation','number',fc.incubationHours==null?'':fc.incubationHours)+f('Sumber pangan','ed116_foodsource','text',fc.foodSource||fc.source||'')+f('Dirawat inap?','ed116_hospitalized','select','Tidak|Ya')+f('Spesimen klinis','ed116_specimen','text',fc.clinicalSpecimen||fc.specimenClinical||'')+'</details>'}
     html+='<div class="toolbar" style="margin-top:14px"><button type="button" class="primary" id="ed116_save">Simpan Perubahan</button><button type="button" id="ed116_cancel">Batal</button></div>';
     var box=document.getElementById('modalbox'),modalEl=document.getElementById('modal');if(!box||!modalEl){alert('Panel edit belum tersedia. Muat ulang halaman dan coba kembali.');return}
-    box.innerHTML=html;var idEl=document.getElementById('ed116_id');if(idEl)idEl.readOnly=true;
+    box.innerHTML=html;
+    // v208: pilihan kosong harus tetap kosong; jangan mewarisi opsi pertama.
+    [['ed116_sex',c.sex,'Pilih jenis kelamin...'],['ed116_status',c.status,'Pilih status kasus...'],['ed116_outcome',c.outcome,'Pilih outcome...']].forEach(function(pair){
+      var el=document.getElementById(pair[0]),source=pair[1];
+      if(!el)return;
+      if(source===null||source===undefined||String(source)===''){
+        var placeholder=document.createElement('option');
+        placeholder.value='';placeholder.textContent=pair[2];
+        el.insertBefore(placeholder,el.firstChild);el.value='';
+      }else{
+        el.value=String(source);
+      }
+    });
+    var idEl=document.getElementById('ed116_id');if(idEl)idEl.readOnly=true;
     [['ed116_sex',c.sex],['ed116_status',c.status],['ed116_outcome',c.outcome],['ed116_hospitalized',fc.hospitalized||'Tidak']].forEach(function(pair){var el=document.getElementById(pair[0]);if(el&&pair[1]!=null&&pair[1]!=='')el.value=pair[1]});
     modalEl.classList.add('show');
     document.getElementById('ed116_save').onclick=function(){window.saveCaseSource(index,food)};
@@ -5129,7 +5142,7 @@ try{installBrandingV183();}catch(e){}
       });
       c.answers=updatedAnswers;
     }
-    Object.assign(c,{name:v('ed116_name').trim(),age:age===null?0:age,sex:v('ed116_sex'),onset:v('ed116_onset'),status:v('ed116_status'),outcome:v('ed116_outcome'),symptoms:v('ed116_symptoms'),address:v('ed116_address'),prov:v('ed116_prov'),kab:v('ed116_kab'),kec:v('ed116_kec'),desa:v('ed116_desa'),lat:lat,lng:lng,updatedAt:new Date().toISOString()});
+    Object.assign(c,{name:v('ed116_name').trim(),age:age===null?'':age,sex:v('ed116_sex'),onset:v('ed116_onset'),status:v('ed116_status'),outcome:v('ed116_outcome'),symptoms:v('ed116_symptoms'),address:v('ed116_address'),prov:v('ed116_prov'),kab:v('ed116_kab'),kec:v('ed116_kec'),desa:v('ed116_desa'),lat:lat,lng:lng,updatedAt:new Date().toISOString()});
     c.admin=Object.assign({},c.admin||{},{prov:c.prov||(c.admin&&c.admin.prov)||'',kab:c.kab||(c.admin&&c.admin.kab)||'',kec:c.kec||(c.admin&&c.admin.kec)||'',desa:c.desa||(c.admin&&c.admin.desa)||'',lat:lat,lng:lng,source:(c.admin&&c.admin.source)||'input manual'});
     if(food){var old=c.foodCase||{};c.foodCase=Object.assign({},old,{food:v('ed116_food'),consumedAt:v('ed116_consumed'),onsetAt:v('ed116_foodonset'),incubationHours:v('ed116_incubation')===''?null:Number(v('ed116_incubation')),symptoms:v('ed116_symptoms'),foodSource:v('ed116_foodsource'),hospitalized:v('ed116_hospitalized'),clinicalSpecimen:v('ed116_specimen')})}
     try{if(typeof queueSync==='function')queueSync('cases')}catch(e){console.warn('Antrean sinkronisasi kasus:',e)}
