@@ -1,10 +1,10 @@
-const CACHE='gorut-outbreak-ai-staging-v195';
+const CACHE='gorut-outbreak-ai-staging-v207';
 const ASSETS=[
   './',
   './index.html',
   './premium.css?v=158',
   './favicon.svg',
-  './app.js?v=195',
+  './app.js?v=207',
   './backend-config.js',
   './manifest.webmanifest',
   './mobile.html',
