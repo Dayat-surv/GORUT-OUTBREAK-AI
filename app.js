@@ -3189,11 +3189,20 @@ window.renderDemographyV49=function(){
   function firstAnswer59(c,keys){const a=c?.answers||{};for(const k of keys){if(n59(c?.[k]))return c[k];if(n59(a?.[k]))return a[k]}return ''}
   function symptoms59(c){return firstAnswer59(c,['symptoms','symptom','gejala','gejalaUtama','mainSymptoms','caseSymptoms','keluhanUtama'])||'-'}
   function onset59(c){return c?.onset||firstAnswer59(c,['onset','dateOnset','tanggalOnset','Date Onset','Tanggal Pertama Kali mengalami Gejala'])||'-'}
+  function riskContext59(c){
+    const a=c&&c.answers&&typeof c.answers==='object'?c.answers:{},items=[];
+    const occupation=a.Q_pekerjaan??a.pekerjaan??a.Pekerjaan??'';
+    const immunization=a.Q_status_imunisasi_mr_mmr??a.status_imunisasi_mr_mmr??a['Status imunisasi MR/MMR']??'';
+    if(String(occupation).trim())items.push('Pekerjaan: '+String(occupation).trim());
+    if(String(immunization).trim())items.push('Status imunisasi MR/MMR (informasi protektif): '+String(immunization).trim());
+    return items.length?'<div class="small" style="margin-top:5px"><b>Informasi kuesioner terkait (bukan faktor risiko otomatis):</b> '+items.map(e59).join('; ')+'</div>':'';
+  }
   function riskCell59(c){
-    const items=riskItems59(c);if(!items.length)return '<span class="risk-none">Belum teridentifikasi</span>';
+    const items=riskItems59(c),context=riskContext59(c);
+    if(!items.length)return '<span class="risk-none">Belum ada faktor risiko teridentifikasi</span>'+context;
     const shown=items.slice(0,3),chips=shown.map(x=>`<span class="risk-chip" title="${e59(x.label||'')} — ${e59(x.value??'')}"><span>${e59((x.label||'').replace(/\s+/g,' ').slice(0,55))}</span><b>${e59(x.value??'')}</b></span>`).join('');
     const more=items.length>3?`<button class="risk-more" onclick="showCaseRiskFactors59('${e59(c.id)}')">+${items.length-3} lainnya</button>`:'';
-    return `<div class="risk-cell"><div class="risk-chips">${chips}</div><div class="risk-footer">${more}<button class="risk-detail" onclick="showCaseRiskFactors59('${e59(c.id)}')">Lihat detail</button></div></div>`;
+    return `<div class="risk-cell"><div class="risk-chips">${chips}</div><div class="risk-footer">${more}<button class="risk-detail" onclick="showCaseRiskFactors59('${e59(c.id)}')">Lihat detail</button></div>${context}</div>`;
   }
   window.showCaseRiskFactors59=function(id){const c=(db.cases||[]).find(x=>String(x.id)===String(id));if(!c)return;const items=riskItems59(c),groups={};items.forEach(x=>{const cat=n59(x.category)||'Faktor risiko';(groups[cat]??=[]).push(x)});const body=Object.entries(groups).map(([cat,arr])=>`<div class="risk-group"><h4>${e59(cat)}</h4>${arr.map(x=>`<div class="risk-detail-row"><div>${e59(x.label||'')}</div><strong>${e59(x.value??'')}</strong></div>`).join('')}</div>`).join('');modal(`<h2>🔎 Faktor Risiko — ${e59(c.id)}</h2><div class="small">Sumber: jawaban kuesioner pada <code>case.answers</code>. Tampilan ini adalah ringkasan paparan/faktor risiko, bukan penetapan hubungan kausal.</div>${body||'<div class="notice">Belum ada faktor risiko yang teridentifikasi.</div>'}<div style="margin-top:12px"><button onclick="closeAppModal()">Tutup</button></div>`)};
   window.cases=function(){
@@ -4708,8 +4717,12 @@ try{installBrandingV183();}catch(e){}
   function detail(key){
     var g=groups().find(function(x){return x.key===key});
     if(!g)return;
+    var sourceCount=g.rows.length;
+    var sourceNotice=sourceCount===1
+      ?'Terdapat <b>1 rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Detail dan Edit merujuk ke satu-satunya rekaman yang tersedia (Sumber 1).'
+      :'Terdapat <b>'+sourceCount+' rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Detail menampilkan setiap sumber secara terpisah; tombol Edit pada tabel utama mengarah ke rekaman terakhir (Sumber '+sourceCount+').';
     var html='<h2>Detail Lengkap — '+esc(g.view.id||'-')+'</h2>'+
-      '<div class="notice">Terdapat <b>'+g.rows.length+' rekaman sumber</b> untuk ID kasus dan penyelidikan ini. Detail/edit aktif diarahkan ke rekaman terakhir dalam kelompok (diasumsikan Sumber 2); rekaman lain tetap tersimpan dan tidak dihapus.</div>';
+      '<div class="notice">'+sourceNotice+' Rekaman sumber tetap dipertahankan dan tidak digabung atau dihapus.</div>';
     // v200: show core case/admin fields separately from questionnaire answers.
     // Read-only display: prefer the grouped view, then fall back to its admin metadata.
     var coreCase=g.view||g.primary||{};
@@ -4725,7 +4738,7 @@ try{installBrandingV183();}catch(e){}
       ['Kecamatan',coreCase.kec||(coreCase.admin&&coreCase.admin.kec)],
       ['Kabupaten',coreCase.kab||(coreCase.admin&&coreCase.admin.kab)],
       ['Provinsi',coreCase.prov||(coreCase.admin&&coreCase.admin.prov)],
-      ['Puskesmas',coreCase.pkm||coreCase.puskesmas],
+      ['Puskesmas',coreCase.pkm||coreCase.puskesmas||(coreCase.answers&&(coreCase.answers.Q_puskesmas||coreCase.answers.puskesmas||coreCase.answers.Puskesmas))],
       ['Umur',coreCase.age],
       ['Jenis kelamin',coreCase.sex],
       ['Tanggal onset',coreCase.onset],
@@ -4736,7 +4749,12 @@ try{installBrandingV183();}catch(e){}
     ];
     html+='<details open style="margin:12px 0"><summary><b>1. Data inti kasus, klinis, dan lokasi</b></summary>'+
       '<div style="overflow:auto;max-height:45vh"><table class="report-table"><thead><tr><th>Informasi</th><th>Nilai</th></tr></thead><tbody>'+
-      coreRows.map(function(row){return '<tr><td>'+esc(row[0])+'</td><td>'+esc(coreDisplay(row[1]))+'</td></tr>'}).join('')+
+      coreRows.map(function(row){
+        var value=row[0]==='Alamat lengkap'&&/^(ada|ya|yes|true|1)$/i.test(String(row[1]||'').trim())
+          ?'Nilai sumber: "'+String(row[1])+'" — bukan alamat lengkap; alamat sebenarnya belum tersedia dan perlu diverifikasi.'
+          :coreDisplay(row[1]);
+        return '<tr><td>'+esc(row[0])+'</td><td>'+esc(value)+'</td></tr>';
+      }).join('')+
       '</tbody></table></div></details>';
     html+='<h3 style="margin:16px 0 8px">2. Seluruh jawaban kuesioner</h3>';
     // Only source 2 is active in the detail/edit workflow. Earlier source records remain
