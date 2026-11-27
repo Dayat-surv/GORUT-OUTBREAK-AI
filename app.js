@@ -5151,6 +5151,7 @@ try{installBrandingV183();}catch(e){}
         var hasPrior=Object.prototype.hasOwnProperty.call(updatedAnswers,k);
         if(!hasPrior&&String(raw).trim()==='')return;
         var prior=hasPrior?updatedAnswers[k]:undefined;
+        if(hasPrior&&prior===null&&String(raw).trim()==='')return;
         if(typeof prior==='object'&&prior!==null){
           try{updatedAnswers[k]=JSON.parse(raw)}catch(parseErr){updatedAnswers[k]=raw}
         }else updatedAnswers[k]=raw;
