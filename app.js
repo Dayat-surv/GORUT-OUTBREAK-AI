@@ -5104,7 +5104,19 @@ try{installBrandingV183();}catch(e){}
       }
     });
     var idEl=document.getElementById('ed116_id');if(idEl)idEl.readOnly=true;
-    [['ed116_sex',c.sex],['ed116_status',c.status],['ed116_outcome',c.outcome],['ed116_hospitalized',fc.hospitalized||'Tidak']].forEach(function(pair){var el=document.getElementById(pair[0]);if(el&&pair[1]!=null&&pair[1]!=='')el.value=pair[1]});
+    [['ed116_sex',c.sex],['ed116_status',c.status],['ed116_outcome',c.outcome],['ed116_hospitalized',fc.hospitalized||'Tidak']].forEach(function(pair){
+      var el=document.getElementById(pair[0]),source=pair[1];
+      if(el&&source!=null&&source!==''){
+        var value=String(source);
+        if(el.tagName==='SELECT'&&!Array.from(el.options).some(function(o){return o.value===value})){
+          var legacy=document.createElement('option');
+          legacy.value=value;
+          legacy.textContent=value+' (nilai tersimpan)';
+          el.appendChild(legacy);
+        }
+        el.value=value;
+      }
+    });
     modalEl.classList.add('show');
     document.getElementById('ed116_save').onclick=function(){window.saveCaseSource(index,food)};
     document.getElementById('ed116_cancel').onclick=function(){modalEl.classList.remove('show')};
@@ -5135,7 +5147,10 @@ try{installBrandingV183();}catch(e){}
     if(answerEls.length){
       var updatedAnswers=Object.assign({},c.answers&&typeof c.answers==='object'?c.answers:{});
       answerEls.forEach(function(el){
-        var k=el.getAttribute('data-answer-key'),raw=el.value,prior=updatedAnswers[k];
+        var k=el.getAttribute('data-answer-key'),raw=el.value;
+        var hasPrior=Object.prototype.hasOwnProperty.call(updatedAnswers,k);
+        if(!hasPrior&&String(raw).trim()==='')return;
+        var prior=hasPrior?updatedAnswers[k]:undefined;
         if(typeof prior==='object'&&prior!==null){
           try{updatedAnswers[k]=JSON.parse(raw)}catch(parseErr){updatedAnswers[k]=raw}
         }else updatedAnswers[k]=raw;
